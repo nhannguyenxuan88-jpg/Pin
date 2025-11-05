@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PinCorp App - Quản Lý Sản Xuất</title>
     <link rel="icon" type="image/png" href="/nhan-lam-logo.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    
+    <!-- Initialize theme from localStorage -->
+    <script>
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
 
     <!-- Hide only injected SVGs, not component SVGs -->
     <style>
@@ -23,18 +27,14 @@
         display: none !important;
         visibility: hidden !important;
       }
-    </style>
-    
-    <!-- Initialize theme from localStorage -->
-    <script>
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        // Default to light mode
-        document.documentElement.classList.remove('dark');
+      
+      /* Fix font rendering */
+      * {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
-    </script>
+    </style>
   </head>
   <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
     <div id="root"></div>

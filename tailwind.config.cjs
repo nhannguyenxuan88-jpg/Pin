@@ -1,4 +1,4 @@
-module.exports = {
+﻿module.exports = {
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
@@ -9,7 +9,16 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Be Vietnam Pro', 'sans-serif'],
+        sans: [
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
       },
     },
   },
