@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    
+
     <!-- Hide only injected SVGs, not component SVGs -->
     <style>
       body > svg:not([class]),
@@ -24,10 +24,19 @@
         visibility: hidden !important;
       }
     </style>
+    
+    <!-- Initialize theme from localStorage -->
+    <script>
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        // Default to light mode
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
   </head>
-  <body
-    class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-  >
+  <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>
