@@ -1,0 +1,4173 @@
+import React, { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import type {
+  PinMaterial,
+  EnhancedMaterial,
+  Supplier,
+  PinMaterialHistory,
+} from "../types";
+import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import { useMaterialStock } from "../lib/hooks/useMaterialStock";
+import { usePinContext } from "../contexts/PinContext";
+import {
+  PlusIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  XMarkIcon,
+  EyeIcon,
+} from "./common/Icons";
+import PinImportHistory from "./PinImportHistory";
+import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+    amount
+  );
+
+// Generate SKU theo format: NL-ddmmyyyy-số
+const generateMaterialSKU = (existingMaterials: PinMaterial[] = []) => {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const yyyy = today.getFullYear();
+  const dateStr = `${dd}${mm}${yyyy}`;
+  // Đếm số SKU có cùng ngày
+  const todayPrefix = `NL-${dateStr}`;
+  const countToday = existingMaterials.filter((m) =>
+    m.sku?.startsWith(todayPrefix)
+  ).length;
+
+  const sequence = String(countToday + 1).padStart(3, "0");
+  return `NL-${dateStr}-${sequence}`;
+};
+
+const generateId = () =>
+  `M${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+
+// Interface cho item trong bảng nhập liệu
+interface MaterialItem {
+  id: number;
+  name: string;
+  sku: string;
+  unit: string;
+  purchasePrice: number;
+  retailPrice: number;
+  wholesalePrice: number;
+  quantity: number;
+  totalCost: number;
+}
+
+const createEmptyMaterialItem = (id: number): MaterialItem => ({
+  id,
+  name: "",
+  sku: "",
+  unit: "cái",
+  purchasePrice: 0,
+  retailPrice: 0,
+  wholesalePrice: 0,
+  quantity: 1,
+  totalCost: 0,
+});
+
+const normalizeMaterialItem = (item: Partial<MaterialItem>): MaterialItem => {
+  const purchasePrice = item.purchasePrice ?? 0;
+  const quantity = item.quantity ?? 1;
+  return {
+    id: item.id ?? Date.now(),
+    name: item.name ?? "",
+    sku: item.sku ?? "",
+    unit: item.unit ?? "cái",
+    purchasePrice,
+    retailPrice: item.retailPrice ?? 0,
+    wholesalePrice: item.wholesalePrice ?? 0,
+    quantity,
+    totalCost: item.totalCost ?? purchasePrice * quantity,
+  };
+};
+
+// Interface cho lịch sử kho
+interface StockHistory {
+  id: string;
+  material_id: string;
+  transaction_type: "import" | "export" | "adjustment";
+  quantity_change: number;
+  quantity_before: number;
+  quantity_after: number;
+  reason: string;
+  created_at: string;
+  created_by: string;
+  invoice_number?: string;
+  supplier?: string;
+}
+
+// Interface cho điều chỉnh tồn kho
+interface StockAdjustment {
+  material_id: string;
+  current_stock: number;
+  actual_stock: number;
+  reason: string;
+  note?: string;
+}
+
+// Interface cho dự báo tồn kho thông minh
+interface StockForecast {
+  material_id: string;
+  material_name: string;
+  current_stock: number;
+  average_monthly_consumption: number;
+  forecasted_stock_30_days: number;
+  forecasted_stock_60_days: number;
+  forecasted_stock_90_days: number;
+  recommended_reorder_date: string;
+  recommended_reorder_quantity: number;
+  risk_level: "low" | "medium" | "high" | "critical";
+  trend: "increasing" | "stable" | "decreasing";
+  seasonal_factor?: number;
+}
+
+// Interface cho phân tích giá nhà cung cấp
+interface SupplierPriceAnalysis {
+  material_id: string;
+  material_name: string;
+  suppliers: SupplierPrice[];
+  price_trend: "rising" | "falling" | "stable";
+  average_price: number;
+  best_price: number;
+  best_supplier: string;
+  price_variance: number;
+  recommendations: string[];
+}
+
+interface SupplierPrice {
+  supplier_name: string;
+  current_price: number;
+  last_updated: string;
+  price_history: PricePoint[];
+  quality_rating?: number;
+  delivery_time_days?: number;
+  reliability_score?: number;
+}
+
+interface PricePoint {
+  date: string;
+  price: number;
+  quantity?: number;
+  invoice_number?: string;
+}
+
+// Simple Material Form Component
+const MaterialForm: React.FC<{
+  isOpen: boolean;
+  material: PinMaterial | null;
+  onClose: () => void;
+  onSubmit: (data: Omit<PinMaterial, "id">) => Promise<void>;
+  existingMaterials?: PinMaterial[];
+  suppliers: Supplier[];
+  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+}> = ({
+  isOpen,
+  material,
+  onClose,
+  onSubmit,
+  existingMaterials = [],
+  suppliers,
+  setSuppliers,
+}) => {
+  const [formData, setFormData] = useState({
+    supplier: "",
+    supplierPhone: "",
+    paymentMethod: "cash", // Phương thức thanh toán
+    paymentStatus: "pending", // Trạng thái thanh toán
+    partialPaymentAmount: 0, // Số tiền thanh toán trước (cho thanh toán một phần)
+  });
+
+  const [materials, setMaterials] = useState<MaterialItem[]>([
+    createEmptyMaterialItem(1),
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSupplierDropdownOpen, setIsSupplierDropdownOpen] = useState(false);
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState<
+    number | null
+  >(null);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showUnitModal, setShowUnitModal] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [newSupplierAddress, setNewSupplierAddress] = useState("");
+  const [newSupplierEmail, setNewSupplierEmail] = useState("");
+  const [newSupplierNotes, setNewSupplierNotes] = useState("");
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductSku, setNewProductSku] = useState("");
+  const [newProductUnit, setNewProductUnit] = useState("cái");
+  const [newUnit, setNewUnit] = useState("");
+  const [customUnits, setCustomUnits] = useState<string[]>([]);
+  const supplierInputRef = useRef<HTMLDivElement>(null);
+  const productInputRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+
+  const ensureMaterialItems = (items?: any[]): MaterialItem[] => {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return [createEmptyMaterialItem(1)];
+    }
+
+    return items.map((item, index) =>
+      normalizeMaterialItem({
+        ...item,
+        id: item?.id ?? index + 1,
+      })
+    );
+  };
+
+  // Supplier list combining context suppliers and existing materials (unique suppliers)
+  const materialsSuppliers = Array.from(
+    new Set(existingMaterials.map((m) => m.supplier).filter(Boolean))
+  ).map((name) => ({
+    name: name as string,
+    phone: "", // Phone can be extracted if stored in material data
+  }));
+
+  // Combine context suppliers with materials suppliers, prioritizing context suppliers
+  const normalizedSuppliers = suppliers
+    .filter((s) => Boolean(s.name))
+    .map((s) => ({ name: s.name as string, phone: s.phone || "" }));
+
+  const availableSuppliers = [
+    ...normalizedSuppliers,
+    ...materialsSuppliers.filter(
+      (ms) => !normalizedSuppliers.some((s) => s.name === ms.name)
+    ),
+  ];
+
+  // Product list from existing materials in database
+  const availableProducts = existingMaterials.map((m) => ({
+    name: m.name,
+    sku: m.sku,
+    unit: m.unit,
+    purchasePrice: m.purchasePrice ?? 0,
+    retailPrice: m.retailPrice ?? 0,
+    wholesalePrice: m.wholesalePrice ?? 0,
+  }));
+
+  // Get all available units (from existing materials + custom units)
+  const baseUnits = ["cái", "kg", "mét", "lít", "cuộn", "bộ", "hộp", "thùng"];
+  const existingUnits = Array.from(
+    new Set(existingMaterials.map((m) => m.unit).filter(Boolean))
+  );
+  const allAvailableUnits = Array.from(
+    new Set([...baseUnits, ...existingUnits, ...customUnits])
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      if (material) {
+        // Nếu edit một sản phẩm cụ thể, điền vào dòng đầu tiên
+        setMaterials([
+          normalizeMaterialItem({
+            id: 1,
+            name: material.name || "",
+            sku: material.sku || "",
+            unit: material.unit || "cái",
+            purchasePrice: material.purchasePrice || 0,
+            retailPrice: material.retailPrice ?? 0,
+            wholesalePrice: material.wholesalePrice ?? 0,
+            quantity: 1,
+            totalCost: (material.purchasePrice || 0) * 1,
+          }),
+        ]);
+        setFormData({
+          supplier: material.supplier || "",
+          supplierPhone: (material as any).supplierPhone || "",
+          paymentMethod: "cash",
+          paymentStatus: "pending",
+          partialPaymentAmount: 0,
+        });
+      } else {
+        // Try to load saved data from localStorage
+        const savedData = localStorage.getItem("materialFormDraft");
+        if (savedData) {
+          try {
+            const parsed = JSON.parse(savedData);
+            setMaterials(ensureMaterialItems(parsed.materials));
+            setFormData(
+              parsed.formData || {
+                supplier: "",
+                supplierPhone: "",
+                paymentMethod: "cash",
+                paymentStatus: "pending",
+                partialPaymentAmount: 0,
+              }
+            );
+          } catch (e) {
+            // If parsing fails, use default values
+            setMaterials([createEmptyMaterialItem(1)]);
+            setFormData({
+              supplier: "",
+              supplierPhone: "",
+              paymentMethod: "cash",
+              paymentStatus: "pending",
+              partialPaymentAmount: 0,
+            });
+          }
+        } else {
+          // Reset form cho nhập mới
+          setMaterials([createEmptyMaterialItem(1)]);
+          setFormData({
+            supplier: "",
+            supplierPhone: "",
+            paymentMethod: "cash",
+            paymentStatus: "pending",
+            partialPaymentAmount: 0,
+          });
+        }
+      }
+    }
+  }, [isOpen, material]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        supplierInputRef.current &&
+        !supplierInputRef.current.contains(event.target as Node)
+      ) {
+        setIsSupplierDropdownOpen(false);
+      }
+
+      // Check product dropdowns
+      if (isProductDropdownOpen !== null) {
+        const ref = productInputRefs.current[isProductDropdownOpen];
+        if (ref && !ref.contains(event.target as Node)) {
+          setIsProductDropdownOpen(null);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProductDropdownOpen]);
+
+  // Save form data to localStorage and prevent page reload when form has data
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const hasData =
+      formData.supplier.trim() !== "" ||
+      formData.supplierPhone.trim() !== "" ||
+      materials.some(
+        (m) => m.name.trim() !== "" || m.purchasePrice > 0 || m.quantity > 1
+      );
+
+    // Save to localStorage if there's data
+    if (hasData) {
+      localStorage.setItem(
+        "materialFormDraft",
+        JSON.stringify({
+          formData,
+          materials,
+          timestamp: Date.now(),
+        })
+      );
+    }
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasData) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+      return undefined;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isOpen, formData, materials]);
+
+  // Tính tổng tiền tất cả sản phẩm
+  const grandTotal = materials.reduce(
+    (sum: number, item: MaterialItem) => sum + item.totalCost,
+    0
+  );
+
+  // Thêm dòng sản phẩm mới
+  const addMaterialRow = () => {
+    const newId = Math.max(...materials.map((m: MaterialItem) => m.id)) + 1;
+    setMaterials((prev: MaterialItem[]) => [
+      ...prev,
+      createEmptyMaterialItem(newId),
+    ]);
+  };
+
+  // Xóa dòng sản phẩm
+  const removeMaterialRow = (id: number) => {
+    if (materials.length > 1) {
+      setMaterials((prev: MaterialItem[]) =>
+        prev.filter((m: MaterialItem) => m.id !== id)
+      );
+    }
+  };
+
+  // Cập nhật thông tin sản phẩm
+  const updateMaterial = (
+    id: number,
+    field: keyof MaterialItem,
+    value: any
+  ) => {
+    setMaterials((prev: MaterialItem[]) =>
+      prev.map((item: MaterialItem) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          // Tự động tính lại tổng tiền
+          if (field === "purchasePrice" || field === "quantity") {
+            updated.totalCost = updated.purchasePrice * updated.quantity;
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Kiểm tra có ít nhất 1 sản phẩm hợp lệ
+    const validMaterials = materials.filter(
+      (m: MaterialItem) =>
+        m.name.trim() && m.purchasePrice > 0 && m.quantity > 0
+    );
+    if (validMaterials.length === 0) {
+      alert("Vui lòng nhập ít nhất một sản phẩm hợp lệ!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Tự động tạo số phiếu nhập và ngày hiện tại
+      const autoInvoiceNumber = `IMP-${Date.now()}`;
+      const currentDate = new Date().toISOString().split("T")[0];
+
+      // Tạo danh sách tạm để track SKU đã tạo trong batch này
+      const tempMaterials = [...existingMaterials];
+
+      // Lưu từng sản phẩm hợp lệ
+      for (const material of validMaterials) {
+        // Generate SKU dựa trên danh sách đã update
+        const generatedSKU = material.sku || generateMaterialSKU(tempMaterials);
+
+        const materialData = {
+          name: material.name,
+          sku: generatedSKU,
+          unit: material.unit,
+          purchasePrice: material.purchasePrice,
+          retailPrice: material.retailPrice,
+          wholesalePrice: material.wholesalePrice,
+          quantity: material.quantity,
+          totalCost: material.totalCost,
+          supplier: formData.supplier,
+          supplierPhone: formData.supplierPhone,
+          invoiceNumber: autoInvoiceNumber,
+          importDate: currentDate,
+          paymentMethod: formData.paymentMethod,
+          paymentStatus: formData.paymentStatus,
+          description: `Phiếu nhập ${autoInvoiceNumber} - Tổng: ${formatCurrency(
+            grandTotal
+          )}`,
+        };
+
+        await onSubmit({ ...materialData, stock: materialData.quantity });
+
+        // Thêm vào danh sách tạm để SKU tiếp theo sẽ tăng
+        tempMaterials.push({
+          ...materialData,
+          id: generateId(),
+          stock: materialData.quantity,
+          branch_id: "",
+          created_at: currentDate,
+          updated_at: currentDate,
+        } as PinMaterial);
+      }
+      // Clear saved draft after successful submission
+      localStorage.removeItem("materialFormDraft");
+      onClose();
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert("Lỗi khi lưu: " + (error as any)?.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-7xl max-h-[95vh] overflow-y-auto overflow-x-visible shadow-2xl border border-gray-200 dark:border-gray-600">
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-gray-800 px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center rounded-t-xl">
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+              {material ? "📦 Nhập kho bổ sung" : "📝 Tạo phiếu nhập kho"}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {material
+                ? "Thêm số lượng cho nguyên vật liệu có sẵn"
+                : "Tạo mới hoặc nhập thêm nguyên vật liệu"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
+          >
+            <XMarkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-6">
+            {/* --- 1. Nhà cung cấp --- */}
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
+              <h4 className="text-base font-semibold text-indigo-800 dark:text-indigo-200 mb-3 flex items-center">
+                🏢 Nhà cung cấp
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="relative" ref={supplierInputRef}>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                    Tên nhà cung cấp (*)
+                  </label>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={formData.supplier}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          supplier: e.target.value,
+                        }));
+                        setIsSupplierDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsSupplierDropdownOpen(true)}
+                      className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-l-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all"
+                      placeholder="Tìm hoặc thêm nhà cung cấp..."
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSupplierModal(true)}
+                      className="px-4 py-3 border-t border-r border-b border-gray-300 dark:border-gray-600 rounded-r-lg bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                      disabled={isSubmitting}
+                      title="Thêm nhà cung cấp mới"
+                    >
+                      <PlusIcon className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+                    </button>
+                  </div>
+                  {isSupplierDropdownOpen && (
+                    <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {availableSuppliers
+                        .filter(
+                          (s) =>
+                            !formData.supplier ||
+                            s.name
+                              .toLowerCase()
+                              .includes(formData.supplier.toLowerCase())
+                        )
+                        .map((supplier, index) => (
+                          <div
+                            key={index}
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                supplier: supplier.name,
+                                supplierPhone: supplier.phone,
+                              }));
+                              setIsSupplierDropdownOpen(false);
+                            }}
+                            className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          >
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {supplier.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {supplier.phone}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                    Số điện thoại NCC
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.supplierPhone}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        supplierPhone: e.target.value,
+                      }))
+                    }
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all"
+                    placeholder="0xxx xxx xxx"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* --- 2. Danh sách sản phẩm --- */}
+            <div
+              className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700"
+              style={{ overflow: "visible" }}
+            >
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-base font-semibold text-blue-800 dark:text-blue-200 flex items-center">
+                  📦 Danh sách sản phẩm
+                </h4>
+                <button
+                  type="button"
+                  onClick={addMaterialRow}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2"
+                  disabled={isSubmitting}
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Thêm
+                </button>
+              </div>
+
+              <div
+                className="w-full overflow-x-scroll"
+                style={{
+                  overflowX: "scroll",
+                  WebkitOverflowScrolling: "touch",
+                  scrollbarWidth: "thin",
+                  msOverflowStyle: "scrollbar",
+                }}
+              >
+                <table className="w-full min-w-[1200px] border border-gray-300 dark:border-gray-600 rounded-lg overflow-visible">
+                  <thead className="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                      <th className="p-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[280px]">
+                        Tên sản phẩm (*)
+                      </th>
+                      <th className="hidden p-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[12%]">
+                        SKU
+                      </th>
+                      <th className="p-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[70px]">
+                        Đơn vị
+                      </th>
+                      <th className="p-2 text-right text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[110px]">
+                        Giá nhập (*)
+                      </th>
+                      <th className="p-2 text-right text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[110px]">
+                        Giá bán lẻ
+                      </th>
+                      <th className="p-2 text-right text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[110px]">
+                        Giá bán sỉ
+                      </th>
+                      <th className="p-2 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[60px]">
+                        SL (*)
+                      </th>
+                      <th className="p-2 text-right text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[120px]">
+                        Tổng tiền
+                      </th>
+                      <th className="p-2 text-center text-sm font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 w-[50px]">
+                        Xóa
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="relative">
+                    {materials.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      >
+                        <td
+                          className="p-2 w-[280px]"
+                          style={{
+                            position: "relative",
+                            overflow: "visible",
+                          }}
+                        >
+                          <div
+                            className="relative"
+                            ref={(el) => {
+                              productInputRefs.current[item.id] = el;
+                            }}
+                          >
+                            <div className="flex">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => {
+                                  updateMaterial(
+                                    item.id,
+                                    "name",
+                                    e.target.value
+                                  );
+                                  setIsProductDropdownOpen(item.id);
+                                }}
+                                onFocus={() =>
+                                  setIsProductDropdownOpen(item.id)
+                                }
+                                className="flex-1 p-1.5 border border-gray-300 dark:border-gray-600 rounded-l bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500"
+                                placeholder="Tìm hoặc thêm sản phẩm..."
+                                disabled={isSubmitting}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowProductModal(true)}
+                                className="px-2 py-1.5 border-t border-r border-b border-gray-300 dark:border-gray-600 rounded-r bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                                disabled={isSubmitting}
+                                title="Thêm sản phẩm mới"
+                              >
+                                <PlusIcon className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+                              </button>
+                            </div>
+                            {isProductDropdownOpen === item.id && (
+                              <div className="absolute z-[100] top-full mt-1 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-60 overflow-y-auto min-w-[300px]">
+                                {availableProducts
+                                  .filter(
+                                    (p) =>
+                                      !item.name ||
+                                      p.name
+                                        .toLowerCase()
+                                        .includes(item.name.toLowerCase())
+                                  )
+                                  .map((product, index) => (
+                                    <div
+                                      key={index}
+                                      onClick={() => {
+                                        updateMaterial(
+                                          item.id,
+                                          "name",
+                                          product.name
+                                        );
+                                        updateMaterial(
+                                          item.id,
+                                          "sku",
+                                          product.sku
+                                        );
+                                        updateMaterial(
+                                          item.id,
+                                          "unit",
+                                          product.unit
+                                        );
+                                        updateMaterial(
+                                          item.id,
+                                          "purchasePrice",
+                                          product.purchasePrice ?? 0
+                                        );
+                                        updateMaterial(
+                                          item.id,
+                                          "retailPrice",
+                                          product.retailPrice ?? 0
+                                        );
+                                        updateMaterial(
+                                          item.id,
+                                          "wholesalePrice",
+                                          product.wholesalePrice ?? 0
+                                        );
+                                        setIsProductDropdownOpen(null);
+                                      }}
+                                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                    >
+                                      <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                        {product.name}
+                                      </div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {product.sku} • {product.unit}
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="hidden p-2 w-[12%]">
+                          <input
+                            type="text"
+                            value={item.sku}
+                            onChange={(e) =>
+                              updateMaterial(item.id, "sku", e.target.value)
+                            }
+                            className="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500"
+                            placeholder="Auto"
+                            disabled={isSubmitting}
+                          />
+                        </td>
+                        <td className="p-2 w-[70px]">
+                          <div className="flex gap-0 w-full max-w-[70px]">
+                            <input
+                              type="text"
+                              value={item.unit}
+                              onChange={(e) =>
+                                updateMaterial(item.id, "unit", e.target.value)
+                              }
+                              className="flex-1 px-1 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-1 focus:ring-blue-500 min-w-0"
+                              placeholder=""
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        </td>
+                        <td className="p-2 w-[110px]">
+                          <input
+                            type="number"
+                            value={item.purchasePrice}
+                            onChange={(e) =>
+                              updateMaterial(
+                                item.id,
+                                "purchasePrice",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500 text-right"
+                            placeholder="0"
+                            min="0"
+                            disabled={isSubmitting}
+                          />
+                        </td>
+                        <td className="p-2 w-[110px]">
+                          <input
+                            type="number"
+                            value={item.retailPrice}
+                            onChange={(e) =>
+                              updateMaterial(
+                                item.id,
+                                "retailPrice",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500 text-right"
+                            placeholder="0"
+                            min="0"
+                            disabled={isSubmitting}
+                          />
+                        </td>
+                        <td className="p-2 w-[110px]">
+                          <input
+                            type="number"
+                            value={item.wholesalePrice}
+                            onChange={(e) =>
+                              updateMaterial(
+                                item.id,
+                                "wholesalePrice",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500 text-right"
+                            placeholder="0"
+                            min="0"
+                            disabled={isSubmitting}
+                          />
+                        </td>
+                        <td className="p-2 w-[60px]">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateMaterial(
+                                item.id,
+                                "quantity",
+                                Number(e.target.value)
+                              )
+                            }
+                            className="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500 text-center"
+                            placeholder="1"
+                            min="1"
+                            disabled={isSubmitting}
+                          />
+                        </td>
+                        <td className="p-2 w-[120px]">
+                          <div className="text-sm font-semibold text-green-600 dark:text-green-400 text-right">
+                            {formatCurrency(item.totalCost)}
+                          </div>
+                        </td>
+                        <td className="p-2 text-center w-[50px]">
+                          <button
+                            type="button"
+                            onClick={() => removeMaterialRow(item.id)}
+                            className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                            disabled={materials.length <= 1 || isSubmitting}
+                            title="Xóa dòng này"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Tổng cộng */}
+              <div className="mt-3 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg border">
+                <div className="flex justify-between items-center">
+                  <span className="text-base font-semibold text-gray-700 dark:text-gray-200">
+                    🧮 Tổng giá trị:
+                  </span>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(grandTotal)}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Tổng{" "}
+                  {materials.filter((m: MaterialItem) => m.name.trim()).length}{" "}
+                  sản phẩm
+                </div>
+              </div>
+            </div>
+
+            {/* --- 3. Thanh toán --- */}
+            <div className="bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-700 shadow-sm">
+              <h4 className="text-base font-bold text-orange-800 dark:text-orange-200 mb-3 flex items-center gap-2">
+                <span className="text-xl">💳</span>
+                <span>Thanh toán</span>
+              </h4>
+
+              <div className="space-y-3">
+                {/* Phương thức và trạng thái thanh toán */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <label className="block text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                      Phương thức
+                    </label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          paymentMethod: e.target.value,
+                        }))
+                      }
+                      className="w-full p-2 border-0 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 transition-all"
+                      disabled={isSubmitting}
+                    >
+                      <option value="cash">💵 Tiền mặt</option>
+                      <option value="bank_transfer">🏦 Chuyển khoản</option>
+                      <option value="credit">📝 Công nợ</option>
+                      <option value="check">📊 Số sách</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <label className="block text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                      Trạng thái
+                    </label>
+                    <select
+                      value={formData.paymentStatus}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          paymentStatus: e.target.value,
+                        }))
+                      }
+                      className="w-full p-2 border-0 bg-gray-50 dark:bg-gray-700 rounded-md text-sm text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 transition-all"
+                      disabled={isSubmitting}
+                    >
+                      <option value="pending">⏳ Đang chờ</option>
+                      <option value="partial">⚡ Một phần</option>
+                      <option value="paid">✅ Đã thanh toán</option>
+                      <option value="overdue">⚠️ Quá hạn</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Thanh toán một phần */}
+                {formData.paymentStatus === "partial" && (
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border-2 border-yellow-300 dark:border-yellow-600 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">💰</span>
+                      <label className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                        Số tiền thanh toán trước
+                      </label>
+                    </div>
+                    <input
+                      type="number"
+                      value={formData.partialPaymentAmount}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          partialPaymentAmount: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full p-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-base font-semibold focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-yellow-500 transition-all"
+                      placeholder="0"
+                      min="0"
+                      max={grandTotal}
+                      disabled={isSubmitting}
+                    />
+
+                    {/* Bảng tính toán */}
+                    <div className="mt-2 space-y-1.5 bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-lg">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Tổng giá trị
+                        </span>
+                        <span className="font-bold text-gray-900 dark:text-white">
+                          {formatCurrency(grandTotal)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Thanh toán trước
+                        </span>
+                        <span className="font-bold text-green-600 dark:text-green-400">
+                          - {formatCurrency(formData.partialPaymentAmount)}
+                        </span>
+                      </div>
+                      <div className="h-px bg-gray-300 dark:bg-gray-600"></div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                          Còn lại
+                        </span>
+                        <span className="font-bold text-red-600 dark:text-red-400">
+                          {formatCurrency(
+                            grandTotal - formData.partialPaymentAmount
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tổng quan thanh toán */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border border-green-200 dark:border-green-700">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-0.5">
+                        Thanh toán
+                      </div>
+                      <div className="text-lg font-bold text-green-700 dark:text-green-400">
+                        {formatCurrency(
+                          formData.paymentStatus === "partial"
+                            ? formData.partialPaymentAmount
+                            : formData.paymentStatus === "paid"
+                            ? grandTotal
+                            : 0
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-0.5">
+                        Tổng đơn
+                      </div>
+                      <div className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                        {formatCurrency(grandTotal)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-600">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors font-medium"
+              disabled={isSubmitting}
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg disabled:opacity-50 transition-colors font-medium shadow-lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Đang lưu..." : "🚀 Tạo phiếu nhập kho"}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Modal thêm nhà cung cấp mới */}
+      {showSupplierModal && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                📦 Thêm nhà cung cấp mới
+              </h3>
+              <button
+                onClick={() => {
+                  setShowSupplierModal(false);
+                  setNewSupplierName("");
+                  setNewSupplierPhone("");
+                  setNewSupplierAddress("");
+                  setNewSupplierEmail("");
+                  setNewSupplierNotes("");
+                }}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                  📦 Tên nhà cung cấp (*)
+                </label>
+                <input
+                  type="text"
+                  value={newSupplierName}
+                  onChange={(e) => setNewSupplierName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nhập tên nhà cung cấp..."
+                  autoFocus
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                  📞 Số điện thoại
+                </label>
+                <input
+                  type="tel"
+                  value={newSupplierPhone}
+                  onChange={(e) => setNewSupplierPhone(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0xxx xxx xxx"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                  📍 Địa chỉ
+                </label>
+                <textarea
+                  value={newSupplierAddress}
+                  onChange={(e) => setNewSupplierAddress(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Nhập địa chỉ nhà cung cấp..."
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                  ✉️ Email
+                </label>
+                <input
+                  type="email"
+                  value={newSupplierEmail}
+                  onChange={(e) => setNewSupplierEmail(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                  📝 Ghi chú
+                </label>
+                <textarea
+                  value={newSupplierNotes}
+                  onChange={(e) => setNewSupplierNotes(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Thêm ghi chú về nhà cung cấp..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSupplierModal(false);
+                  setNewSupplierName("");
+                  setNewSupplierPhone("");
+                  setNewSupplierAddress("");
+                  setNewSupplierEmail("");
+                  setNewSupplierNotes("");
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (newSupplierName.trim()) {
+                    // Tạo supplier object và lưu vào context nếu cần
+                    const newSupplier: Supplier = {
+                      id: `SUP-${Date.now()}`,
+                      name: newSupplierName.trim(),
+                      phone: newSupplierPhone.trim(),
+                      address: newSupplierAddress.trim(),
+                      email: newSupplierEmail.trim(),
+                      notes: newSupplierNotes.trim(),
+                    };
+
+                    // Lưu vào danh sách suppliers chung
+                    setSuppliers((prev) => [newSupplier, ...prev]);
+
+                    // Cập nhật form data
+                    setFormData((prev) => ({
+                      ...prev,
+                      supplier: newSupplierName.trim(),
+                      supplierPhone: newSupplierPhone.trim(),
+                    }));
+
+                    // Reset và đóng modal
+                    setNewSupplierName("");
+                    setNewSupplierPhone("");
+                    setNewSupplierAddress("");
+                    setNewSupplierEmail("");
+                    setNewSupplierNotes("");
+                    setShowSupplierModal(false);
+
+                    // Thông báo thành công
+                    alert("Đã thêm nhà cung cấp thành công!");
+                  }
+                }}
+                disabled={!newSupplierName.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                💾 Lưu nhà cung cấp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal thêm sản phẩm mới */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              ➕ Thêm sản phẩm mới
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                  Tên sản phẩm
+                </label>
+                <input
+                  type="text"
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Nhập tên sản phẩm..."
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                  SKU
+                </label>
+                <input
+                  type="text"
+                  value={newProductSku}
+                  onChange={(e) => setNewProductSku(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Mã sản phẩm (tự động nếu để trống)..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                  Đơn vị
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newProductUnit}
+                    onChange={(e) => setNewProductUnit(e.target.value)}
+                    className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Nhập hoặc chọn đơn vị..."
+                    list="unit-options-modal"
+                  />
+                  <datalist id="unit-options-modal">
+                    {allAvailableUnits.map((unit) => (
+                      <option key={unit} value={unit} />
+                    ))}
+                  </datalist>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newUnitInput = prompt("📝 Nhập đơn vị tính mới:");
+                      if (newUnitInput && newUnitInput.trim()) {
+                        const trimmedUnit = newUnitInput.trim();
+                        if (!allAvailableUnits.includes(trimmedUnit)) {
+                          setCustomUnits((prev) => [...prev, trimmedUnit]);
+                        }
+                        setNewProductUnit(trimmedUnit);
+                      }
+                    }}
+                    className="px-3 py-2 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
+                    title="Thêm đơn vị mới"
+                  >
+                    <PlusIcon className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setNewProductName("");
+                    setNewProductSku("");
+                    setNewProductUnit("cái");
+                  }}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newProductName.trim()) {
+                      // Add to first empty row or current focused row
+                      const emptyRow = materials.find((m) => !m.name.trim());
+                      if (emptyRow) {
+                        updateMaterial(emptyRow.id, "name", newProductName);
+                        updateMaterial(
+                          emptyRow.id,
+                          "sku",
+                          newProductSku || `AUTO-${Date.now()}`
+                        );
+                        updateMaterial(emptyRow.id, "unit", newProductUnit);
+                      }
+                      setNewProductName("");
+                      setNewProductSku("");
+                      setNewProductUnit("cái");
+                      setShowProductModal(false);
+                    }
+                  }}
+                  disabled={!newProductName.trim()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Thêm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal thêm đơn vị tính mới */}
+      {showUnitModal && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 w-full max-w-sm">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-3">
+              ➕ Thêm đơn vị tính
+            </h3>
+            <input
+              type="text"
+              value={newUnit}
+              onChange={(e) => setNewUnit(e.target.value)}
+              className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              placeholder="VD: chiếc, bộ, hộp, thùng..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newUnit.trim()) {
+                  // Update the datalist - unit will be available for all rows
+                  const emptyRow = materials.find(
+                    (m) => !m.unit || m.unit === "cái"
+                  );
+                  if (emptyRow) {
+                    updateMaterial(emptyRow.id, "unit", newUnit);
+                  }
+                  setNewUnit("");
+                  setShowUnitModal(false);
+                }
+              }}
+              autoFocus
+            />
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg mt-2">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                💡 cái, kg, mét, lít, cuộn, bộ, hộp, thùng
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUnitModal(false);
+                  setNewUnit("");
+                }}
+                className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (newUnit.trim()) {
+                    const emptyRow = materials.find(
+                      (m) => !m.unit || m.unit === "cái"
+                    );
+                    if (emptyRow) {
+                      updateMaterial(emptyRow.id, "unit", newUnit);
+                    }
+                    setNewUnit("");
+                    setShowUnitModal(false);
+                  }
+                }}
+                disabled={!newUnit.trim()}
+                className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Thêm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Material Detail Modal Component với tabs
+const MaterialDetailModal: React.FC<{
+  isOpen: boolean;
+  material: PinMaterial | null;
+  onClose: () => void;
+  onEdit: () => void;
+  enhancedMaterials?: any[]; // Enhanced materials with commitment info
+}> = ({ isOpen, material, onClose, onEdit, enhancedMaterials = [] }) => {
+  const [activeTab, setActiveTab] = useState<"info" | "history">("info");
+  const [stockHistory, setStockHistory] = useState<StockHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Load stock history
+  const loadStockHistory = async () => {
+    if (!material) return;
+
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("pincorp_stock_history")
+        .select(
+          `
+          *,
+          profiles:created_by(username)
+        `
+        )
+        .eq("material_id", material.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setStockHistory(data || []);
+    } catch (err) {
+      console.error("Error loading stock history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && material && activeTab === "history") {
+      loadStockHistory();
+    }
+  }, [isOpen, material, activeTab]);
+
+  if (!isOpen || !material) return null;
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case "import":
+        return "📥";
+      case "export":
+        return "📤";
+      case "adjustment":
+        return "⚖️";
+      default:
+        return "📋";
+    }
+  };
+
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case "import":
+        return "text-green-600 dark:text-green-400";
+      case "export":
+        return "text-red-600 dark:text-red-400";
+      case "adjustment":
+        return "text-blue-600 dark:text-blue-400";
+      default:
+        return "text-gray-600 dark:text-gray-400";
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-600">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              📦 Chi tiết vật tư
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {material.name} ({material.sku})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 border-b border-gray-200 dark:border-gray-600">
+          <nav className="flex space-x-4">
+            <button
+              onClick={() => setActiveTab("info")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === "info"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              ℹ️ Thông tin cơ bản
+            </button>
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === "history"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              📋 Lịch sử nhập/xuất
+            </button>
+          </nav>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
+          {activeTab === "info" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tên vật tư
+                  </label>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {material.name}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    SKU
+                  </label>
+                  <p className="text-gray-900 dark:text-white font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {material.sku}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Đơn vị
+                  </label>
+                  <p className="text-gray-900 dark:text-white">
+                    {material.unit}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Giá nhập
+                  </label>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {formatCurrency(material.purchasePrice)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tồn kho hiện tại
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {(() => {
+                        const enhancedMaterial = enhancedMaterials.find(
+                          (m) => m.id === material.id
+                        );
+                        const committedQty =
+                          enhancedMaterial?.committedQuantity || 0;
+                        const availableQty =
+                          enhancedMaterial?.availableStock || material.stock;
+
+                        if (committedQty > 0) {
+                          return (
+                            <>
+                              <span className="text-green-600 font-bold">
+                                {availableQty}
+                              </span>
+                              <span className="text-gray-500">
+                                /{material.stock}
+                              </span>
+                              <span className="text-sm font-normal">
+                                {" "}
+                                {material.unit}
+                              </span>
+                            </>
+                          );
+                        } else {
+                          return `${material.stock} ${material.unit}`;
+                        }
+                      })()}
+                    </p>
+                    {(() => {
+                      const enhancedMaterial = enhancedMaterials.find(
+                        (m) => m.id === material.id
+                      );
+                      const committedQty =
+                        enhancedMaterial?.committedQuantity || 0;
+
+                      if (committedQty > 0) {
+                        return (
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-lg text-amber-700 dark:text-amber-300">
+                              🔒 Đã cam kết: {committedQty} {material.unit}
+                            </div>
+                            <div className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-lg text-green-700 dark:text-green-300">
+                              ✅ Khả dụng: {enhancedMaterial?.availableStock}{" "}
+                              {material.unit}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Nhà cung cấp
+                  </label>
+                  <p className="text-gray-900 dark:text-white">
+                    {material.supplier || "Chưa có"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Mô tả
+                  </label>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    {material.description || "Không có mô tả"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "history" && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  📊 Lịch sử giao dịch kho
+                </h4>
+                <button
+                  onClick={loadStockHistory}
+                  className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  🔄 Làm mới
+                </button>
+              </div>
+
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Đang tải lịch sử...
+                  </span>
+                </div>
+              ) : stockHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  📭 Chưa có giao dịch nào
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stockHistory.map((record) => (
+                    <div
+                      key={record.id}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">
+                            {getTransactionIcon(record.transaction_type)}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`font-semibold ${getTransactionColor(
+                                  record.transaction_type
+                                )}`}
+                              >
+                                {record.transaction_type === "import"
+                                  ? "Nhập kho"
+                                  : record.transaction_type === "export"
+                                  ? "Xuất kho"
+                                  : "Điều chỉnh"}
+                              </span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                                {new Date(record.created_at).toLocaleString(
+                                  "vi-VN"
+                                )}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                              {record.reason}
+                            </p>
+                            {record.invoice_number && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Số phiếu: {record.invoice_number}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div
+                            className={`text-lg font-bold ${
+                              record.quantity_change > 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                            }`}
+                          >
+                            {record.quantity_change > 0 ? "+" : ""}
+                            {record.quantity_change}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {record.quantity_before} → {record.quantity_after}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors"
+          >
+            Đóng
+          </button>
+          <button
+            onClick={onEdit}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <PencilSquareIcon className="w-4 h-4" />
+            Chỉnh sửa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Stock Adjustment Modal Component
+const StockAdjustmentModal: React.FC<{
+  isOpen: boolean;
+  material: PinMaterial | null;
+  onClose: () => void;
+  onSubmit: (adjustment: StockAdjustment) => Promise<void>;
+}> = ({ isOpen, material, onClose, onSubmit }) => {
+  const [actualStock, setActualStock] = useState<number>(0);
+  const [reason, setReason] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && material) {
+      setActualStock(material.stock);
+      setReason("");
+      setNote("");
+    }
+  }, [isOpen, material]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!material || isSubmitting) return;
+
+    if (!reason.trim()) {
+      alert("Vui lòng nhập lý do điều chỉnh!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        material_id: material.id,
+        current_stock: material.stock,
+        actual_stock: actualStock,
+        reason: reason.trim(),
+        note: note.trim(),
+      });
+      onClose();
+    } catch (error) {
+      console.error("Stock adjustment error:", error);
+      alert("Lỗi khi điều chỉnh tồn kho: " + (error as any)?.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen || !material) return null;
+
+  const difference = actualStock - material.stock;
+  const isIncrease = difference > 0;
+  const isDecrease = difference < 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl shadow-2xl border border-gray-200 dark:border-gray-600">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              ⚖️ Điều chỉnh tồn kho
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {material.name} ({material.sku})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-6">
+            {/* Current vs Actual Stock */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                <label className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  📊 Tồn kho hệ thống
+                </label>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {material.stock} {material.unit}
+                </p>
+              </div>
+
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-700">
+                <label className="block text-sm font-medium text-green-800 dark:text-green-200 mb-2">
+                  📦 Tồn kho thực tế (*)
+                </label>
+                <input
+                  type="number"
+                  value={actualStock}
+                  onChange={(e) => setActualStock(Number(e.target.value))}
+                  className="w-full text-2xl font-bold bg-transparent border-none p-0 text-green-600 dark:text-green-400 focus:ring-0"
+                  min="0"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            {/* Difference Display */}
+            {difference !== 0 && (
+              <div
+                className={`p-4 rounded-lg border ${
+                  isIncrease
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`font-semibold ${
+                      isIncrease
+                        ? "text-green-800 dark:text-green-200"
+                        : "text-red-800 dark:text-red-200"
+                    }`}
+                  >
+                    {isIncrease ? "📈 Tăng kho:" : "📉 Giảm kho:"}
+                  </span>
+                  <span
+                    className={`text-xl font-bold ${
+                      isIncrease
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {isIncrease ? "+" : ""}
+                    {difference} {material.unit}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Reason */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                🏷️ Lý do điều chỉnh (*)
+              </label>
+              <select
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">-- Chọn lý do --</option>
+                <option value="Kiểm kho định kỳ">Kiểm kho định kỳ</option>
+                <option value="Hàng hỏng">Hàng hỏng</option>
+                <option value="Thất thoát">Thất thoát</option>
+                <option value="Sai sót nhập liệu">Sai sót nhập liệu</option>
+                <option value="Trả hàng nhà cung cấp">
+                  Trả hàng nhà cung cấp
+                </option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+
+            {/* Note */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                📝 Ghi chú bổ sung
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+                rows={3}
+                placeholder="Mô tả chi tiết lý do điều chỉnh..."
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || difference === 0}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Đang xử lý...
+                </>
+              ) : (
+                <>⚖️ Điều chỉnh tồn kho</>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Stock Forecast Modal Component
+const StockForecastModal: React.FC<{
+  isOpen: boolean;
+  material: PinMaterial | null;
+  onClose: () => void;
+}> = ({ isOpen, material, onClose }) => {
+  const [forecast, setForecast] = useState<StockForecast | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Tính toán dự báo tồn kho
+  const calculateForecast = async () => {
+    if (!material) return;
+
+    setLoading(true);
+    try {
+      // Lấy lịch sử giao dịch trong 90 ngày qua
+      const { data: history, error } = await supabase
+        .from("pincorp_stock_history")
+        .select("*")
+        .eq("material_id", material.id)
+        .gte(
+          "created_at",
+          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+        )
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Tính toán tiêu thụ trung bình
+      const exportTransactions =
+        history?.filter((h) => h.transaction_type === "export") || [];
+      const totalConsumption = exportTransactions.reduce(
+        (sum, t) => sum + Math.abs(t.quantity_change),
+        0
+      );
+      const monthlyConsumption = totalConsumption / 3; // 90 ngày = 3 tháng
+
+      // Dự báo tồn kho
+      const forecast30 = Math.max(0, material.stock - monthlyConsumption * 1);
+      const forecast60 = Math.max(0, material.stock - monthlyConsumption * 2);
+      const forecast90 = Math.max(0, material.stock - monthlyConsumption * 3);
+
+      // Xu hướng tiêu thụ
+      const recentTransactions = exportTransactions.slice(0, 10);
+      const olderTransactions = exportTransactions.slice(10, 20);
+      const recentAvg =
+        recentTransactions.reduce(
+          (sum, t) => sum + Math.abs(t.quantity_change),
+          0
+        ) / Math.max(1, recentTransactions.length);
+      const olderAvg =
+        olderTransactions.reduce(
+          (sum, t) => sum + Math.abs(t.quantity_change),
+          0
+        ) / Math.max(1, olderTransactions.length);
+
+      let trend: "increasing" | "stable" | "decreasing" = "stable";
+      if (recentAvg > olderAvg * 1.2) trend = "increasing";
+      else if (recentAvg < olderAvg * 0.8) trend = "decreasing";
+
+      // Mức độ rủi ro
+      let riskLevel: "low" | "medium" | "high" | "critical" = "low";
+      if (forecast30 <= 0) riskLevel = "critical";
+      else if (forecast30 <= monthlyConsumption * 0.5) riskLevel = "high";
+      else if (forecast60 <= monthlyConsumption * 0.5) riskLevel = "medium";
+
+      // Ngày nên đặt hàng lại
+      const daysUntilEmpty =
+        monthlyConsumption > 0
+          ? material.stock / (monthlyConsumption / 30)
+          : 999;
+      const reorderDate = new Date(
+        Date.now() + (daysUntilEmpty - 14) * 24 * 60 * 60 * 1000
+      );
+
+      const forecastData: StockForecast = {
+        material_id: material.id,
+        material_name: material.name,
+        current_stock: material.stock,
+        average_monthly_consumption: monthlyConsumption,
+        forecasted_stock_30_days: forecast30,
+        forecasted_stock_60_days: forecast60,
+        forecasted_stock_90_days: forecast90,
+        recommended_reorder_date: reorderDate.toISOString().split("T")[0],
+        recommended_reorder_quantity: Math.ceil(monthlyConsumption * 2), // 2 tháng
+        risk_level: riskLevel,
+        trend: trend,
+      };
+
+      setForecast(forecastData);
+    } catch (err) {
+      console.error("Error calculating forecast:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && material) {
+      calculateForecast();
+    }
+  }, [isOpen, material]);
+
+  if (!isOpen || !material) return null;
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case "critical":
+        return "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30";
+      case "high":
+        return "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30";
+      case "medium":
+        return "text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30";
+      default:
+        return "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30";
+    }
+  };
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case "increasing":
+        return "📈";
+      case "decreasing":
+        return "📉";
+      default:
+        return "📊";
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-600">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              🔮 Dự báo tồn kho thông minh
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {material.name} ({material.sku})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+              <span className="text-gray-600 dark:text-gray-400">
+                Đang phân tích...
+              </span>
+            </div>
+          ) : forecast ? (
+            <div className="space-y-6">
+              {/* Risk Assessment */}
+              <div
+                className={`p-4 rounded-lg border ${getRiskColor(
+                  forecast.risk_level
+                )}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold mb-1">
+                      ⚠️ Mức độ rủi ro: {forecast.risk_level.toUpperCase()}
+                    </h4>
+                    <p className="text-sm opacity-80">
+                      {forecast.risk_level === "critical" &&
+                        "Cần đặt hàng ngay lập tức!"}
+                      {forecast.risk_level === "high" &&
+                        "Nên đặt hàng trong tuần tới"}
+                      {forecast.risk_level === "medium" &&
+                        "Có thể đặt hàng trong tháng tới"}
+                      {forecast.risk_level === "low" &&
+                        "Tồn kho ổn định trong thời gian tới"}
+                    </p>
+                  </div>
+                  <span className="text-2xl">
+                    {getTrendIcon(forecast.trend)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Current Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                    📊 Tồn kho hiện tại
+                  </h5>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {forecast.current_stock}
+                  </p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    {material.unit}
+                  </p>
+                </div>
+
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <h5 className="font-medium text-purple-800 dark:text-purple-200 mb-2">
+                    📉 Tiêu thụ tháng
+                  </h5>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {Math.round(forecast.average_monthly_consumption)}
+                  </p>
+                  <p className="text-sm text-purple-600 dark:text-purple-400">
+                    {material.unit}/tháng
+                  </p>
+                </div>
+
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-700">
+                  <h5 className="font-medium text-green-800 dark:text-green-200 mb-2">
+                    📅 Nên đặt hàng
+                  </h5>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {new Date(
+                      forecast.recommended_reorder_date
+                    ).toLocaleDateString("vi-VN")}
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    {forecast.recommended_reorder_quantity} {material.unit}
+                  </p>
+                </div>
+              </div>
+
+              {/* Forecast Timeline */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  📊 Dự báo tồn kho
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      30 ngày tới
+                    </h5>
+                    <p
+                      className={`text-xl font-bold ${
+                        forecast.forecasted_stock_30_days <= 0
+                          ? "text-red-600 dark:text-red-400"
+                          : forecast.forecasted_stock_30_days <= 10
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`}
+                    >
+                      {Math.round(forecast.forecasted_stock_30_days)}{" "}
+                      {material.unit}
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      60 ngày tới
+                    </h5>
+                    <p
+                      className={`text-xl font-bold ${
+                        forecast.forecasted_stock_60_days <= 0
+                          ? "text-red-600 dark:text-red-400"
+                          : forecast.forecasted_stock_60_days <= 10
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`}
+                    >
+                      {Math.round(forecast.forecasted_stock_60_days)}{" "}
+                      {material.unit}
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      90 ngày tới
+                    </h5>
+                    <p
+                      className={`text-xl font-bold ${
+                        forecast.forecasted_stock_90_days <= 0
+                          ? "text-red-600 dark:text-red-400"
+                          : forecast.forecasted_stock_90_days <= 10
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`}
+                    >
+                      {Math.round(forecast.forecasted_stock_90_days)}{" "}
+                      {material.unit}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                  💡 Gợi ý
+                </h4>
+                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  {forecast.risk_level === "critical" && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-500">⚠️</span>
+                      <span>
+                        Kho sắp hết! Cần đặt hàng ngay lập tức để tránh gian
+                        đoạn sản xuất.
+                      </span>
+                    </li>
+                  )}
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500">📋</span>
+                    <span>
+                      Nên đặt hàng {forecast.recommended_reorder_quantity}{" "}
+                      {material.unit} vào ngày{" "}
+                      {new Date(
+                        forecast.recommended_reorder_date
+                      ).toLocaleDateString("vi-VN")}
+                    </span>
+                  </li>
+                  {forecast.trend === "increasing" && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500">📈</span>
+                      <span>
+                        Xu hướng tiêu thụ đang tăng, cân nhắc tăng lượng đặt
+                        hàng.
+                      </span>
+                    </li>
+                  )}
+                  {forecast.trend === "decreasing" && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-orange-500">📉</span>
+                      <span>
+                        Xu hướng tiêu thụ đang giảm, có thể giảm lượng đặt hàng.
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              📉 Chưa có đủ dữ liệu để dự báo
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Supplier Price Analysis Modal Component
+const SupplierPriceAnalysisModal: React.FC<{
+  isOpen: boolean;
+  material: PinMaterial | null;
+  onClose: () => void;
+}> = ({ isOpen, material, onClose }) => {
+  const [analysis, setAnalysis] = useState<SupplierPriceAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Phân tích giá nhà cung cấp
+  const analyzeSupplierPrices = async () => {
+    if (!material) return;
+
+    setLoading(true);
+    try {
+      // Lấy lịch sử nhập hàng từ các nhà cung cấp
+      const { data: materials, error } = await supabase
+        .from("pincorp_materials")
+        .select("*")
+        .ilike("name", `%${material.name}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      // Nhóm theo nhà cung cấp
+      const supplierGroups = new Map<string, any[]>();
+      materials?.forEach((m) => {
+        const supplier = m.supplier || "Không rõ nhà cung cấp";
+        if (!supplierGroups.has(supplier)) {
+          supplierGroups.set(supplier, []);
+        }
+        supplierGroups.get(supplier)?.push({
+          date: m.created_at,
+          price: m.purchasePrice,
+          quantity: 1,
+          invoice_number: `INV-${m.id.slice(-8)}`,
+        });
+      });
+
+      // Tạo dữ liệu phân tích
+      const suppliers: SupplierPrice[] = Array.from(
+        supplierGroups.entries()
+      ).map(([name, history]) => {
+        const sortedHistory = history.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        const currentPrice = sortedHistory[0]?.price || 0;
+
+        return {
+          supplier_name: name,
+          current_price: currentPrice,
+          last_updated: sortedHistory[0]?.date || new Date().toISOString(),
+          price_history: sortedHistory.slice(0, 10),
+          quality_rating: 3.5 + Math.random() * 1.5, // Mock data
+          delivery_time_days: 3 + Math.floor(Math.random() * 10),
+          reliability_score: 0.7 + Math.random() * 0.3,
+        };
+      });
+
+      // Tính toán thống kê
+      const prices = suppliers.map((s) => s.current_price).filter((p) => p > 0);
+      const averagePrice =
+        prices.reduce((sum, p) => sum + p, 0) / Math.max(1, prices.length);
+      const bestPrice = Math.min(...prices.filter((p) => p > 0));
+      const bestSupplier =
+        suppliers.find((s) => s.current_price === bestPrice)?.supplier_name ||
+        "";
+      const priceVariance =
+        prices.length > 1
+          ? Math.sqrt(
+              prices.reduce(
+                (sum, p) => sum + Math.pow(p - averagePrice, 2),
+                0
+              ) / prices.length
+            )
+          : 0;
+
+      // Xác định xu hướng giá
+      let priceTrend: "rising" | "falling" | "stable" = "stable";
+      if (suppliers.length > 0) {
+        const recentPrices = suppliers[0].price_history
+          .slice(0, 3)
+          .map((h) => h.price);
+        const olderPrices = suppliers[0].price_history
+          .slice(3, 6)
+          .map((h) => h.price);
+        if (recentPrices.length > 0 && olderPrices.length > 0) {
+          const recentAvg =
+            recentPrices.reduce((sum, p) => sum + p, 0) / recentPrices.length;
+          const olderAvg =
+            olderPrices.reduce((sum, p) => sum + p, 0) / olderPrices.length;
+          if (recentAvg > olderAvg * 1.05) priceTrend = "rising";
+          else if (recentAvg < olderAvg * 0.95) priceTrend = "falling";
+        }
+      }
+
+      // Tạo gợi ý
+      const recommendations: string[] = [];
+      if (bestPrice < averagePrice * 0.9) {
+        recommendations.push(
+          `${bestSupplier} đang có giá tốt nhất, tiết kiệm ${formatCurrency(
+            averagePrice - bestPrice
+          )} so với giá trung bình`
+        );
+      }
+      if (priceTrend === "rising") {
+        recommendations.push(
+          "Giá đang có xu hướng tăng, nên cân nhắc nhập nhiều hơn trong đợt này"
+        );
+      }
+      if (priceTrend === "falling") {
+        recommendations.push(
+          "Giá đang có xu hướng giảm, có thể chờ thêm để có giá tốt hơn"
+        );
+      }
+      if (priceVariance > averagePrice * 0.2) {
+        recommendations.push(
+          "Chênh lệch giá giữa các nhà cung cấp lớn, nên đàm phán để có giá tốt hơn"
+        );
+      }
+
+      const analysisData: SupplierPriceAnalysis = {
+        material_id: material.id,
+        material_name: material.name,
+        suppliers: suppliers,
+        price_trend: priceTrend,
+        average_price: averagePrice,
+        best_price: bestPrice,
+        best_supplier: bestSupplier,
+        price_variance: priceVariance,
+        recommendations: recommendations,
+      };
+
+      setAnalysis(analysisData);
+    } catch (err) {
+      console.error("Error analyzing supplier prices:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && material) {
+      analyzeSupplierPrices();
+    }
+  }, [isOpen, material]);
+
+  if (!isOpen || !material) return null;
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case "rising":
+        return "📈";
+      case "falling":
+        return "📉";
+      default:
+        return "📊";
+    }
+  };
+
+  const getTrendColor = (trend: string) => {
+    switch (trend) {
+      case "rising":
+        return "text-red-600 dark:text-red-400";
+      case "falling":
+        return "text-green-600 dark:text-green-400";
+      default:
+        return "text-gray-600 dark:text-gray-400";
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-6xl max-h-[95vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-600">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              💰 Phân tích giá nhà cung cấp
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {material.name} ({material.sku})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+              <span className="text-gray-600 dark:text-gray-400">
+                Đang phân tích giá...
+              </span>
+            </div>
+          ) : analysis ? (
+            <div className="space-y-6">
+              {/* Price Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <h5 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                    📈 Giá trung bình
+                  </h5>
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                    {formatCurrency(analysis.average_price)}
+                  </p>
+                </div>
+
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-700">
+                  <h5 className="font-medium text-green-800 dark:text-green-200 mb-2">
+                    🏆 Giá tốt nhất
+                  </h5>
+                  <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(analysis.best_price)}
+                  </p>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    {analysis.best_supplier}
+                  </p>
+                </div>
+
+                <div
+                  className={`p-4 rounded-lg border ${
+                    analysis.price_trend === "rising"
+                      ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                      : analysis.price_trend === "falling"
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                      : "bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700"
+                  }`}
+                >
+                  <h5
+                    className={`font-medium mb-2 ${
+                      analysis.price_trend === "rising"
+                        ? "text-red-800 dark:text-red-200"
+                        : analysis.price_trend === "falling"
+                        ? "text-green-800 dark:text-green-200"
+                        : "text-gray-800 dark:text-gray-200"
+                    }`}
+                  >
+                    Xu hướng giá
+                  </h5>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">
+                      {getTrendIcon(analysis.price_trend)}
+                    </span>
+                    <span
+                      className={`font-bold ${getTrendColor(
+                        analysis.price_trend
+                      )}`}
+                    >
+                      {analysis.price_trend === "rising"
+                        ? "Tăng"
+                        : analysis.price_trend === "falling"
+                        ? "Giảm"
+                        : "Ổn định"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <h5 className="font-medium text-purple-800 dark:text-purple-200 mb-2">
+                    📉 Chênh lệch
+                  </h5>
+                  <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                    {formatCurrency(analysis.price_variance)}
+                  </p>
+                  <p className="text-sm text-purple-600 dark:text-purple-400">
+                    Số nhà CC: {analysis.suppliers.length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Supplier Comparison */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  🏢 So sánh nhà cung cấp
+                </h4>
+
+                {analysis.suppliers.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    📉 Chưa có dữ liệu nhà cung cấp
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border border-gray-200 dark:border-gray-600 rounded-lg">
+                      <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Nhà cung cấp
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Giá hiện tại
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                            So với TB
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Đánh giá
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Giao hàng
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Cập nhật
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                        {analysis.suppliers.map((supplier, index) => {
+                          const priceDiff =
+                            supplier.current_price - analysis.average_price;
+                          const isLowest =
+                            supplier.current_price === analysis.best_price;
+
+                          return (
+                            <tr
+                              key={index}
+                              className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                                isLowest
+                                  ? "bg-green-50 dark:bg-green-900/20"
+                                  : ""
+                              }`}
+                            >
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  {isLowest && (
+                                    <span className="text-green-500">🏆</span>
+                                  )}
+                                  <span className="font-medium text-gray-900 dark:text-white">
+                                    {supplier.supplier_name}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`font-semibold ${
+                                    isLowest
+                                      ? "text-green-600 dark:text-green-400"
+                                      : "text-gray-900 dark:text-white"
+                                  }`}
+                                >
+                                  {formatCurrency(supplier.current_price)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`text-sm font-medium ${
+                                    priceDiff < 0
+                                      ? "text-green-600 dark:text-green-400"
+                                      : priceDiff > 0
+                                      ? "text-red-600 dark:text-red-400"
+                                      : "text-gray-600 dark:text-gray-400"
+                                  }`}
+                                >
+                                  {priceDiff > 0 ? "+" : ""}
+                                  {formatCurrency(priceDiff)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-yellow-400">⭐</span>
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    {supplier.quality_rating?.toFixed(1) ||
+                                      "N/A"}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                  {supplier.delivery_time_days} ngày
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  {new Date(
+                                    supplier.last_updated
+                                  ).toLocaleDateString("vi-VN")}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Recommendations */}
+              {analysis.recommendations.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                    💡 Gợi ý tối ưu
+                  </h4>
+                  <ul className="space-y-2">
+                    {analysis.recommendations.map((rec, index) => (
+                      <li
+                        key={index}
+                        className="flex items-start gap-2 text-sm text-blue-800 dark:text-blue-200"
+                      >
+                        <span className="text-blue-500 mt-0.5">•</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              📉 Chưa có dữ liệu để phân tích
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main MaterialManager Component - Updated to use centralized hooks
+const MaterialManager: React.FC<{
+  materials: PinMaterial[];
+  setMaterials: (materials: PinMaterial[]) => void;
+  productionOrders?: any[]; // ProductionOrder[] - will be passed from context
+  suppliers: Supplier[];
+  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+}> = ({
+  materials,
+  setMaterials,
+  productionOrders = [],
+  suppliers,
+  setSuppliers,
+}) => {
+  // Get pinMaterialHistory from context to update it
+  const {
+    pinMaterialHistory,
+    setPinMaterialHistory,
+    reloadPinMaterialHistory,
+  } = usePinContext();
+
+  // ✅ Use centralized material stock management
+  const {
+    enhancedMaterials,
+    calculateCommittedQuantities,
+    checkMaterialAvailability,
+    getMaterialsNeedingReorder,
+    getOrdersAffectingMaterial,
+  } = useMaterialStock();
+
+  // Note: enhancedMaterials từ hook sẽ override materials props để có consistent data
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<PinMaterial | null>(
+    null
+  );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState(""); // "low", "empty", "normal", ""
+  const [unitFilter, setUnitFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "purchasePrice" | "stock">(
+    "name"
+  );
+
+  // Reload function is provided by AppContext
+
+  // Note: the effect that depends on activeView is declared after activeView
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Bulk actions states
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkAction, setBulkAction] = useState<
+    "delete" | "updateSupplier" | "printBarcode" | ""
+  >("");
+  const [bulkSupplier, setBulkSupplier] = useState("");
+  const [bulkSupplierPhone, setBulkSupplierPhone] = useState("");
+
+  // Cấp 2 features states
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedMaterialForDetail, setSelectedMaterialForDetail] =
+    useState<PinMaterial | null>(null);
+  const [showStockAdjustmentModal, setShowStockAdjustmentModal] =
+    useState(false);
+  const [selectedMaterialForAdjustment, setSelectedMaterialForAdjustment] =
+    useState<PinMaterial | null>(null);
+
+  // Cấp 3 features states - Dự báo tồn kho và phân tích giá
+  const [showForecastModal, setShowForecastModal] = useState(false);
+  const [selectedMaterialForForecast, setSelectedMaterialForForecast] =
+    useState<PinMaterial | null>(null);
+  const [showPriceAnalysisModal, setShowPriceAnalysisModal] = useState(false);
+  const [
+    selectedMaterialForPriceAnalysis,
+    setSelectedMaterialForPriceAnalysis,
+  ] = useState<PinMaterial | null>(null);
+  // CSV import modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  // Tab management for History view
+  const [activeView, setActiveView] = useState<"materials" | "history">(
+    "materials"
+  );
+  // Note: History view now self-fetches; no need to trigger context reload here
+
+  // Load modal states from localStorage on mount
+  useEffect(() => {
+    const savedModalStates = localStorage.getItem("materialManagerModalStates");
+    if (savedModalStates) {
+      try {
+        const parsed = JSON.parse(savedModalStates);
+        if (parsed.showForm) setShowForm(true);
+        if (parsed.editingMaterial) setEditingMaterial(parsed.editingMaterial);
+        if (parsed.showDetailModal) setShowDetailModal(true);
+        if (parsed.selectedMaterialForDetail)
+          setSelectedMaterialForDetail(parsed.selectedMaterialForDetail);
+        if (parsed.showStockAdjustmentModal) setShowStockAdjustmentModal(true);
+        if (parsed.selectedMaterialForAdjustment)
+          setSelectedMaterialForAdjustment(
+            parsed.selectedMaterialForAdjustment
+          );
+        if (parsed.showForecastModal) setShowForecastModal(true);
+        if (parsed.selectedMaterialForForecast)
+          setSelectedMaterialForForecast(parsed.selectedMaterialForForecast);
+        if (parsed.showPriceAnalysisModal) setShowPriceAnalysisModal(true);
+        if (parsed.selectedMaterialForPriceAnalysis)
+          setSelectedMaterialForPriceAnalysis(
+            parsed.selectedMaterialForPriceAnalysis
+          );
+      } catch (e) {
+        console.error("Error loading modal states:", e);
+      }
+    }
+  }, []);
+
+  // Save modal states to localStorage whenever they change
+  useEffect(() => {
+    const modalStates = {
+      showForm,
+      editingMaterial,
+      showDetailModal,
+      selectedMaterialForDetail,
+      showStockAdjustmentModal,
+      selectedMaterialForAdjustment,
+      showForecastModal,
+      selectedMaterialForForecast,
+      showPriceAnalysisModal,
+      selectedMaterialForPriceAnalysis,
+    };
+
+    // Only save if any modal is open
+    const anyModalOpen =
+      showForm ||
+      showDetailModal ||
+      showStockAdjustmentModal ||
+      showForecastModal ||
+      showPriceAnalysisModal;
+    if (anyModalOpen) {
+      localStorage.setItem(
+        "materialManagerModalStates",
+        JSON.stringify(modalStates)
+      );
+    } else {
+      // Clear saved states when all modals are closed
+      localStorage.removeItem("materialManagerModalStates");
+    }
+  }, [
+    showForm,
+    editingMaterial,
+    showDetailModal,
+    selectedMaterialForDetail,
+    showStockAdjustmentModal,
+    selectedMaterialForAdjustment,
+    showForecastModal,
+    selectedMaterialForForecast,
+    showPriceAnalysisModal,
+    selectedMaterialForPriceAnalysis,
+  ]);
+
+  // Simple data loading
+  const loadMaterials = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log("🔄 Loading materials...");
+
+      if (!isSupabaseConfigured()) {
+        setError("Supabase chưa được cấu hình");
+        return;
+      }
+
+      // Get current user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError("Chưa đăng nhập");
+        return;
+      }
+
+      console.log("👤 Current user:", user.email);
+
+      // Fetch materials
+      const { data, error: fetchError } = await supabase
+        .from("pincorp_materials")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (fetchError) {
+        console.error("❌ Fetch error:", fetchError);
+        setError("Lỗi tải dữ liệu: " + fetchError.message);
+        return;
+      }
+
+      console.log("✅ Loaded materials:", data?.length || 0);
+
+      const formattedMaterials = (data || []).map((item: any) => ({
+        id: item.id,
+        name: item.name || "",
+        sku: item.sku || "",
+        unit: item.unit || "cái",
+        purchasePrice: Number(item.purchaseprice) || 0,
+        retailPrice: Number(item.retailprice) || 0,
+        wholesalePrice: Number(item.wholesaleprice) || 0,
+        stock: Number(item.stock) || 0,
+        supplier: item.supplier || "",
+        supplierPhone: item.supplierphone || "",
+        description: item.description || "",
+        created_at: item.created_at,
+      }));
+
+      setMaterials(formattedMaterials);
+    } catch (err) {
+      console.error("💥 Load error:", err);
+      setError("Lỗi không xác định: " + (err as any)?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save import transaction function
+  const saveMaterial = async (formData: any) => {
+    console.log("� Processing import transaction:", formData.name);
+
+    try {
+      // Get current user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("Chưa đăng nhập");
+      }
+
+      const materialId = editingMaterial?.id || generateId();
+      const sku = formData.sku || generateMaterialSKU(materials);
+      const importId = `IMP${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 4)}`;
+
+      // 1. Kiểm tra hoặc tạo mới nguyên vật liệu
+      let currentMaterial = editingMaterial;
+      if (!currentMaterial) {
+        // Kiểm tra xem nguyên vật liệu đã tồn tại chưa
+        const { data: existingMaterials } = await supabase
+          .from("pincorp_materials")
+          .select("*")
+          .eq("name", formData.name)
+          .limit(1);
+
+        if (existingMaterials && existingMaterials.length > 0) {
+          currentMaterial = existingMaterials[0];
+        }
+      }
+
+      // 2. Cập nhật hoặc tạo mới nguyên vật liệu
+      const newStock = (currentMaterial?.stock || 0) + formData.quantity;
+      const materialPayload = {
+        id: materialId,
+        name: formData.name,
+        sku: sku,
+        unit: formData.unit,
+        purchaseprice: formData.purchasePrice,
+        retailprice: formData.retailPrice || 0,
+        wholesaleprice: formData.wholesalePrice || 0,
+        stock: newStock,
+        supplier: formData.supplier || "",
+        supplierphone: formData.supplierPhone || "",
+        description: formData.description || "",
+        created_at: currentMaterial?.created_at || new Date().toISOString(),
+        created_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: materialData, error: materialError } = await supabase
+        .from("pincorp_materials")
+        .upsert(materialPayload)
+        .select();
+
+      if (materialError) {
+        console.error("❌ Material save error:", materialError);
+        throw new Error(materialError.message);
+      }
+
+      // 3. Tạo bản ghi nhập kho
+      const importPayload = {
+        id: importId,
+        material_id: materialId,
+        material_name: formData.name,
+        quantity: formData.quantity,
+        unit_price: formData.purchasePrice,
+        total_cost: formData.totalCost,
+        supplier: formData.supplier || "",
+        supplier_phone: formData.supplierPhone || "",
+        invoice_number: formData.invoiceNumber || "",
+        import_date: formData.importDate,
+        payment_method: formData.paymentMethod,
+        payment_status: formData.paymentStatus,
+        description: formData.description || "",
+        created_by: user.id,
+        created_at: new Date().toISOString(),
+      };
+
+      // Tạo bảng nhập kho nếu chưa có
+      const { error: importError } = await supabase
+        .from("pincorp_material_imports")
+        .insert(importPayload);
+
+      if (importError) {
+        console.log(
+          "⚠️ Import log error (table might not exist):",
+          importError
+        );
+        // Không dừng quá trình nếu bảng import chưa có
+      }
+
+      // 4. GHI VÀO BẢNG LỊCH SỬ NHẬP KHO (cho tab Lịch sử)
+      // Lưu ý: KHÔNG set id thủ công nếu cột id là UUID; để DB tự tạo.
+      const historyPayload = {
+        material_id: materialId,
+        material_name: formData.name,
+        material_sku: sku,
+        quantity: formData.quantity,
+        purchase_price: formData.purchasePrice,
+        total_cost: formData.totalCost,
+        supplier: formData.supplier || null,
+        import_date: formData.importDate,
+        notes: formData.description || null,
+        user_id: user.id,
+        user_name: user.email || "Unknown",
+        branch_id: "main", // Default branch
+        created_by: user.id, // Quan trọng cho RLS nếu có
+        created_at: new Date().toISOString(),
+      };
+
+      // Attempt insert; if created_by column doesn't exist in this table, retry without it
+      let insertedHistory: any | null = null;
+      let historyError: any | null = null;
+      {
+        const { data, error } = await supabase
+          .from("pincorp_material_history")
+          .insert(historyPayload)
+          .select()
+          .single();
+        if (
+          error &&
+          (String(error.message || "").includes("created_by") ||
+            error.code === "42703")
+        ) {
+          // Retry without created_by
+          const fallbackPayload: any = { ...historyPayload };
+          delete fallbackPayload.created_by;
+          const { data: data2, error: error2 } = await supabase
+            .from("pincorp_material_history")
+            .insert(fallbackPayload)
+            .select()
+            .single();
+          insertedHistory = data2;
+          historyError = error2;
+        } else {
+          insertedHistory = data;
+          historyError = error;
+        }
+      }
+
+      if (historyError) {
+        console.log(
+          "⚠️ History log error (table might not exist):",
+          historyError
+        );
+        // Không dừng quá trình nếu bảng history chưa có
+      } else if (insertedHistory) {
+        // ✅ Update context with inserted row (đảm bảo có id UUID và các cột thực tế)
+        const newHistory: PinMaterialHistory = {
+          id: insertedHistory.id,
+          materialId: insertedHistory.material_id,
+          materialName: insertedHistory.material_name,
+          materialSku: insertedHistory.material_sku,
+          quantity: Number(insertedHistory.quantity ?? 0),
+          purchasePrice: Number(
+            insertedHistory.purchase_price ?? insertedHistory.purchaseprice ?? 0
+          ),
+          totalCost: Number(
+            insertedHistory.total_cost ?? insertedHistory.totalcost ?? 0
+          ),
+          supplier: insertedHistory.supplier || undefined,
+          importDate:
+            insertedHistory.import_date ||
+            insertedHistory.importdate ||
+            new Date().toISOString(),
+          notes: insertedHistory.notes || undefined,
+          userId: insertedHistory.user_id || undefined,
+          userName: insertedHistory.user_name || undefined,
+          branchId: insertedHistory.branch_id || "main",
+          created_at: insertedHistory.created_at || undefined,
+        };
+        setPinMaterialHistory((prev) => [newHistory, ...prev]);
+        console.log("✅ History updated in context (inserted)");
+      }
+
+      console.log("✅ Import transaction successful");
+
+      // Reload data to ensure consistency
+      await loadMaterials();
+    } catch (err) {
+      console.error("💥 Import failed:", err);
+      throw err;
+    }
+  };
+
+  // Bulk CSV import handler
+  const handleCsvImport = async (
+    items: Array<{
+      name: string;
+      sku?: string;
+      unit?: string;
+      purchasePrice?: number;
+      retailPrice?: number;
+      wholesalePrice?: number;
+      quantity?: number;
+      supplier?: string;
+      supplierPhone?: string;
+    }>
+  ) => {
+    for (const it of items) {
+      if (!it.name || !(it.purchasePrice && it.purchasePrice > 0)) continue;
+      const quantity = Math.max(1, Number(it.quantity ?? 1));
+      const purchasePrice = Number(it.purchasePrice ?? 0);
+      const payload = {
+        name: it.name,
+        sku: it.sku || "",
+        unit: it.unit || "cái",
+        purchasePrice,
+        retailPrice: Number(it.retailPrice ?? 0),
+        wholesalePrice: Number(it.wholesalePrice ?? 0),
+        quantity,
+        totalCost: purchasePrice * quantity,
+        supplier: it.supplier || "",
+        supplierPhone: it.supplierPhone || "",
+        invoiceNumber: `IMP-${Date.now()}`,
+        importDate: new Date().toISOString().split("T")[0],
+        paymentMethod: "cash",
+        paymentStatus: "paid",
+        description: "Nhập từ CSV",
+      };
+      await saveMaterial(payload);
+    }
+    await loadMaterials();
+    setShowImportModal(false);
+  };
+
+  // Delete function
+  const deleteMaterial = async (id: string) => {
+    if (!window.confirm("Xóa nguyên vật liệu này?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("pincorp_materials")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw new Error(error.message);
+
+      await loadMaterials();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Lỗi khi xóa: " + (err as any)?.message);
+    }
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    loadMaterials();
+  }, []);
+
+  // Handle sort
+  const handleSort = (column: "name" | "purchasePrice" | "stock") => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  // Bulk actions handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(filteredMaterials.map((m) => m.id));
+      setSelectedItems(allIds);
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Xóa ${selectedItems.size} vật tư đã chọn?`)) return;
+
+    try {
+      const deletePromises = Array.from(selectedItems).map((id) =>
+        supabase.from("pincorp_materials").delete().eq("id", id)
+      );
+
+      await Promise.all(deletePromises);
+      await loadMaterials();
+      setSelectedItems(new Set());
+      setShowBulkActions(false);
+      alert(`Đã xóa ${selectedItems.size} vật tư thành công!`);
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      alert("Lỗi khi xóa: " + (err as any)?.message);
+    }
+  };
+
+  const handleBulkUpdateSupplier = async () => {
+    if (!bulkSupplier.trim()) {
+      alert("Vui lòng nhập tên nhà cung cấp!");
+      return;
+    }
+
+    try {
+      const updatePromises = Array.from(selectedItems).map((id) =>
+        supabase
+          .from("pincorp_materials")
+          .update({
+            supplier: bulkSupplier,
+            supplierphone: bulkSupplierPhone,
+          })
+          .eq("id", id)
+      );
+
+      await Promise.all(updatePromises);
+      await loadMaterials();
+      setSelectedItems(new Set());
+      setShowBulkActions(false);
+      setBulkSupplier("");
+      setBulkSupplierPhone("");
+      alert(`Đã cập nhật nhà cung cấp cho ${selectedItems.size} vật tư!`);
+    } catch (err) {
+      console.error("Bulk update error:", err);
+      alert("Lỗi khi cập nhật: " + (err as any)?.message);
+    }
+  };
+
+  const handlePrintBarcodes = () => {
+    const selectedMaterials = filteredMaterials.filter((m) =>
+      selectedItems.has(m.id)
+    );
+    const barcodeData = selectedMaterials.map((m) => ({
+      name: m.name,
+      sku: m.sku,
+      price: formatCurrency(m.purchasePrice),
+    }));
+
+    // Simple print implementation
+    const printContent = `
+      <html>
+        <head><title>Mã vạch vật tư</title></head>
+        <body style="font-family: Arial; padding: 20px;">
+          <h2>Mã vạch vật tư (${selectedItems.size} sản phẩm)</h2>
+          ${barcodeData
+            .map(
+              (item) => `
+            <div style="border: 1px solid #ccc; margin: 10px 0; padding: 15px; page-break-inside: avoid;">
+              <div style="font-size: 18px; font-weight: bold;">${item.name}</div>
+              <div style="font-size: 14px; color: #666;">SKU: ${item.sku}</div>
+              <div style="font-size: 16px; margin-top: 5px;">Giá: ${item.price}</div>
+              <div style="font-family: monospace; font-size: 24px; text-align: center; margin-top: 10px; border: 2px solid #000; padding: 5px;">||||| ${item.sku} |||||</div>
+            </div>
+          `
+            )
+            .join("")}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "", "width=800,height=600");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    setSelectedItems(new Set());
+    setShowBulkActions(false);
+  };
+
+  // Update bulk actions visibility
+  React.useEffect(() => {
+    setShowBulkActions(selectedItems.size > 0);
+  }, [selectedItems]);
+
+  // Cấp 2 features handlers
+  const handleShowMaterialDetail = (material: PinMaterial) => {
+    setSelectedMaterialForDetail(material);
+    setShowDetailModal(true);
+  };
+
+  const handleShowStockAdjustment = (material: PinMaterial) => {
+    setSelectedMaterialForAdjustment(material);
+    setShowStockAdjustmentModal(true);
+  };
+
+  // Cấp 3 features handlers - Dự báo và phân tích
+  const handleShowStockForecast = (material: PinMaterial) => {
+    setSelectedMaterialForForecast(material);
+    setShowForecastModal(true);
+  };
+
+  const handleShowPriceAnalysis = (material: PinMaterial) => {
+    setSelectedMaterialForPriceAnalysis(material);
+    setShowPriceAnalysisModal(true);
+  };
+
+  const handleStockAdjustment = async (adjustment: StockAdjustment) => {
+    try {
+      // First, try to create the stock_history table if it doesn't exist
+      const createTableSQL = `
+        CREATE TABLE IF NOT EXISTS pincorp_stock_history (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          material_id UUID NOT NULL REFERENCES pincorp_materials(id) ON DELETE CASCADE,
+          transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('import', 'export', 'adjustment')),
+          quantity_before INTEGER NOT NULL DEFAULT 0,
+          quantity_change INTEGER NOT NULL,
+          quantity_after INTEGER NOT NULL DEFAULT 0,
+          reason TEXT NOT NULL,
+          invoice_number VARCHAR(100),
+          note TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+          created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+        );
+      `;
+
+      // Try to create table (will be ignored if exists)
+      try {
+        await supabase.rpc("sql", { query: createTableSQL });
+      } catch (err) {
+        console.warn("Table creation warning:", err);
+      }
+
+      // Record the stock history
+      const { error: historyError } = await supabase
+        .from("pincorp_stock_history")
+        .insert({
+          material_id: adjustment.material_id,
+          transaction_type: "adjustment",
+          quantity_before: adjustment.current_stock,
+          quantity_change: adjustment.actual_stock - adjustment.current_stock,
+          quantity_after: adjustment.actual_stock,
+          reason: adjustment.reason,
+          invoice_number: `ADJ-${Date.now()}`,
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+
+      if (historyError) throw historyError;
+
+      // Update material stock
+      const { error: updateError } = await supabase
+        .from("pincorp_materials")
+        .update({ stock: adjustment.actual_stock })
+        .eq("id", adjustment.material_id);
+
+      if (updateError) throw updateError;
+
+      // Reload materials
+      await loadMaterials();
+      alert("Điều chỉnh tồn kho thành công!");
+    } catch (error) {
+      console.error("Stock adjustment error:", error);
+      throw error;
+    }
+  };
+
+  // Get stock status for visual indicators
+  const getStockStatus = (stock: number) => {
+    if (stock === 0)
+      return {
+        status: "empty",
+        color: "text-red-600 dark:text-red-400",
+        icon: "🔴",
+      };
+    if (stock <= 5)
+      return {
+        status: "critical",
+        color: "text-orange-600 dark:text-orange-400",
+        icon: "🟠",
+      };
+    if (stock <= 10)
+      return {
+        status: "low",
+        color: "text-yellow-600 dark:text-yellow-400",
+        icon: "🟡",
+      };
+    return {
+      status: "normal",
+      color: "text-green-600 dark:text-green-400",
+      icon: "🟢",
+    };
+  };
+
+  // Get unique suppliers and units for filter options
+  const uniqueSuppliers = [
+    ...new Set(materials.map((m) => m.supplier).filter(Boolean)),
+  ];
+  const uniqueUnits = [
+    ...new Set(materials.map((m) => m.unit).filter(Boolean)),
+  ];
+
+  // Advanced filtering and sorting
+  const filteredMaterials = enhancedMaterials
+    .filter((material) => {
+      const matchesSearch =
+        material.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (
+          (material as any).supplierphone ||
+          (material as any).supplierPhone ||
+          ""
+        )
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+
+      const matchesSupplier =
+        !supplierFilter || material.supplier === supplierFilter;
+
+      const matchesStock =
+        !stockFilter ||
+        (stockFilter === "empty"
+          ? material.stock === 0
+          : stockFilter === "low"
+          ? material.stock > 0 && material.stock <= 10
+          : stockFilter === "normal"
+          ? material.stock > 10
+          : true);
+
+      const matchesUnit = !unitFilter || material.unit === unitFilter;
+
+      return matchesSearch && matchesSupplier && matchesStock && matchesUnit;
+    })
+    .sort((a, b) => {
+      if (!sortBy) return 0;
+
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  return (
+    <div className="flex flex-col h-screen space-y-6 p-6">
+      {/* Header with Tabs */}
+      <div className="flex justify-between items-center flex-shrink-0">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Quản lý Kho Nguyên vật liệu
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Hệ thống nhập kho và quản lý dòng tiền
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={loadMaterials}
+            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+            disabled={loading}
+          >
+            {loading ? "Đang tải..." : "Tải lại"}
+          </button>
+          {activeView === "materials" && (
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg"
+                title="Upload danh sách CSV - Tự nhận biết cột"
+              >
+                📥 Import CSV
+              </button>
+              <button
+                onClick={() => {
+                  setEditingMaterial(null);
+                  setShowForm(true);
+                }}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg"
+              >
+                <PlusIcon className="w-5 h-5" />
+                📦 Tạo phiếu nhập kho
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <button
+          onClick={() => setActiveView("materials")}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeView === "materials"
+              ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          }`}
+        >
+          📦 Danh sách vật liệu
+        </button>
+        <button
+          onClick={() => setActiveView("history")}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeView === "history"
+              ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          }`}
+        >
+          📊 Lịch sử nhập kho
+        </button>
+      </div>
+
+      {/* Content based on active view */}
+      <div className="flex-1 overflow-hidden">
+        {(() => {
+          console.log("🔍 MaterialManager activeView:", activeView);
+          return null;
+        })()}
+        {activeView === "history" ? (
+          <PinImportHistory />
+        ) : (
+          <div className="space-y-6 flex flex-col h-full">
+            {/* Original content continues here */}
+
+            {/* Bulk Actions Toolbar */}
+            {showBulkActions && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-blue-800 dark:text-blue-200 font-semibold">
+                      📋 Đã chọn {selectedItems.size} vật tư
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleBulkDelete}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                        Xóa
+                      </button>
+                      <button
+                        onClick={() =>
+                          setBulkAction(
+                            bulkAction === "updateSupplier"
+                              ? ""
+                              : "updateSupplier"
+                          )
+                        }
+                        className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        🏢 Cập nhật NCC
+                      </button>
+                      <button
+                        onClick={handlePrintBarcodes}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        🏷️ In mã vạch
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedItems(new Set());
+                      setShowBulkActions(false);
+                      setBulkAction("");
+                    }}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Update Supplier Form */}
+                {bulkAction === "updateSupplier" && (
+                  <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                          Nhà cung cấp mới
+                        </label>
+                        <input
+                          type="text"
+                          value={bulkSupplier}
+                          onChange={(e) => setBulkSupplier(e.target.value)}
+                          className="w-full p-2 border border-blue-300 dark:border-blue-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          placeholder="Tên nhà cung cấp..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                          Số điện thoại
+                        </label>
+                        <input
+                          type="tel"
+                          value={bulkSupplierPhone}
+                          onChange={(e) => setBulkSupplierPhone(e.target.value)}
+                          className="w-full p-2 border border-blue-300 dark:border-blue-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          placeholder="0xxx xxx xxx"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={handleBulkUpdateSupplier}
+                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ✅ Cập nhật {selectedItems.size} vật tư
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Advanced Search and Filters */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
+              {/* Search Bar */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="🔍 Tìm theo tên, SKU, nhà cung cấp hoặc mô tả..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Advanced Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Supplier Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    🏢 Nhà cung cấp
+                  </label>
+                  <select
+                    value={supplierFilter}
+                    onChange={(e) => setSupplierFilter(e.target.value)}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  >
+                    <option value="">Tất cả</option>
+                    {uniqueSuppliers.map((supplier) => (
+                      <option key={supplier} value={supplier}>
+                        {supplier}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Stock Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    📦 Tồn kho
+                  </label>
+                  <select
+                    value={stockFilter}
+                    onChange={(e) => setStockFilter(e.target.value)}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  >
+                    <option value="">Tất cả</option>
+                    <option value="empty">🔴 Hết hàng (0)</option>
+                    <option value="low">🟡 Sắp hết (1-10)</option>
+                    <option value="normal">🟢 Bình thường (&gt;10)</option>
+                  </select>
+                </div>
+
+                {/* Unit Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    📏 Đơn vị
+                  </label>
+                  <select
+                    value={unitFilter}
+                    onChange={(e) => setUnitFilter(e.target.value)}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  >
+                    <option value="">Tất cả</option>
+                    {uniqueUnits.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Results Count */}
+                <div className="flex items-end">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                      {filteredMaterials.length}
+                    </span>{" "}
+                    / {materials.length} kết quả
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status */}
+            {loading && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded border border-yellow-200 dark:border-yellow-800">
+                Đang tải dữ liệu...
+              </div>
+            )}
+
+            {error && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded border border-red-200 dark:border-red-800">
+                {error}
+              </div>
+            )}
+
+            {/* Materials Table */}
+            <div className="flex-1 overflow-auto bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 shadow-lg">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-4 text-center text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedItems.size === filteredMaterials.length &&
+                            filteredMaterials.length > 0
+                          }
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                      </th>
+                      <th
+                        className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        onClick={() => handleSort("name")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Tên
+                          {sortBy === "name" && (
+                            <span className="text-blue-500">
+                              {sortOrder === "asc" ? "↑" : "↓"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        SKU
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        Đơn vị
+                      </th>
+                      <th
+                        className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        onClick={() => handleSort("purchasePrice")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Giá nhập
+                          {sortBy === "purchasePrice" && (
+                            <span className="text-blue-500">
+                              {sortOrder === "asc" ? "↑" : "↓"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        Giá bán lẻ
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        Giá bán sỉ
+                      </th>
+                      <th
+                        className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        onClick={() => handleSort("stock")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Tồn kho
+                          {sortBy === "stock" && (
+                            <span className="text-blue-500">
+                              {sortOrder === "asc" ? "↑" : "↓"}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        Nhà cung cấp
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        SĐT NCC
+                      </th>
+                      <th className="px-4 py-4 text-center text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        Thao tác
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                    {filteredMaterials.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={11}
+                          className="px-4 py-12 text-center text-gray-500 dark:text-gray-400"
+                        >
+                          {loading ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                              <span>Đang tải...</span>
+                            </div>
+                          ) : (
+                            <div className="text-lg">
+                              Không có nguyên vật liệu nào
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredMaterials.map((material) => (
+                        <tr
+                          key={material.id}
+                          className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                            selectedItems.has(material.id)
+                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+                              : ""
+                          }`}
+                        >
+                          <td className="px-4 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.has(material.id)}
+                              onChange={(e) =>
+                                handleSelectItem(material.id, e.target.checked)
+                              }
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                            />
+                          </td>
+                          <td className="px-4 py-4 font-semibold text-gray-900 dark:text-white">
+                            {material.name}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 font-mono bg-gray-50 dark:bg-gray-700/50">
+                            {material.sku}
+                          </td>
+                          <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
+                            {material.unit}
+                          </td>
+                          <td className="px-4 py-4 text-gray-700 dark:text-gray-300 font-semibold">
+                            {formatCurrency(material.purchasePrice)}
+                          </td>
+                          <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
+                            {material.retailPrice
+                              ? formatCurrency(material.retailPrice)
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
+                            {material.wholesalePrice
+                              ? formatCurrency(material.wholesalePrice)
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            {(() => {
+                              const stockStatus = getStockStatus(
+                                material.availableStock || material.stock
+                              );
+                              const hasCommitments =
+                                (material.committedQuantity || 0) > 0;
+                              return (
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">
+                                      {stockStatus.icon}
+                                    </span>
+                                    <span
+                                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                        stockStatus.color
+                                      } ${
+                                        (material.availableStock ||
+                                          material.stock) === 0
+                                          ? "bg-red-100 dark:bg-red-900/30"
+                                          : (material.availableStock ||
+                                              material.stock) <= 5
+                                          ? "bg-orange-100 dark:bg-orange-900/30"
+                                          : (material.availableStock ||
+                                              material.stock) <= 10
+                                          ? "bg-yellow-100 dark:bg-yellow-900/30"
+                                          : "bg-green-100 dark:bg-green-900/30"
+                                      }`}
+                                    >
+                                      {hasCommitments ? (
+                                        <>
+                                          <span className="font-bold text-green-700 dark:text-green-300">
+                                            {material.availableStock}
+                                          </span>
+                                          <span className="text-gray-500 dark:text-gray-400">
+                                            /{material.stock}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        material.stock
+                                      )}
+                                      {(material.availableStock ||
+                                        material.stock) === 0 && " (Hết hàng)"}
+                                      {(material.availableStock ||
+                                        material.stock) > 0 &&
+                                        (material.availableStock ||
+                                          material.stock) <= 5 &&
+                                        " (Nguy hiểm)"}
+                                      {(material.availableStock ||
+                                        material.stock) > 5 &&
+                                        (material.availableStock ||
+                                          material.stock) <= 10 &&
+                                        " (Thấp)"}
+                                    </span>
+                                  </div>
+                                  {hasCommitments && (
+                                    <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                      🔒 Cam kết: {material.committedQuantity}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-4 py-4 text-gray-700 dark:text-gray-300 font-medium">
+                            {material.supplier || "-"}
+                          </td>
+                          <td className="px-4 py-4 text-gray-600 dark:text-gray-400">
+                            {(material as any).supplierphone ||
+                              (material as any).supplierPhone ||
+                              "-"}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex justify-center gap-1">
+                              <button
+                                onClick={() =>
+                                  handleShowMaterialDetail(material)
+                                }
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                title="Xem chi tiết & lịch sử"
+                              >
+                                <EyeIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleShowStockForecast(material)
+                                }
+                                className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                                title="Dự báo tồn kho thông minh"
+                              >
+                                <span className="text-sm">🔮</span>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleShowPriceAnalysis(material)
+                                }
+                                className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                                title="Phân tích giá nhà cung cấp"
+                              >
+                                <span className="text-sm">💰</span>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleShowStockAdjustment(material)
+                                }
+                                className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                                title="Điều chỉnh tồn kho"
+                              >
+                                <span className="text-sm">⚖️</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingMaterial(material);
+                                  setShowForm(true);
+                                }}
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                title="Nhập kho thêm"
+                              >
+                                <PencilSquareIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteMaterial(material.id)}
+                                className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                title="Xóa"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Hiển thị {filteredMaterials.length} / {materials.length} nguyên
+              vật liệu
+            </div>
+
+            {/* Form Modal */}
+            <MaterialForm
+              isOpen={showForm}
+              material={editingMaterial}
+              onClose={() => {
+                setShowForm(false);
+                setEditingMaterial(null);
+              }}
+              onSubmit={saveMaterial}
+              existingMaterials={materials}
+              suppliers={suppliers}
+              setSuppliers={setSuppliers}
+            />
+
+            {/* Material Detail Modal */}
+            <MaterialDetailModal
+              isOpen={showDetailModal}
+              material={selectedMaterialForDetail}
+              enhancedMaterials={enhancedMaterials}
+              onClose={() => {
+                setShowDetailModal(false);
+                setSelectedMaterialForDetail(null);
+              }}
+              onEdit={() => {
+                if (selectedMaterialForDetail) {
+                  setEditingMaterial(selectedMaterialForDetail);
+                  setShowForm(true);
+                  setShowDetailModal(false);
+                  setSelectedMaterialForDetail(null);
+                }
+              }}
+            />
+
+            {/* Stock Adjustment Modal */}
+            <StockAdjustmentModal
+              isOpen={showStockAdjustmentModal}
+              material={selectedMaterialForAdjustment}
+              onClose={() => {
+                setShowStockAdjustmentModal(false);
+                setSelectedMaterialForAdjustment(null);
+              }}
+              onSubmit={handleStockAdjustment}
+            />
+
+            {/* Stock Forecast Modal */}
+            <StockForecastModal
+              isOpen={showForecastModal}
+              material={selectedMaterialForForecast}
+              onClose={() => {
+                setShowForecastModal(false);
+                setSelectedMaterialForForecast(null);
+              }}
+            />
+
+            {/* Supplier Price Analysis Modal */}
+            <SupplierPriceAnalysisModal
+              isOpen={showPriceAnalysisModal}
+              material={selectedMaterialForPriceAnalysis}
+              onClose={() => {
+                setShowPriceAnalysisModal(false);
+                setSelectedMaterialForPriceAnalysis(null);
+              }}
+            />
+            {/* CSV Import Modal */}
+            <MaterialImportModal
+              isOpen={showImportModal}
+              onClose={() => setShowImportModal(false)}
+              onImport={handleCsvImport}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MaterialManager;

@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom global styles */
+:root {
+  --font-sans: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Hide ALL scrollbars globally while keeping scroll functionality */
+/* Applies to the whole app; use `.show-scrollbar` on a container to opt out */
+* {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Utility to hide scrollbars while keeping scroll functionality */
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+
+  /* Opt-out utility: show scrollbars for a specific container */
+  .show-scrollbar {
+    -ms-overflow-style: auto;
+    scrollbar-width: auto;
+  }
+  .show-scrollbar::-webkit-scrollbar {
+    display: initial;
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* Print tweaks: hide overlay/backdrop and buttons with Tailwind's print:hidden classes already used */
+@media print {
+  /* Remove default page margins */
+  @page {
+    size: A5 portrait;
+    margin: 10mm;
+  }
+  /* Ensure white background for print content */
+  body {
+    background: #fff !important;
+  }
+  /* Only print the active print area */
+  body * {
+    visibility: hidden !important;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+  .print-area {
+    position: static !important;
+    inset: auto !important;
+  }
+  /* Hide typical modal backdrops */
+  .fixed.inset-0 {
+    background: transparent !important;
+  }
+  /* Avoid page breaks inside table rows */
+  tr,
+  td,
+  th {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border-color: #000 !important;
+  }
+  img {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
