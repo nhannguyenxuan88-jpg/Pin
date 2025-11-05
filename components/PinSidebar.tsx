@@ -83,18 +83,18 @@ export const PinTopNav: React.FC<{
   const [showLogoMenu, setShowLogoMenu] = useState(false);
 
   const navLinks = [
-    // 1. SALES & PRODUCTS - BÃ¡n hÃ ng & Sáº£n pháº©m
-    { to: "/sales", icon: <ShoppingCartIcon />, label: "BÃ¡n hÃ ng" },
-    { to: "/products", icon: <TagIcon />, label: "Sáº£n pháº©m" },
+    // 1. SALES & PRODUCTS - Bán hàng & Sản phẩm
+    { to: "/sales", icon: <ShoppingCartIcon />, label: "Bán hàng" },
+    { to: "/products", icon: <TagIcon />, label: "Sản phẩm" },
 
-    // 2. PRODUCTION - Sáº£n xuáº¥t (gá»™p Materials + BOMs + Repairs)
-    { to: "/materials", icon: <CubeIcon />, label: "Váº­t liá»‡u" },
-    { to: "/boms", icon: <BeakerIcon />, label: "Sáº£n xuáº¥t" },
+    // 2. PRODUCTION - Sản xuất (gộp Materials + BOMs + Repairs)
+    { to: "/materials", icon: <CubeIcon />, label: "Vật liệu" },
+    { to: "/boms", icon: <BeakerIcon />, label: "Sản xuất" },
     { to: "/repairs", icon: <WrenchScrewdriverIcon />, label: "Sửa chữa" },
 
-    // 3. FINANCIAL & ANALYTICS - TÃ i chÃ­nh & BÃ¡o cÃ¡o (gá»™p táº¥t cáº£ bÃ¡o cÃ¡o)
-    { to: "/financial", icon: <BanknotesIcon />, label: "TÃ i chÃ­nh" },
-    { to: "/reports", icon: <ChartBarIcon />, label: "BÃ¡o cÃ¡o" },
+    // 3. FINANCIAL & ANALYTICS - Tài chính & Báo cáo (gộp tất cả báo cáo)
+    { to: "/financial", icon: <BanknotesIcon />, label: "Tài chính" },
+    { to: "/reports", icon: <ChartBarIcon />, label: "Báo cáo" },
   ];
 
   return (
@@ -159,7 +159,7 @@ export const PinTopNav: React.FC<{
                         className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
                       >
                         <CpuChipIcon className="w-4 h-4" />
-                        AI Dá»± Ä‘oÃ¡n
+                        AI Dự đoán
                       </NavLink>
 
                       <NavLink
@@ -168,7 +168,7 @@ export const PinTopNav: React.FC<{
                         className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
                       >
                         <DocumentChartBarIcon className="w-4 h-4" />
-                        Chi phÃ­ SX
+                        Chi phí SX
                       </NavLink>
 
                       <div className="border-t border-slate-200 dark:border-slate-600 my-2"></div>
@@ -179,7 +179,7 @@ export const PinTopNav: React.FC<{
                         className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
                       >
                         <CogIcon className="w-5 h-5" />
-                        Danh bạ¡
+                        Danh bạ
                       </NavLink>
 
                       <button
@@ -202,7 +202,7 @@ export const PinTopNav: React.FC<{
                             d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                           />
                         </svg>
-                        Chuyá»ƒn á»©ng dá»¥ng
+                        Chuyển ứng dụng
                       </button>
                     </div>
                   </div>
@@ -259,17 +259,17 @@ export const PinMobileNav: React.FC = () => {
     {
       to: "/sales",
       icon: <ShoppingCartIcon className="w-6 h-6" />,
-      label: "BÃ¡n hÃ ng",
+      label: "Bán hàng",
     },
     {
       to: "/materials",
       icon: <CubeIcon className="w-6 h-6" />,
-      label: "Váº­t tÆ°",
+      label: "Vật tư",
     },
     {
       to: "/boms",
       icon: <BeakerIcon className="w-6 h-6" />,
-      label: "Sáº£n xuáº¥t",
+      label: "Sản xuất",
     },
     {
       to: "/repairs",
@@ -279,12 +279,12 @@ export const PinMobileNav: React.FC = () => {
     {
       to: "/reports",
       icon: <ChartBarIcon className="w-6 h-6" />,
-      label: "BÃ¡o cÃ¡o",
+      label: "Báo cáo",
     },
     {
       to: "/financial",
       icon: <BanknotesIcon className="w-6 h-6" />,
-      label: "TÃ i chÃ­nh",
+      label: "Tài chính",
     },
   ];
 
@@ -308,7 +308,7 @@ export const FloatingNavButtons: React.FC<{ onSwitchApp: () => void }> = ({
       <button
         onClick={onSwitchApp}
         className="w-12 h-12 flex items-center justify-center rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm shadow-lg hover:bg-white/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 transition-colors"
-        title="Chuyá»ƒn á»©ng dá»¥ng"
+        title="Chuyển ứng dụng"
       >
         <HomeIcon className="w-6 h-6" />
       </button>
