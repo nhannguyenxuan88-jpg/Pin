@@ -84,7 +84,9 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
               value={selectedSupplierId}
               onChange={(e) => {
                 setSelectedSupplierId(e.target.value);
-                const supplier = (suppliers as any[]).find((s: any) => s.id === e.target.value);
+                const supplier = (suppliers as any[]).find(
+                  (s: any) => s.id === e.target.value
+                );
                 if (supplier) setSupplierQuery(supplier.name);
               }}
               className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-slate-100 focus:outline-none focus:border-sky-500"
@@ -92,7 +94,8 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
               <option value="">Chọn nhà cung cấp...</option>
               {(suppliers as any[]).map((sup: any) => (
                 <option key={sup.id} value={sup.id}>
-                  {sup.name} • Nợ: {new Intl.NumberFormat("vi-VN").format(sup.debt || 0)} ₫
+                  {sup.name} • Nợ:{" "}
+                  {new Intl.NumberFormat("vi-VN").format(sup.debt || 0)} ₫
                 </option>
               ))}
             </select>
