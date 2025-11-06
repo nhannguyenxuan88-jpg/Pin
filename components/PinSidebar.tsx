@@ -92,6 +92,7 @@ export const PinTopNav: React.FC<{
 
     // 3. FINANCIAL & ANALYTICS - Tài chính & Báo cáo (gộp tất cả báo cáo)
     { to: "/financial", icon: <BanknotesIcon />, label: "Tài chính" },
+    { to: "/receivables", icon: <BanknotesIcon />, label: "Công Nợ" },
     { to: "/reports", icon: <ChartBarIcon />, label: "Báo cáo" },
   ];
 
@@ -316,6 +317,11 @@ export const PinMobileNav: React.FC = () => {
       to: "/financial",
       icon: <BanknotesIcon className="w-6 h-6" />,
       label: "Tài chính",
+    },
+    {
+      to: "/receivables",
+      icon: <BanknotesIcon className="w-6 h-6" />,
+      label: "Công Nợ",
     },
   ];
 

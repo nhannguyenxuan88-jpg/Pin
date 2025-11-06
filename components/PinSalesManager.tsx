@@ -1,11 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
-import type {
-  PinProduct,
-  PinCartItem,
-  PinSale,
-  PinCustomer,
-} from "../types";
+import type { PinProduct, PinCartItem, PinSale, PinCustomer } from "../types";
 import {
   ShoppingCartIcon,
   PlusIcon,
@@ -1444,6 +1439,28 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       {formatCurrency(s.total)}
                     </td>
                     <td className="p-3 text-right">
+                      <button
+                        onClick={() => {
+                          setLastSaleData(s);
+                          setIsReceiptVisible(true);
+                        }}
+                        title="In hóa đơn"
+                        className="mr-2 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                          />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => openEdit(s)}
                         disabled={!currentUser}

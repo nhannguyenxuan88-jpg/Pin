@@ -14,6 +14,7 @@ import PredictiveDashboard from "./PredictiveDashboard";
 import PinFinancialManager from "./PinFinancialManager";
 import PinProductionReset from "./PinProductionReset";
 import PinSettings from "./PinSettings";
+import Receivables from "./Receivables";
 import { CashTransaction, PinSale } from "../types";
 
 interface PinCorpAppProps {
@@ -158,6 +159,7 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
                 }
               />
               <Route path="/financial" element={<PinFinancialManager />} />
+              <Route path="/receivables" element={<Receivables />} />
               <Route path="/settings" element={<PinSettings />} />
               <Route
                 path="/production-reset"
