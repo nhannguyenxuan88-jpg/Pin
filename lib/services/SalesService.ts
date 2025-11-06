@@ -112,7 +112,8 @@ export function createSalesService(ctx: PinContextType): SalesService {
             !!pinSaleError &&
             (/duplicate key|unique constraint|23505|409|Conflict/i.test(
               pinSaleError.message || ""
-            ) || (pinSaleError.status === 409));
+            ) ||
+              pinSaleError.status === 409);
 
           if (!pinSaleError || !isUniqueViolation) {
             break;
