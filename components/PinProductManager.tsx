@@ -30,7 +30,7 @@ const EditPriceModal: React.FC<{
       setRetailPrice(product.retailPrice || product.sellingPrice || 0);
       setWholesalePrice(
         product.wholesalePrice ||
-          Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
+        Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
       );
     }
   }, [product, isOpen]);
@@ -135,11 +135,10 @@ const EditPriceModal: React.FC<{
             title={
               !currentUser ? "Bạn phải đăng nhập để lưu thay đổi" : undefined
             }
-            className={`font-semibold py-2 px-4 rounded-lg ${
-              currentUser
+            className={`font-semibold py-2 px-4 rounded-lg ${currentUser
                 ? "bg-sky-600 text-white"
                 : "bg-sky-300 text-white/70 cursor-not-allowed"
-            }`}
+              }`}
           >
             Lưu
           </button>
@@ -250,38 +249,39 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
         onSave={updateProduct}
         product={editingProduct}
       />
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100">
+      <div className="flex justify-between items-center animate-fadeIn">
+        <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           🏭 Quản lý Thành phẩm
         </h1>
         <div className="flex items-center gap-4">
           <button
             onClick={syncProductsFromCompletedOrders}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
           >
             🔄 Sync từ Đơn hoàn thành
           </button>
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Tổng: <span className="font-semibold">{products.length}</span> sản
-            phẩm
+          <div className="px-5 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/40 dark:to-purple-900/40 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Tổng: </span>
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{products.length}</span>
+            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400"> sản phẩm</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200/60 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border-2 border-slate-200 dark:border-slate-700 animate-fadeIn">
         <div className="flex gap-4 items-center">
           <input
             type="text"
             placeholder="🔍 Tìm theo tên hoặc SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-slate-100"
+            className="flex-1 px-5 py-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-base font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-200 shadow-sm"
           />
           {filteredProducts.length !== products.length && (
-            <div className="text-sm text-slate-600 dark:text-slate-400">
-              Tìm thấy:{" "}
-              <span className="font-semibold">{filteredProducts.length}</span>{" "}
-              sản phẩm
+            <div className="px-5 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 rounded-xl border-2 border-green-200 dark:border-green-800">
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Tìm thấy: </span>
+              <span className="text-lg font-bold text-green-600 dark:text-green-400">{filteredProducts.length}</span>
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400"> sản phẩm</span>
             </div>
           )}
         </div>
@@ -345,13 +345,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                   </td>
                   <td className="p-4 text-right">
                     <div
-                      className={`font-bold ${
-                        product.stock <= 10
+                      className={`font-bold ${product.stock <= 10
                           ? "text-red-500"
                           : product.stock <= 50
-                          ? "text-yellow-500"
-                          : "text-green-600 dark:text-green-400"
-                      }`}
+                            ? "text-yellow-500"
+                            : "text-green-600 dark:text-green-400"
+                        }`}
                     >
                       {product.stock}
                     </div>
@@ -359,8 +358,8 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                       {product.stock <= 10
                         ? "⚠️ Thấp"
                         : product.stock <= 50
-                        ? "🔶 Vừa"
-                        : "✅ Ổn"}
+                          ? "🔶 Vừa"
+                          : "✅ Ổn"}
                     </div>
                   </td>
                   <td className="p-4 text-right text-slate-800 dark:text-slate-200">
@@ -376,19 +375,18 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                       </div>
                     </div>
                     <div
-                      className={`text-xs mt-1 ${
-                        profitMarginRetail >= 20
+                      className={`text-xs mt-1 ${profitMarginRetail >= 20
                           ? "text-green-500"
                           : profitMarginRetail >= 10
-                          ? "text-yellow-500"
-                          : "text-red-500"
-                      }`}
+                            ? "text-yellow-500"
+                            : "text-red-500"
+                        }`}
                     >
                       {profitMarginRetail >= 20
                         ? "💚 Tốt"
                         : profitMarginRetail >= 10
-                        ? "🟡 TB"
-                        : "🔴 Thấp"}
+                          ? "🟡 TB"
+                          : "🔴 Thấp"}
                     </div>
                   </td>
                   <td className="p-4">
@@ -439,13 +437,13 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                           if (activeOrders.length > 0) {
                             alert(
                               `⚠️ KHÔNG THỂ XÓA SẢN PHẨM!\n\n` +
-                                `Sản phẩm "${product.name}" có ${activeOrders.length} đơn hàng sản xuất đang hoạt động:\n` +
-                                `${activeOrders
-                                  .map(
-                                    (order) => `• ${order.id} (${order.status})`
-                                  )
-                                  .join("\n")}\n\n` +
-                                `Vui lòng hoàn thành hoặc hủy các đơn hàng này trước khi xóa sản phẩm.`
+                              `Sản phẩm "${product.name}" có ${activeOrders.length} đơn hàng sản xuất đang hoạt động:\n` +
+                              `${activeOrders
+                                .map(
+                                  (order) => `• ${order.id} (${order.status})`
+                                )
+                                .join("\n")}\n\n` +
+                              `Vui lòng hoàn thành hoặc hủy các đơn hàng này trước khi xóa sản phẩm.`
                             );
                             return;
                           }
