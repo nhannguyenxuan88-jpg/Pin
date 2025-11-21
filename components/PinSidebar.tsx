@@ -15,6 +15,8 @@ import {
   BanknotesIcon,
   CogIcon,
   TrashIcon,
+  ArrowsLeftRightIcon,
+  ArrowRightOnRectangleIcon,
 } from "./common/Icons";
 import { ThemeToggle } from "./ThemeToggle";
 import type { User } from "../types";
@@ -225,19 +227,7 @@ export const PinTopNav: React.FC<{
                         }}
                         className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                          />
-                        </svg>
+                        <ArrowsLeftRightIcon className="w-4 h-4" />
                         Chuyển ứng dụng
                       </button>
 
@@ -255,19 +245,7 @@ export const PinTopNav: React.FC<{
                         }}
                         className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-sm text-red-600 dark:text-red-400"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5m0 0l-5-5m5 5H3"
-                          />
-                        </svg>
+                        <ArrowRightOnRectangleIcon className="w-4 h-4" />
                         Đăng xuất
                       </button>
                     </div>
@@ -415,19 +393,7 @@ export const FloatingNavButtons: React.FC<{ onSwitchApp: () => void }> = ({
         className="w-12 h-12 flex items-center justify-center rounded-full bg-red-50/80 dark:bg-red-900/30 backdrop-blur-sm shadow-lg hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors"
         title="Đăng xuất"
       >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5m0 0l-5-5m5 5H3"
-          />
-        </svg>
+        <ArrowRightOnRectangleIcon className="w-6 h-6" />
       </button>
     </div>
   );

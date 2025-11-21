@@ -12,6 +12,10 @@ import {
   XMarkIcon,
   CubeIcon,
   PencilSquareIcon,
+  MagnifyingGlassIcon,
+  ChevronRightIcon,
+  UsersIcon,
+  PrinterIcon,
 } from "./common/Icons";
 import PinReceiptModal from "./PinReceiptModal";
 
@@ -956,19 +960,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
                         title="Bỏ chọn khách hàng"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
+                        <XMarkIcon className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -995,19 +987,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         onFocus={() => setIsCustomerListOpen(true)}
                         className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-l-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       />
-                      <svg
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
+                      <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                     </div>
                     <button
                       type="button"
@@ -1066,19 +1046,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                     </div>
                                   </div>
                                   <div className="flex items-center">
-                                    <svg
-                                      className="w-4 h-4 text-slate-400 group-hover:text-blue-500"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 5l7 7-7 7"
-                                      />
-                                    </svg>
+                                    <ChevronRightIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
                                   </div>
                                 </div>
                               </div>
@@ -1087,19 +1055,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         ) : (
                           <div className="p-6 text-center">
                             <div className="text-slate-400 mb-2">
-                              <svg
-                                className="w-12 h-12 mx-auto"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1.5}
-                                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                                />
-                              </svg>
+                              <UsersIcon className="w-12 h-12 mx-auto" />
                             </div>
                             <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                               Không tìm thấy khách hàng
@@ -1447,19 +1403,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         title="In hóa đơn"
                         className="mr-2 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                          />
-                        </svg>
+                        <PrinterIcon className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => openEdit(s)}
@@ -1523,6 +1467,24 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               </button>
             </div>
             <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium">Ngày bán</label>
+                <input
+                  type="datetime-local"
+                  value={
+                    editingSale?.date
+                      ? new Date(editingSale.date).toISOString().slice(0, 16)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    if (editingSale) {
+                      const newDate = new Date(e.target.value).toISOString();
+                      setEditingSale({ ...editingSale, date: newDate });
+                    }
+                  }}
+                  className="w-full p-2 border rounded-md bg-white dark:bg-slate-700"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium">Giảm giá</label>
                 <div className="flex mt-1">

@@ -47,6 +47,14 @@ export default function PrintRepairOrder({ order }: { order: PinRepairOrder }) {
         <strong>Kỹ thuật viên:</strong> {order.technicianName || "-"}
         <br />
         <strong>Trạng thái:</strong> {order.status}
+        <br />
+        {(order as any).warrantyPeriod > 0 && (
+          <>
+            <strong>Thời gian bảo hành:</strong> {(order as any).warrantyPeriod}{" "}
+            ngày
+            <br />
+          </>
+        )}
       </div>
 
       <div style={{ marginBottom: 12 }}>

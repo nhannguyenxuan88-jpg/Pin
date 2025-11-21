@@ -66,6 +66,7 @@ const RepairOrderModal: React.FC<RepairOrderModalProps> = ({
     paymentStatus: "unpaid",
     partialPaymentAmount: 0,
     depositAmount: 0,
+    warrantyPeriod: 0, // Thêm: Thời gian bảo hành (ngày)
   });
 
   const [materialInput, setMaterialInput] = useState({
@@ -326,6 +327,14 @@ const RepairOrderModal: React.FC<RepairOrderModalProps> = ({
       }
 
       const total = calculateTotal();
+
+      // Validation: Phải có ít nhất vật liệu hoặc phí dịch vụ
+      if (total <= 0) {
+        alert("Vui lòng nhập ít nhất vật liệu sử dụng hoặc phí dịch vụ");
+        setIsSubmitting(false);
+        return;
+      }
+
       // Validate partial payment if selected
       if (formData.paymentStatus === "partial") {
         const amt = Number(formData.partialPaymentAmount || 0);
@@ -566,6 +575,52 @@ const RepairOrderModal: React.FC<RepairOrderModalProps> = ({
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                 />
               </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Thời gian bảo hành (ngày)
+                </label>
+                <input
+                  type="number"
+                  name="warrantyPeriod"
+                  placeholder="VD: 30 (ngày)"
+                  value={formData.warrantyPeriod || 0}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      warrantyPeriod: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  min="0"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+              <div></div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Thời gian bảo hành (ngày)
+                </label>
+                <input
+                  type="number"
+                  name="warrantyPeriod"
+                  placeholder="VD: 30 (ngày)"
+                  value={formData.warrantyPeriod || 0}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      warrantyPeriod: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  min="0"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+              <div />
             </div>
 
             <div className="grid md:grid-cols-2 gap-3 mb-3">

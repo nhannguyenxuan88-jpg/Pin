@@ -1222,7 +1222,7 @@ const PinFinancialManager: React.FC = () => {
                       Ngày
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                      Mô tả
+                      Mô tả / Ghi chú
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
                       Khách hàng/Người nhận
@@ -1250,7 +1250,14 @@ const PinFinancialManager: React.FC = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                          {transaction.notes || "-"}
+                          <div className="font-medium">
+                            {transaction.description || "-"}
+                          </div>
+                          {transaction.notes && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {transaction.notes}
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                           {typeof transaction.contact === "object" &&

@@ -1273,7 +1273,7 @@ const ReceiptItemRow: React.FC<{
             </button>
           </div>
           {isListOpen && (
-            <div className="absolute z-30 top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
               {materials.length > 0 ? (
                 materials
                   .filter(
@@ -1399,7 +1399,7 @@ const ReceiptItemRow: React.FC<{
               Thành tiền
             </label>
             <p className="font-semibold text-slate-800 dark:text-slate-100 mt-1">
-              {formatCurrency(item.quantity * item.purchasePrice)}
+              {formatCurrency(item.quantity * item.retailPrice)}
             </p>
           </div>
           <button
