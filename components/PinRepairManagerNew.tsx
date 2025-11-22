@@ -528,9 +528,9 @@ const PinRepairManagerNew: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+      {/* Page Header with Stats */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex-shrink-0">
           <h1 className="text-3xl font-bold text-pin-gray-900 dark:text-pin-dark-900">
             Quản lý Sửa chữa
           </h1>
@@ -538,78 +538,67 @@ const PinRepairManagerNew: React.FC = () => {
             Quản lý phiếu sửa chữa và bảo hành
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="lg"
-          leftIcon={<PlusIcon className="w-5 h-5" />}
-          onClick={() => handleOpenModal()}
-        >
-          Tạo phiếu mới
-        </Button>
+
+        {/* 4 Stats Cards + Button */}
+        <div className="flex flex-col gap-3 lg:flex-1 lg:max-w-4xl">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatsCard
+                title="Tổng phiếu"
+                value={stats.total}
+                icon={<WrenchScrewdriverIcon className="w-6 h-6" />}
+                variant="primary"
+                compact
+              />
+              <StatsCard
+                title="Chờ xử lý"
+                value={stats.pending}
+                icon={<ClockIcon className="w-6 h-6" />}
+                variant="warning"
+                compact
+              />
+              <StatsCard
+                title="Đang sửa"
+                value={stats.inProgress}
+                icon={<WrenchScrewdriverIcon className="w-6 h-6" />}
+                variant="primary"
+                compact
+              />
+              <StatsCard
+                title="Hoàn thành"
+                value={stats.completed}
+                icon={<CheckCircleIcon className="w-6 h-6" />}
+                variant="success"
+                compact
+              />
+            </div>
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={<PlusIcon className="w-5 h-5" />}
+              onClick={() => handleOpenModal()}
+              className="flex-shrink-0"
+            >
+              Tạo phiếu mới
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <CardGrid cols={4}>
+      {/* Revenue Stats - 2 Cards */}
+      <CardGrid cols={2}>
         <StatsCard
-          title="Tổng phiếu"
-          value={stats.total}
-          icon={<WrenchScrewdriverIcon className="w-6 h-6" />}
-          variant="primary"
-        />
-        <StatsCard
-          title="Chờ xử lý"
-          value={stats.pending}
-          icon={<ClockIcon className="w-6 h-6" />}
-          variant="warning"
-        />
-        <StatsCard
-          title="Đang sửa"
-          value={stats.inProgress}
-          icon={<WrenchScrewdriverIcon className="w-6 h-6" />}
-          variant="primary"
-        />
-        <StatsCard
-          title="Hoàn thành"
-          value={stats.completed}
-          icon={<CheckCircleIcon className="w-6 h-6" />}
+          title="Tổng doanh thu"
+          value={formatCurrency(stats.totalRevenue)}
+          icon={<BanknotesIcon className="w-6 h-6" />}
           variant="success"
         />
-      </CardGrid>
-
-      {/* Revenue Stats */}
-      <CardGrid cols={2}>
-        <Card
-          padding="lg"
-          className="bg-gradient-to-br from-pin-blue-500 to-pin-blue-600 text-white"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/80 text-sm mb-1">Tổng doanh thu</p>
-              <p className="text-3xl font-bold">
-                {formatCurrency(stats.totalRevenue)}
-              </p>
-            </div>
-            <div className="w-16 h-16 rounded-lg bg-white/20 flex items-center justify-center">
-              <BanknotesIcon className="w-8 h-8" />
-            </div>
-          </div>
-        </Card>
-        <Card
-          padding="lg"
-          className="bg-gradient-to-br from-pin-red-500 to-pin-red-600 text-white"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/80 text-sm mb-1">Chưa thanh toán</p>
-              <p className="text-3xl font-bold">
-                {formatCurrency(stats.unpaidAmount)}
-              </p>
-            </div>
-            <div className="w-16 h-16 rounded-lg bg-white/20 flex items-center justify-center">
-              <CalendarIcon className="w-8 h-8" />
-            </div>
-          </div>
-        </Card>
+        <StatsCard
+          title="Chưa thanh toán"
+          value={formatCurrency(stats.unpaidAmount)}
+          icon={<CalendarIcon className="w-6 h-6" />}
+          variant="danger"
+        />
       </CardGrid>
 
       {/* Filters */}

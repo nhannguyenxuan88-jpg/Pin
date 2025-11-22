@@ -146,6 +146,8 @@ export interface StatsCardProps {
   };
   variant?: "default" | "primary" | "success" | "warning" | "danger";
   className?: string;
+  valueClassName?: string;
+  compact?: boolean; // Compact mode for cards with simple numbers
 }
 
 const variantClasses = {
@@ -163,6 +165,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   trend,
   variant = "primary",
   className,
+  valueClassName,
+  compact = false,
 }) => {
   return (
     <div
@@ -171,30 +175,78 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         "bg-gradient-to-br",
         variantClasses[variant],
         "text-white",
-        "rounded-xl p-6",
+        "rounded-lg sm:rounded-xl",
+        compact ? "p-2 sm:p-2.5 md:p-3" : "p-3 sm:p-4 md:p-5 lg:p-6",
         "shadow-lg",
         className
       )}
     >
       {/* Decorative background element */}
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full" />
-      <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/5 rounded-full" />
+      <div
+        className={cn(
+          "absolute bg-white/10 rounded-full",
+          compact
+            ? "-right-1 -top-1 w-8 h-8 sm:w-12 sm:h-12"
+            : "-right-2 -top-2 sm:-right-4 sm:-top-4 w-16 h-16 sm:w-24 sm:h-24"
+        )}
+      />
+      <div
+        className={cn(
+          "absolute bg-white/5 rounded-full",
+          compact
+            ? "-right-2 -bottom-2 w-10 h-10 sm:w-14 sm:h-14"
+            : "-right-3 -bottom-3 sm:-right-6 sm:-bottom-6 w-20 h-20 sm:w-32 sm:h-32"
+        )}
+      />
 
       <div className="relative z-10">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <p className="text-white/80 text-sm font-medium mb-1">{title}</p>
-            <p className="text-3xl font-bold">{value}</p>
+        <div
+          className={cn(
+            "flex items-start justify-between",
+            compact ? "gap-1 mb-1" : "gap-2 mb-2 sm:mb-3"
+          )}
+        >
+          <div className="flex-1 min-w-0">
+            <p
+              className={cn(
+                "text-white/80 font-medium leading-tight",
+                compact
+                  ? "text-[10px] sm:text-xs mb-0.5 truncate"
+                  : "text-xs sm:text-sm mb-1 truncate"
+              )}
+            >
+              {title}
+            </p>
+            <p
+              className={cn(
+                "font-bold leading-tight",
+                compact
+                  ? "text-xl sm:text-2xl"
+                  : "text-sm sm:text-base md:text-lg lg:text-xl break-words",
+                valueClassName
+              )}
+            >
+              {value}
+            </p>
           </div>
           {icon && (
-            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
-              {icon}
+            <div
+              className={cn(
+                "flex-shrink-0 rounded-md bg-white/20 flex items-center justify-center",
+                compact
+                  ? "w-8 h-8 sm:w-10 sm:h-10"
+                  : "w-10 h-10 sm:w-12 sm:h-12"
+              )}
+            >
+              <div className={cn(compact ? "scale-75" : "scale-90")}>
+                {icon}
+              </div>
             </div>
           )}
         </div>
 
         {trend && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1.5 text-xs">
             <span
               className={cn(
                 "font-semibold",
@@ -203,7 +255,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
             >
               {trend.value >= 0 ? "↗" : "↘"} {Math.abs(trend.value)}%
             </span>
-            <span className="text-white/70">{trend.label}</span>
+            <span className="text-white/70 truncate">{trend.label}</span>
           </div>
         )}
       </div>
@@ -214,7 +266,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
 // Grid layout for cards
 export interface CardGridProps {
   children: React.ReactNode;
-  cols?: 1 | 2 | 3 | 4;
+  cols?: 1 | 2 | 3 | 4 | 6;
   className?: string;
 }
 
@@ -223,6 +275,7 @@ const gridColsClasses = {
   2: "grid-cols-1 md:grid-cols-2",
   3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
   4: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+  6: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
 };
 
 export const CardGrid: React.FC<CardGridProps> = ({
@@ -231,7 +284,13 @@ export const CardGrid: React.FC<CardGridProps> = ({
   className,
 }) => {
   return (
-    <div className={cn("grid gap-6", gridColsClasses[cols], className)}>
+    <div
+      className={cn(
+        "grid gap-3 sm:gap-4 md:gap-6",
+        gridColsClasses[cols],
+        className
+      )}
+    >
       {children}
     </div>
   );
