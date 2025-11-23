@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "../../lib/utils/cn";
+import { Icon, IconName, IconTone, IconSize } from "../common/Icon";
 
 export interface CardProps {
   children: React.ReactNode;
@@ -140,6 +141,9 @@ export interface StatsCardProps {
   title: string;
   value: string | number;
   icon?: React.ReactNode;
+  iconName?: IconName;
+  iconTone?: IconTone;
+  iconSize?: IconSize;
   trend?: {
     value: number;
     label: string;
@@ -162,12 +166,26 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   title,
   value,
   icon,
+  iconName,
+  iconTone,
+  iconSize,
   trend,
   variant = "primary",
   className,
   valueClassName,
   compact = false,
 }) => {
+  const resolvedIcon =
+    icon ||
+    (iconName ? (
+      <Icon
+        name={iconName}
+        tone={iconTone ?? "contrast"}
+        size={iconSize ?? (compact ? "md" : "lg")}
+        className="drop-shadow-sm"
+      />
+    ) : null);
+
   return (
     <div
       className={cn(
@@ -229,7 +247,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
               {value}
             </p>
           </div>
-          {icon && (
+          {resolvedIcon && (
             <div
               className={cn(
                 "flex-shrink-0 rounded-md bg-white/20 flex items-center justify-center",
@@ -239,7 +257,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
               )}
             >
               <div className={cn(compact ? "scale-75" : "scale-90")}>
-                {icon}
+                {resolvedIcon}
               </div>
             </div>
           )}

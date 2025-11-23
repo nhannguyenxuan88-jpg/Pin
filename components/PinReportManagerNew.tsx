@@ -3,14 +3,7 @@ import type { PinSale, ProductionOrder } from "../types";
 import { Card, CardGrid, CardTitle, CardBody, StatsCard } from "./ui/Card";
 import { Badge } from "./ui/Badge";
 import { DataTable, Column } from "./ui/Table";
-import {
-  BanknotesIcon,
-  ChartBarIcon,
-  ShoppingCartIcon,
-  CubeIcon,
-  TrendingUpIcon,
-  CalendarIcon,
-} from "./common/Icons";
+import { Icon } from "./common/Icon";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", {
@@ -223,7 +216,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
 
         {/* Date Filter */}
         <Card padding="sm" className="flex items-center gap-3 w-full sm:w-auto">
-          <CalendarIcon className="w-5 h-5 text-pin-gray-400" />
+          <Icon name="calendar" size="md" tone="muted" />
           <input
             type="date"
             value={startDate}
@@ -245,25 +238,25 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
         <StatsCard
           title="Tổng doanh thu"
           value={formatCurrency(reportData.totalRevenue)}
-          icon={<BanknotesIcon className="w-6 h-6" />}
+          iconName="money"
           variant="primary"
         />
         <StatsCard
           title="Lợi nhuận"
           value={formatCurrency(reportData.totalProfit)}
-          icon={<TrendingUpIcon className="w-6 h-6" />}
+          iconName="progressUp"
           variant="success"
         />
         <StatsCard
           title="Đơn hàng"
           value={reportData.filteredSales.length}
-          icon={<ShoppingCartIcon className="w-6 h-6" />}
+          iconName="sales"
           variant="warning"
         />
         <StatsCard
           title="Sản xuất"
           value={reportData.productionStats.total}
-          icon={<CubeIcon className="w-6 h-6" />}
+          iconName="stock"
           variant="info"
         />
       </CardGrid>
@@ -278,7 +271,12 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
               : "border-transparent text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-gray-900 dark:hover:text-pin-dark-900"
           }`}
         >
-          <ShoppingCartIcon className="w-4 h-4 inline mr-2" />
+          <Icon
+            name="sales"
+            size="sm"
+            tone={selectedTab === "sales" ? "primary" : "muted"}
+            className="inline mr-2"
+          />
           Bán hàng ({reportData.filteredSales.length})
         </button>
         <button
@@ -289,7 +287,12 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
               : "border-transparent text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-gray-900 dark:hover:text-pin-dark-900"
           }`}
         >
-          <CubeIcon className="w-4 h-4 inline mr-2" />
+          <Icon
+            name="stock"
+            size="sm"
+            tone={selectedTab === "production" ? "primary" : "muted"}
+            className="inline mr-2"
+          />
           Sản xuất ({reportData.productionStats.total})
         </button>
       </div>
@@ -300,7 +303,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
           {/* Sales Table */}
           <Card padding="none">
             <div className="p-6 border-b border-pin-gray-200 dark:border-pin-dark-300">
-              <CardTitle icon={<ChartBarIcon className="w-5 h-5" />}>
+              <CardTitle icon={<Icon name="ratios" size="md" tone="primary" />}>
                 Chi tiết đơn hàng
               </CardTitle>
             </div>
@@ -317,7 +320,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
           {/* Top Products */}
           <Card>
             <CardTitle
-              icon={<TrendingUpIcon className="w-5 h-5" />}
+              icon={<Icon name="progressUp" size="md" tone="primary" />}
               subtitle="Sản phẩm bán chạy nhất"
             >
               Top sản phẩm
@@ -337,7 +340,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       {selectedTab === "production" && (
         <Card>
           <CardTitle
-            icon={<CubeIcon className="w-5 h-5" />}
+            icon={<Icon name="stock" size="md" tone="primary" />}
             subtitle="Thống kê sản xuất"
           >
             Tình trạng sản xuất

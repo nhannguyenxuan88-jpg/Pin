@@ -1,58 +1,64 @@
 import React from "react";
 import { cn } from "../../lib/utils/cn";
+import type { IconProps as PhosphorIconProps } from "phosphor-react";
 import {
-  ArrowTrendingDownIcon,
-  ArrowTrendingUpIcon,
-  BanknotesIcon,
-  BuildingLibraryIcon,
-  CalendarIcon,
-  ChartBarIcon,
-  ChartPieIcon,
-  CheckCircleIcon,
-  ClipboardDocumentListIcon,
-  ClockIcon,
-  CubeIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-  MagnifyingGlassIcon,
-  NoSymbolIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  SparklesIcon,
-  TrashIcon,
-  UserGroupIcon,
-  WrenchScrewdriverIcon,
-  XMarkIcon,
-} from "./Icons";
+  Bank,
+  Buildings,
+  CalendarBlank,
+  ChartBar,
+  ChartPie,
+  CheckCircle,
+  ClipboardText,
+  Clock,
+  Cube,
+  CurrencyDollarSimple,
+  Info,
+  MagnifyingGlass,
+  Money,
+  PencilSimple,
+  Plus,
+  Prohibit,
+  Sparkle,
+  Trash,
+  TrendDown,
+  TrendUp,
+  UsersThree,
+  Warning,
+  Wrench,
+  X,
+} from "phosphor-react";
+
+type PhosphorIconComponent = React.ComponentType<PhosphorIconProps>;
 
 export const ICON_REGISTRY = {
-  overview: ChartPieIcon,
-  assets: BuildingLibraryIcon,
-  cashflow: BanknotesIcon,
-  ratios: ChartBarIcon,
-  capital: BanknotesIcon,
-  equity: BuildingLibraryIcon,
-  workingCapital: BanknotesIcon,
-  repairs: WrenchScrewdriverIcon,
-  orders: ClipboardDocumentListIcon,
-  pending: ClockIcon,
-  success: CheckCircleIcon,
-  warning: ExclamationTriangleIcon,
-  danger: NoSymbolIcon,
-  info: InformationCircleIcon,
-  close: XMarkIcon,
-  search: MagnifyingGlassIcon,
-  add: PlusIcon,
-  edit: PencilSquareIcon,
-  delete: TrashIcon,
-  customers: UserGroupIcon,
-  stock: CubeIcon,
-  progressUp: ArrowTrendingUpIcon,
-  progressDown: ArrowTrendingDownIcon,
-  calendar: CalendarIcon,
-  highlight: SparklesIcon,
-  money: BanknotesIcon,
-} as const;
+  overview: ChartPie,
+  assets: Buildings,
+  cashflow: CurrencyDollarSimple,
+  ratios: ChartBar,
+  sales: ChartPie,
+  capital: Money,
+  equity: Bank,
+  workingCapital: Money,
+  repairs: Wrench,
+  orders: ClipboardText,
+  pending: Clock,
+  success: CheckCircle,
+  warning: Warning,
+  danger: Prohibit,
+  info: Info,
+  close: X,
+  search: MagnifyingGlass,
+  add: Plus,
+  edit: PencilSimple,
+  delete: Trash,
+  customers: UsersThree,
+  stock: Cube,
+  progressUp: TrendUp,
+  progressDown: TrendDown,
+  calendar: CalendarBlank,
+  highlight: Sparkle,
+  money: CurrencyDollarSimple,
+} as const satisfies Record<string, PhosphorIconComponent>;
 
 export type IconName = keyof typeof ICON_REGISTRY;
 export type IconTone =
@@ -62,14 +68,16 @@ export type IconTone =
   | "success"
   | "warning"
   | "danger"
-  | "info";
+  | "info"
+  | "contrast"
+  | "mutedContrast";
 export type IconSize = "sm" | "md" | "lg" | "xl";
 
-const sizeClasses: Record<IconSize, string> = {
-  sm: "w-4 h-4",
-  md: "w-5 h-5",
-  lg: "w-6 h-6",
-  xl: "w-8 h-8",
+const sizeValues: Record<IconSize, number> = {
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
 };
 
 const toneClasses: Record<IconTone, string> = {
@@ -80,11 +88,13 @@ const toneClasses: Record<IconTone, string> = {
   warning: "text-yellow-600 dark:text-yellow-400",
   danger: "text-red-600 dark:text-red-400",
   info: "text-blue-600 dark:text-blue-400",
+  contrast: "text-white",
+  mutedContrast: "text-white/80",
 };
 
-type SvgProps = Omit<React.SVGProps<SVGSVGElement>, "ref">;
+type BaseIconProps = Omit<PhosphorIconProps, "size" | "weight">;
 
-export interface StandardIconProps extends SvgProps {
+export interface StandardIconProps extends BaseIconProps {
   name: IconName;
   tone?: IconTone;
   size?: IconSize;
@@ -102,12 +112,9 @@ export const Icon: React.FC<StandardIconProps> = ({
   return (
     <IconComponent
       {...props}
-      className={cn(
-        "shrink-0",
-        sizeClasses[size],
-        toneClasses[tone],
-        className
-      )}
+      weight="duotone"
+      size={sizeValues[size]}
+      className={cn("shrink-0", toneClasses[tone], className)}
     />
   );
 };

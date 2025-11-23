@@ -3,17 +3,11 @@ import { usePinContext } from "../contexts/PinContext";
 import type { CashTransaction } from "../types";
 import DebtCollectionModal from "./DebtCollectionModal";
 import SupplierPaymentModal from "./SupplierPaymentModal";
-import { Card, StatsCard, CardGrid } from "./ui/Card";
+import { Card, StatsCard, CardGrid, type StatsCardProps } from "./ui/Card";
 import { DataTable } from "./ui/Table";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
-import {
-  MagnifyingGlassIcon,
-  UserGroupIcon,
-  CubeIcon,
-  BanknotesIcon,
-  CheckCircleIcon,
-} from "./common/Icons";
+import { Icon, type IconName } from "./common/Icon";
 
 interface Row {
   id: string;
@@ -39,6 +33,7 @@ interface SupplierRow {
   amount: number;
   paid: number;
   debt: number;
+  ordersCount?: number;
 }
 
 const fmt = (val: number) =>
@@ -272,6 +267,7 @@ export default function ReceivablesNew() {
         amount: info.total,
         paid,
         debt,
+        ordersCount: info.count,
       });
     }
     return arr.sort(
@@ -313,6 +309,79 @@ export default function ReceivablesNew() {
   const selectedDebt = activeList
     .filter((r: any) => selectedIds.includes(r.id))
     .reduce((s, r: any) => s + r.debt, 0);
+
+  const activeSummaryCards = useMemo<
+    Array<{
+      title: string;
+      value: string | number;
+      iconName: IconName;
+      variant: StatsCardProps["variant"];
+    }>
+  >(() => {
+    if (activeTab === "customers") {
+      const uniqueCustomers = new Set(
+        customerRows.map(
+          (row) => `${row.customerPhone || ""}-${row.customerName || ""}`
+        )
+      ).size;
+      const pendingOrders = customerRows.filter(
+        (row) => row.kind === "workorder"
+      ).length;
+
+      return [
+        {
+          title: "Tổng công nợ KH",
+          value: `${fmt(totalCustomerDebt)} đ`,
+          iconName: "money",
+          variant: "danger",
+        },
+        {
+          title: "Khách hàng đang nợ",
+          value: uniqueCustomers,
+          iconName: "customers",
+          variant: "primary",
+        },
+        {
+          title: "Phiếu sửa chưa thu",
+          value: pendingOrders,
+          iconName: "orders",
+          variant: "warning",
+        },
+      ];
+    }
+
+    const pendingReceipts = supplierRows.reduce(
+      (sum, row) => sum + (row.ordersCount || 0),
+      0
+    );
+
+    return [
+      {
+        title: "Tổng công nợ NCC",
+        value: `${fmt(totalSupplierDebt)} đ`,
+        iconName: "money",
+        variant: "danger",
+      },
+      {
+        title: "Nhà cung cấp đang nợ",
+        value: supplierRows.length,
+        iconName: "stock",
+        variant: "primary",
+      },
+      {
+        title: "Đơn nhập chưa thanh toán",
+        value: pendingReceipts,
+        iconName: "orders",
+        variant: "warning",
+      },
+    ];
+  }, [
+    activeTab,
+    customerRows,
+    supplierRows,
+    totalCustomerDebt,
+    totalSupplierDebt,
+  ]);
 
   const toggleAll = (checked: boolean) => {
     const next: Record<string, boolean> = {};
@@ -596,13 +665,13 @@ export default function ReceivablesNew() {
         <StatsCard
           title="Tổng công nợ"
           value={`${fmt(totalCustomerDebt + totalSupplierDebt)} đ`}
-          icon={<BanknotesIcon className="w-6 h-6" />}
+          iconName="money"
           variant="primary"
         />
         <StatsCard
           title="Công nợ khách hàng"
           value={`${fmt(totalCustomerDebt)} đ`}
-          icon={<UserGroupIcon className="w-6 h-6" />}
+          iconName="customers"
           trend={{
             value: customerRows.length,
             label: "khoản",
@@ -612,7 +681,7 @@ export default function ReceivablesNew() {
         <StatsCard
           title="Công nợ nhà cung cấp"
           value={`${fmt(totalSupplierDebt)} đ`}
-          icon={<CubeIcon className="w-6 h-6" />}
+          iconName="stock"
           trend={{
             value: supplierRows.length,
             label: "khoản",
@@ -623,38 +692,89 @@ export default function ReceivablesNew() {
 
       {/* Main Card */}
       <Card>
-        {/* Tab Navigation */}
-        <div className="border-b border-slate-200 dark:border-slate-700">
-          <div className="flex space-x-1 p-1">
-            <button
-              onClick={() => {
-                setActiveTab("customers");
-                setSelected({});
-              }}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === "customers"
-                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-              }`}
-            >
-              <UserGroupIcon className="w-5 h-5 inline-block mr-2" />
-              Công nợ khách hàng ({customerRows.length})
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("suppliers");
-                setSelected({});
-              }}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === "suppliers"
-                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-              }`}
-            >
-              <CubeIcon className="w-5 h-5 inline-block mr-2" />
-              Công nợ nhà cung cấp ({supplierRows.length})
-            </button>
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700 space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setActiveTab("customers");
+                  setSelected({});
+                }}
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "customers"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                }`}
+              >
+                <Icon
+                  name="customers"
+                  size="sm"
+                  tone={activeTab === "customers" ? "primary" : "muted"}
+                  className="mr-2"
+                />
+                Công nợ khách hàng ({customerRows.length})
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("suppliers");
+                  setSelected({});
+                }}
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "suppliers"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                }`}
+              >
+                <Icon
+                  name="stock"
+                  size="sm"
+                  tone={activeTab === "suppliers" ? "primary" : "muted"}
+                  className="mr-2"
+                />
+                Công nợ nhà cung cấp ({supplierRows.length})
+              </button>
+            </div>
+            <div className="lg:ml-auto text-sm text-slate-600 dark:text-slate-400">
+              Tổng công nợ đang hiển thị:
+              <span className="ml-1 font-semibold text-rose-600">
+                {fmt(totalDebt)} đ
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                onClick={() =>
+                  activeTab === "customers"
+                    ? setShowCollectModal(true)
+                    : setShowSupplierPayModal(true)
+                }
+                className="whitespace-nowrap"
+              >
+                <Icon
+                  name={activeTab === "customers" ? "success" : "money"}
+                  size="sm"
+                  tone="contrast"
+                  className="mr-2"
+                />
+                {activeTab === "customers" ? "Thu nợ" : "Thanh toán NCC"}
+              </Button>
+              {selectedIds.length > 0 && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setSelected({})}
+                  className="whitespace-nowrap"
+                >
+                  Xóa lựa chọn
+                </Button>
+              )}
+            </div>
           </div>
+
+          <CardGrid cols={3}>
+            {activeSummaryCards.map((card) => (
+              <StatsCard key={card.title} {...card} />
+            ))}
+          </CardGrid>
         </div>
 
         {/* Search and Actions */}
@@ -662,7 +782,12 @@ export default function ReceivablesNew() {
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search */}
             <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Icon
+                name="search"
+                size="md"
+                tone="muted"
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+              />
               <input
                 type="text"
                 placeholder={
@@ -683,7 +808,12 @@ export default function ReceivablesNew() {
                   Đã chọn {selectedIds.length} ({fmt(selectedDebt)} đ)
                 </span>
                 <Button variant="primary" onClick={handleCollectAllSelected}>
-                  <CheckCircleIcon className="w-4 h-4 mr-2" />
+                  <Icon
+                    name="success"
+                    size="sm"
+                    tone="contrast"
+                    className="mr-2"
+                  />
                   {activeTab === "customers" ? "Thu nợ" : "Thanh toán"}
                 </Button>
               </div>
@@ -692,16 +822,18 @@ export default function ReceivablesNew() {
         </div>
 
         {/* DataTable */}
-        <DataTable
-          data={activeList}
-          columns={
-            activeTab === "customers"
-              ? (customerColumns as any)
-              : (supplierColumns as any)
-          }
-          keyExtractor={(row: any) => row.id}
-          emptyMessage="Không có công nợ"
-        />
+        <div className="p-0 sm:p-4">
+          <DataTable
+            data={activeList}
+            columns={
+              activeTab === "customers"
+                ? (customerColumns as any)
+                : (supplierColumns as any)
+            }
+            keyExtractor={(row: any) => row.id}
+            emptyMessage="Không có công nợ"
+          />
+        </div>
       </Card>
 
       {/* Modals */}

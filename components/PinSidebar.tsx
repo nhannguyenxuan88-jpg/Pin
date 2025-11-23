@@ -17,10 +17,14 @@ import {
   TrashIcon,
   ArrowsLeftRightIcon,
   ArrowRightOnRectangleIcon,
+  SparklesIcon,
+  ClipboardDocumentListIcon,
+  CameraIcon,
 } from "./common/Icons";
 import { ThemeToggle } from "./ThemeToggle";
 import type { User } from "../types";
 import { supabase } from "../supabaseClient";
+import NotificationBell from "./NotificationBell";
 
 // --- NAV ITEM FOR DESKTOP TOP NAV ---
 // Consistent, purge-safe classes (no dynamic color strings)
@@ -132,6 +136,24 @@ export const PinTopNav: React.FC<{
       icon: <ChartBarIcon />,
       label: "Báo cáo",
       color: "text-violet-400",
+    },
+    {
+      to: "/analytics",
+      icon: <SparklesIcon />,
+      label: "Phân tích",
+      color: "text-purple-400",
+    },
+    {
+      to: "/audit-logs",
+      icon: <ClipboardDocumentListIcon />,
+      label: "Logs",
+      color: "text-indigo-400",
+    },
+    {
+      to: "/barcode",
+      icon: <CameraIcon />,
+      label: "Quét mã",
+      color: "text-sky-400",
     },
   ];
 
@@ -270,6 +292,8 @@ export const PinTopNav: React.FC<{
                 />
               ))}
             </nav>
+            {/* Notification Bell */}
+            <NotificationBell />
             {/* Theme toggle */}
             <div className="hidden md:block">
               <ThemeToggle />

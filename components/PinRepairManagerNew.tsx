@@ -17,11 +17,6 @@ import {
   PlusIcon,
   PrinterIcon,
   TrashIcon,
-  CalendarIcon,
-  BanknotesIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ClipboardDocumentListIcon,
   DocumentTextIcon,
 } from "./common/Icons";
 import { PinRepairModalNew } from "./PinRepairModalNew";
@@ -548,28 +543,28 @@ const PinRepairManagerNew: React.FC = () => {
               <StatsCard
                 title="Tổng phiếu"
                 value={stats.total}
-                icon={<ClipboardDocumentListIcon className="w-6 h-6" />}
+                iconName="orders"
                 variant="primary"
                 compact
               />
               <StatsCard
                 title="Chờ xử lý"
                 value={stats.pending}
-                icon={<ClockIcon className="w-6 h-6" />}
+                iconName="pending"
                 variant="warning"
                 compact
               />
               <StatsCard
                 title="Đang sửa"
                 value={stats.inProgress}
-                icon={<WrenchScrewdriverIcon className="w-6 h-6" />}
+                iconName="repairs"
                 variant="primary"
                 compact
               />
               <StatsCard
                 title="Hoàn thành"
                 value={stats.completed}
-                icon={<CheckCircleIcon className="w-6 h-6" />}
+                iconName="success"
                 variant="success"
                 compact
               />
@@ -592,13 +587,13 @@ const PinRepairManagerNew: React.FC = () => {
         <StatsCard
           title="Tổng doanh thu"
           value={formatCurrency(stats.totalRevenue)}
-          icon={<BanknotesIcon className="w-6 h-6" />}
+          iconName="money"
           variant="success"
         />
         <StatsCard
           title="Chưa thanh toán"
           value={formatCurrency(stats.unpaidAmount)}
-          icon={<CalendarIcon className="w-6 h-6" />}
+          iconName="calendar"
           variant="danger"
         />
       </CardGrid>

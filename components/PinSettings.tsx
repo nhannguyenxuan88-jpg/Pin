@@ -6,8 +6,10 @@ import {
   PencilSquareIcon,
   TrashIcon,
   BuildingLibraryIcon,
+  ArrowDownTrayIcon,
 } from "./common/Icons";
 import type { PinCustomer, Supplier } from "../types";
+import BackupManager from "./BackupManager";
 
 const PinSettings: React.FC = () => {
   const {
@@ -19,11 +21,12 @@ const PinSettings: React.FC = () => {
     upsertPinCustomer,
   } = usePinContext();
 
-  const [activeTab, setActiveTab] = useState<"customers" | "suppliers">(
-    "customers"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "customers" | "suppliers" | "backup"
+  >("customers");
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<PinCustomer | null>(
     null
   );
@@ -211,6 +214,17 @@ const PinSettings: React.FC = () => {
             <BuildingLibraryIcon className="w-5 h-5" />
             <span>Nhà cung cấp</span>
           </button>
+          <button
+            onClick={() => setActiveTab("backup")}
+            className={`flex-1 flex items-center justify-center space-x-2 px-6 py-4 font-medium transition-colors ${
+              activeTab === "backup"
+                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            <ArrowDownTrayIcon className="w-5 h-5" />
+            <span>Sao lưu</span>
+          </button>
         </div>
 
         <div className="p-6">
@@ -291,7 +305,7 @@ const PinSettings: React.FC = () => {
                 )}
               </div>
             </div>
-          ) : (
+          ) : activeTab === "suppliers" ? (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
@@ -368,9 +382,96 @@ const PinSettings: React.FC = () => {
                 )}
               </div>
             </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                  📦 Quản lý Sao lưu & Khôi phục
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">
+                  Sao lưu toàn bộ dữ liệu để đảm bảo an toàn
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowBackupModal(true)}
+                className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl"
+              >
+                <ArrowDownTrayIcon className="w-6 h-6" />
+                <span>Mở Quản lý Sao lưu</span>
+              </button>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="text-2xl mb-2">💾</div>
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                    Xuất JSON
+                  </h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-400">
+                    Toàn bộ dữ liệu có thể import lại
+                  </p>
+                </div>
+
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                  <div className="text-2xl mb-2">📊</div>
+                  <h3 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
+                    Xuất Excel
+                  </h3>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                    File CSV dễ đọc và phân tích
+                  </p>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <div className="text-2xl mb-2">🔄</div>
+                  <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                    Khôi phục
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Import dữ liệu từ file backup
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
+                  <span>💡</span>
+                  <span>Khuyến nghị</span>
+                </h4>
+                <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Sao lưu dữ liệu hàng ngày để tránh mất mát</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Lưu file backup vào nhiều nơi khác nhau</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>
+                      Kiểm tra file backup định kỳ để đảm bảo có thể khôi phục
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>
+                      Sử dụng dịch vụ cloud (Google Drive, Dropbox) để lưu trữ
+                      an toàn
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Backup Modal */}
+      <BackupManager
+        isOpen={showBackupModal}
+        onClose={() => setShowBackupModal(false)}
+      />
 
       {/* Customer Modal */}
       {showCustomerModal && (
