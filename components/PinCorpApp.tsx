@@ -17,8 +17,6 @@ import PinProductionReset from "./PinProductionReset";
 import PinSettings from "./PinSettings";
 import ReceivablesNew from "./ReceivablesNew";
 import AdvancedAnalyticsDashboard from "./AdvancedAnalyticsDashboard";
-import AuditLogViewer from "./AuditLogViewer";
-import BarcodeScanner from "./BarcodeScanner";
 import { CashTransaction, PinSale } from "../types";
 
 interface PinCorpAppProps {
@@ -179,8 +177,6 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
                 path="/analytics"
                 element={<AdvancedAnalyticsDashboard />}
               />
-              <Route path="/audit-logs" element={<AuditLogViewer />} />
-              <Route path="/barcode" element={<BarcodeScanner />} />
               <Route
                 path="/production-reset"
                 element={<PinProductionReset />}

@@ -18,8 +18,6 @@ import {
   ArrowsLeftRightIcon,
   ArrowRightOnRectangleIcon,
   SparklesIcon,
-  ClipboardDocumentListIcon,
-  CameraIcon,
 } from "./common/Icons";
 import { ThemeToggle } from "./ThemeToggle";
 import type { User } from "../types";
@@ -35,9 +33,11 @@ const PinNavItem: React.FC<{
   color?: string;
 }> = ({ to, icon, label, color = "text-sky-600 dark:text-sky-400" }) => {
   const baseItem =
-    "flex flex-col items-center justify-center text-center p-2 rounded-lg w-24 h-20 transition-colors duration-200";
-  const activeClass = "bg-slate-800 dark:bg-slate-700";
-  const inactiveClass = "hover:bg-slate-800/50 dark:hover:bg-slate-700/50";
+    "flex flex-col items-center justify-center text-center p-2 rounded-xl w-24 h-20 transition-all duration-200 border";
+  const activeClass =
+    "bg-white border-slate-200 shadow-lg shadow-slate-200/80 dark:bg-slate-800 dark:border-slate-600 dark:shadow-none";
+  const inactiveClass =
+    "bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200 dark:hover:bg-slate-700/40 dark:hover:border-slate-600";
 
   return (
     <NavLink
@@ -49,22 +49,23 @@ const PinNavItem: React.FC<{
       {({ isActive }) => (
         <>
           <div
-            className={
-              "w-10 h-10 rounded-full flex items-center justify-center " +
-              (isActive
-                ? "bg-slate-700 dark:bg-slate-600"
-                : "bg-slate-900/50 dark:bg-slate-800/50")
-            }
+            className={`w-10 h-10 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${
+              isActive
+                ? "bg-slate-50 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500"
+                : "bg-slate-100 ring-transparent dark:bg-slate-800/40"
+            }`}
           >
             {React.cloneElement(icon, {
-              className: `w-6 h-6 ${color}`,
+              className: `w-6 h-6 transition-opacity duration-200 ${color} ${
+                isActive ? "opacity-100" : "opacity-75"
+              }`,
             })}
           </div>
           <span
             className={`text-xs font-medium mt-1.5 truncate w-full ${
               isActive
-                ? "text-white dark:text-slate-100"
-                : "text-slate-300 dark:text-slate-400"
+                ? "text-slate-900 dark:text-slate-100"
+                : "text-slate-500 dark:text-slate-400"
             }`}
           >
             {label}
@@ -142,18 +143,6 @@ export const PinTopNav: React.FC<{
       icon: <SparklesIcon />,
       label: "Phân tích",
       color: "text-purple-400",
-    },
-    {
-      to: "/audit-logs",
-      icon: <ClipboardDocumentListIcon />,
-      label: "Logs",
-      color: "text-indigo-400",
-    },
-    {
-      to: "/barcode",
-      icon: <CameraIcon />,
-      label: "Quét mã",
-      color: "text-sky-400",
     },
   ];
 

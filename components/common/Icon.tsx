@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "../../lib/utils/cn";
 import type { IconProps as PhosphorIconProps } from "phosphor-react";
 import {
+  ArrowsClockwise,
   Bank,
   Buildings,
   CalendarBlank,
@@ -10,25 +11,32 @@ import {
   CheckCircle,
   ClipboardText,
   Clock,
+  Coins,
   Cube,
   CurrencyDollarSimple,
   DeviceMobile,
+  Gear,
   IdentificationCard,
   Info,
   MagnifyingGlass,
   Money,
+  Package,
   PencilSimple,
   PhoneCall,
   Plus,
   Prohibit,
   Sparkle,
+  Storefront,
+  Tag,
   Trash,
   TrendDown,
   TrendUp,
   UsersThree,
   Warning,
+  WarningCircle,
   Wrench,
   X,
+  XCircle,
 } from "phosphor-react";
 
 type PhosphorIconComponent = React.ComponentType<PhosphorIconProps>;
@@ -64,6 +72,19 @@ export const ICON_REGISTRY = {
   calendar: CalendarBlank,
   highlight: Sparkle,
   money: CurrencyDollarSimple,
+  cube: Cube,
+  package: Package,
+  tag: Tag,
+  "chart-bar": ChartBar,
+  coins: Coins,
+  gear: Gear,
+  trash: Trash,
+  pencil: PencilSimple,
+  "arrows-clockwise": ArrowsClockwise,
+  storefront: Storefront,
+  "warning-circle": WarningCircle,
+  "check-circle": CheckCircle,
+  "x-circle": XCircle,
 } as const satisfies Record<string, PhosphorIconComponent>;
 
 export type IconName = keyof typeof ICON_REGISTRY;
@@ -104,12 +125,14 @@ export interface StandardIconProps extends BaseIconProps {
   name: IconName;
   tone?: IconTone;
   size?: IconSize;
+  weight?: PhosphorIconProps["weight"];
 }
 
 export const Icon: React.FC<StandardIconProps> = ({
   name,
-  tone = "default",
+  tone,
   size = "md",
+  weight = "duotone",
   className,
   ...props
 }) => {
@@ -118,9 +141,13 @@ export const Icon: React.FC<StandardIconProps> = ({
   return (
     <IconComponent
       {...props}
-      weight="duotone"
+      weight={weight}
       size={sizeValues[size]}
-      className={cn("shrink-0", toneClasses[tone], className)}
+      className={cn(
+        "shrink-0",
+        tone ? toneClasses[tone] : undefined,
+        className
+      )}
     />
   );
 };

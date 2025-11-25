@@ -51,6 +51,7 @@ export function createNotificationService(
 ): NotificationService {
   const STORAGE_KEY = "pincorp-notifications";
   const SETTINGS_KEY = "pincorp-notification-settings";
+  const LAST_CHECK_KEY = "pincorp-notifications-last-check";
 
   const loadNotifications = (): Notification[] => {
     try {
@@ -59,6 +60,37 @@ export function createNotificationService(
     } catch {
       return [];
     }
+  };
+
+  const getLastCheckDate = (): string | null => {
+    try {
+      return localStorage.getItem(LAST_CHECK_KEY);
+    } catch {
+      return null;
+    }
+  };
+
+  const setLastCheckDate = (date: string) => {
+    try {
+      localStorage.setItem(LAST_CHECK_KEY, date);
+    } catch (error) {
+      console.error("Failed to save last check date:", error);
+    }
+  };
+
+  const shouldCheckToday = (): boolean => {
+    const lastCheck = getLastCheckDate();
+    if (!lastCheck) return true;
+
+    const lastCheckDate = new Date(lastCheck);
+    const today = new Date();
+
+    // Chỉ check nếu đã qua ngày mới
+    return (
+      lastCheckDate.getDate() !== today.getDate() ||
+      lastCheckDate.getMonth() !== today.getMonth() ||
+      lastCheckDate.getFullYear() !== today.getFullYear()
+    );
   };
 
   const saveNotifications = (notifications: Notification[]) => {
@@ -122,11 +154,28 @@ export function createNotificationService(
     checkLowStock: () => {
       const settings = loadSettings();
       if (!settings.enableLowStockAlerts) return [];
+      if (!shouldCheckToday()) return []; // Chỉ check 1 lần/ngày
 
       const notifications: Notification[] = [];
       const materials = ctx.pinMaterials || [];
+      const existingNotifs = loadNotifications();
+
+      // Lọc ra các notification tồn kho đã đọc trong 24h qua
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const recentReadNotifs = existingNotifs.filter(
+        (n) =>
+          n.type === "low_stock" &&
+          n.read &&
+          new Date(n.timestamp).getTime() > oneDayAgo
+      );
+      const readMaterialIds = new Set(
+        recentReadNotifs.map((n) => n.data?.materialId || n.data?.productId)
+      );
 
       materials.forEach((material: PinMaterial) => {
+        // Bỏ qua nếu đã đọc thông báo của vật liệu này trong 24h
+        if (readMaterialIds.has(material.id)) return;
+
         // Bỏ qua nếu không có stock hoặc đang committed
         if (material.stock <= 0) return;
 
@@ -163,6 +212,8 @@ export function createNotificationService(
       // Check products
       const products = ctx.pinProducts || [];
       products.forEach((product: PinProduct) => {
+        if (readMaterialIds.has(product.id)) return; // Đã đọc rồi thì bỏ qua
+
         const qty = (product as any).quantity || (product as any).stock || 0;
         if (qty <= 0) return;
 
@@ -182,18 +233,40 @@ export function createNotificationService(
         }
       });
 
+      // Đánh dấu đã check hôm nay
+      if (notifications.length > 0) {
+        setLastCheckDate(new Date().toISOString());
+      }
+
       return notifications;
     },
 
     checkDebtOverdue: () => {
       const settings = loadSettings();
       if (!settings.enableDebtAlerts) return [];
+      if (!shouldCheckToday()) return []; // Chỉ check 1 lần/ngày
 
-      const notifications: Notification[] = [];
+      const debtNotifications: Notification[] = [];
+      const existingNotifs = loadNotifications();
+
+      // Lọc notification công nợ đã đọc
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const recentReadDebts = existingNotifs.filter(
+        (n) =>
+          n.type === "debt_overdue" &&
+          n.read &&
+          new Date(n.timestamp).getTime() > oneDayAgo
+      );
+      const readDebtIds = new Set(
+        recentReadDebts.map((n) => n.data?.saleId || n.data?.repairId)
+      );
+
       const sales = ctx.pinSales || [];
       const now = new Date();
 
       sales.forEach((sale: any) => {
+        if (readDebtIds.has(sale.id)) return; // Đã đọc rồi thì bỏ qua
+
         const paymentStatus = (sale as any).paymentStatus;
         const dueDate = (sale as any).dueDate;
 
@@ -207,7 +280,7 @@ export function createNotificationService(
           );
 
           if (daysOverdue > 0) {
-            notifications.push({
+            debtNotifications.push({
               id: `debt-overdue-${sale.id}-${Date.now()}`,
               type: "debt_overdue",
               severity: daysOverdue > 7 ? "critical" : "high",
@@ -227,6 +300,8 @@ export function createNotificationService(
       // Check repair orders
       const repairOrders = ctx.pinRepairOrders || [];
       repairOrders.forEach((order: any) => {
+        if (readDebtIds.has(order.id)) return; // Đã đọc rồi thì bỏ qua
+
         if (
           (order.paymentStatus === "partial" ||
             order.paymentStatus === "unpaid") &&
@@ -238,7 +313,7 @@ export function createNotificationService(
           );
 
           if (daysOverdue > 0) {
-            notifications.push({
+            debtNotifications.push({
               id: `repair-debt-overdue-${order.id}-${Date.now()}`,
               type: "debt_overdue",
               severity: daysOverdue > 7 ? "critical" : "high",
@@ -253,7 +328,7 @@ export function createNotificationService(
         }
       });
 
-      return notifications;
+      return debtNotifications;
     },
 
     addNotification: (notification) => {

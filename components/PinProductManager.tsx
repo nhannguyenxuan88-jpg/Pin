@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
-import type { PinProduct } from "../types";
+import type { PinProduct, PinBOM, ProductionOrder } from "../types";
 import { XMarkIcon } from "./common/Icons";
+import { Icon, type IconName } from "./common/Icon";
 import Pagination from "./common/Pagination";
 import ProductDeletionModal from "./ProductDeletionModal";
 import {
@@ -13,6 +14,60 @@ const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
     amount
   );
+
+type ActionButtonVariant = "danger" | "warning" | "primary" | "muted";
+
+interface ActionButtonProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+  icon: IconName;
+  label: string;
+  variant: ActionButtonVariant;
+}
+
+const variantStyles: Record<ActionButtonVariant, string> = {
+  danger: "text-rose-400",
+  warning: "text-amber-400",
+  primary: "text-cyan-400",
+  muted: "text-slate-400 dark:text-slate-300",
+};
+
+const ActionButton: React.FC<ActionButtonProps> = ({
+  icon,
+  label,
+  variant,
+  disabled,
+  className,
+  ...props
+}) => {
+  const tooltipClasses = disabled
+    ? "hidden"
+    : "pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1 opacity-0 group-hover:opacity-100 group-hover:-translate-y-0 transition-all duration-150 rounded-md bg-slate-900/90 text-white text-[11px] font-medium px-2 py-1 whitespace-nowrap shadow-lg z-50";
+
+  return (
+    <div className={`relative group ${className ?? ""}`}>
+      <button
+        type="button"
+        aria-label={label}
+        disabled={disabled}
+        className={`h-10 w-10 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 focus:outline-none ${
+          disabled
+            ? "opacity-30 cursor-not-allowed bg-slate-100 ring-slate-200 dark:bg-slate-800/40 dark:ring-slate-600"
+            : "bg-slate-50 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 hover:-translate-y-0.5"
+        }`}
+        {...props}
+      >
+        <Icon
+          name={icon}
+          weight="bold"
+          className={`w-6 h-6 transition-opacity duration-200 ${
+            disabled ? "opacity-75" : "opacity-100"
+          } ${variantStyles[variant]}`}
+        />
+      </button>
+      <div className={tooltipClasses}>{label}</div>
+    </div>
+  );
+};
 
 // --- Edit Price Modal ---
 const EditPriceModal: React.FC<{
@@ -30,7 +85,7 @@ const EditPriceModal: React.FC<{
       setRetailPrice(product.retailPrice || product.sellingPrice || 0);
       setWholesalePrice(
         product.wholesalePrice ||
-        Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
+          Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
       );
     }
   }, [product, isOpen]);
@@ -89,8 +144,12 @@ const EditPriceModal: React.FC<{
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              💰 Giá bán lẻ (*)
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Icon
+                name="money"
+                className="w-4 h-4 text-green-600 dark:text-green-400"
+              />
+              Giá bán lẻ (*)
             </label>
             <input
               type="number"
@@ -106,8 +165,12 @@ const EditPriceModal: React.FC<{
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              🏪 Giá bán sỉ
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Icon
+                name="storefront"
+                className="w-4 h-4 text-blue-600 dark:text-blue-400"
+              />
+              Giá bán sỉ
             </label>
             <input
               type="number"
@@ -135,10 +198,11 @@ const EditPriceModal: React.FC<{
             title={
               !currentUser ? "Bạn phải đăng nhập để lưu thay đổi" : undefined
             }
-            className={`font-semibold py-2 px-4 rounded-lg ${currentUser
+            className={`font-semibold py-2 px-4 rounded-lg ${
+              currentUser
                 ? "bg-sky-600 text-white"
                 : "bg-sky-300 text-white/70 cursor-not-allowed"
-              }`}
+            }`}
           >
             Lưu
           </button>
@@ -213,7 +277,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Advanced deletion modal */}
       <ProductDeletionModal
         product={deletionModalProduct}
@@ -250,20 +314,32 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
         product={editingProduct}
       />
       <div className="flex justify-between items-center animate-fadeIn">
-        <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          🏭 Quản lý Thành phẩm
+        <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
+          <Icon
+            name="cube"
+            className="w-10 h-10 text-blue-600 dark:text-blue-400"
+          />
+          Quản lý Thành phẩm
         </h1>
         <div className="flex items-center gap-4">
           <button
             onClick={syncProductsFromCompletedOrders}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
           >
-            🔄 Sync từ Đơn hoàn thành
+            <Icon name="arrows-clockwise" className="w-5 h-5 text-white" />
+            Sync từ Đơn hoàn thành
           </button>
           <div className="px-5 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/40 dark:to-purple-900/40 rounded-xl border-2 border-blue-200 dark:border-blue-800">
-            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Tổng: </span>
-            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{products.length}</span>
-            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400"> sản phẩm</span>
+            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+              Tổng:{" "}
+            </span>
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+              {products.length}
+            </span>
+            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+              {" "}
+              sản phẩm
+            </span>
           </div>
         </div>
       </div>
@@ -272,16 +348,23 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
         <div className="flex gap-4 items-center">
           <input
             type="text"
-            placeholder="🔍 Tìm theo tên hoặc SKU..."
+            placeholder="Tìm theo tên hoặc SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 px-5 py-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-base font-medium focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-200 shadow-sm"
           />
           {filteredProducts.length !== products.length && (
             <div className="px-5 py-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 rounded-xl border-2 border-green-200 dark:border-green-800">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Tìm thấy: </span>
-              <span className="text-lg font-bold text-green-600 dark:text-green-400">{filteredProducts.length}</span>
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400"> sản phẩm</span>
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                Tìm thấy:{" "}
+              </span>
+              <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                {filteredProducts.length}
+              </span>
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                {" "}
+                sản phẩm
+              </span>
             </div>
           )}
         </div>
@@ -291,22 +374,58 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
           <thead className="border-b-2 dark:border-slate-600 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800">
             <tr>
               <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">
-                📦 Tên Thành phẩm
+                <div className="flex items-center gap-2">
+                  <Icon
+                    name="package"
+                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                  />
+                  Tên Thành phẩm
+                </div>
               </th>
               <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">
-                🏷️ SKU
+                <div className="flex items-center gap-2">
+                  <Icon
+                    name="tag"
+                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                  />
+                  SKU
+                </div>
               </th>
               <th className="p-4 font-semibold text-slate-700 dark:text-slate-300 text-right">
-                📊 Tồn kho
+                <div className="flex items-center gap-2 justify-end">
+                  <Icon
+                    name="chart-bar"
+                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                  />
+                  Tồn kho
+                </div>
               </th>
               <th className="p-4 font-semibold text-slate-700 dark:text-slate-300 text-right">
-                💰 Giá vốn
+                <div className="flex items-center gap-2 justify-end">
+                  <Icon
+                    name="coins"
+                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                  />
+                  Giá vốn
+                </div>
               </th>
               <th className="p-4 font-semibold text-slate-700 dark:text-slate-300 text-right">
-                💵 Giá bán
+                <div className="flex items-center gap-2 justify-end">
+                  <Icon
+                    name="money"
+                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                  />
+                  Giá bán
+                </div>
               </th>
               <th className="p-4 font-semibold text-slate-700 dark:text-slate-300 text-center">
-                ⚙️ Thao tác
+                <div className="flex items-center gap-2 justify-center">
+                  <Icon
+                    name="gear"
+                    className="w-4 h-4 text-slate-600 dark:text-slate-300"
+                  />
+                  Thao tác
+                </div>
               </th>
             </tr>
           </thead>
@@ -345,12 +464,13 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                   </td>
                   <td className="p-4 text-right">
                     <div
-                      className={`font-bold ${product.stock <= 10
+                      className={`font-bold ${
+                        product.stock <= 10
                           ? "text-red-500"
                           : product.stock <= 50
-                            ? "text-yellow-500"
-                            : "text-green-600 dark:text-green-400"
-                        }`}
+                          ? "text-yellow-500"
+                          : "text-green-600 dark:text-green-400"
+                      }`}
                     >
                       {product.stock}
                     </div>
@@ -358,8 +478,8 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                       {product.stock <= 10
                         ? "⚠️ Thấp"
                         : product.stock <= 50
-                          ? "🔶 Vừa"
-                          : "✅ Ổn"}
+                        ? "🔶 Vừa"
+                        : "✅ Ổn"}
                     </div>
                   </td>
                   <td className="p-4 text-right text-slate-800 dark:text-slate-200">
@@ -375,164 +495,166 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({
                       </div>
                     </div>
                     <div
-                      className={`text-xs mt-1 ${profitMarginRetail >= 20
+                      className={`text-xs mt-1 ${
+                        profitMarginRetail >= 20
                           ? "text-green-500"
                           : profitMarginRetail >= 10
-                            ? "text-yellow-500"
-                            : "text-red-500"
-                        }`}
+                          ? "text-yellow-500"
+                          : "text-red-500"
+                      }`}
                     >
                       {profitMarginRetail >= 20
                         ? "💚 Tốt"
                         : profitMarginRetail >= 10
-                          ? "🟡 TB"
-                          : "🔴 Thấp"}
+                        ? "🟡 TB"
+                        : "🔴 Thấp"}
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                       {/* Quantity input and delete button */}
-                      <input
-                        type="number"
-                        min={1}
-                        max={product.stock}
-                        placeholder="SL"
-                        value={deleteQtyMap[product.id] ?? ""}
-                        onChange={(e) =>
-                          setDeleteQtyMap((m) => ({
-                            ...m,
-                            [product.id]: Number(e.target.value),
-                          }))
-                        }
-                        className="w-12 p-1 text-xs border border-slate-300 dark:border-slate-600 rounded text-center bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                        title="Số lượng muốn xóa và hoàn kho NVL"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!currentUser) {
-                            alert("Vui lòng đăng nhập để thực hiện thao tác");
-                            return;
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span>SL</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={product.stock}
+                          placeholder="SL"
+                          value={deleteQtyMap[product.id] ?? ""}
+                          onChange={(e) =>
+                            setDeleteQtyMap((m) => ({
+                              ...m,
+                              [product.id]: Number(e.target.value),
+                            }))
                           }
-                          const qty = deleteQtyMap[product.id] ?? product.stock;
-                          if (!qty || qty <= 0) {
-                            alert("Vui lòng nhập số lượng > 0 để xóa");
-                            return;
+                          className="w-16 h-8 px-2 text-sm rounded-lg border border-slate-400/70 bg-transparent text-slate-800 dark:text-white focus:ring-2 focus:ring-red-400/40 focus:border-red-400"
+                          title="Số lượng muốn xóa và hoàn kho NVL"
+                        />
+                        <ActionButton
+                          icon="trash"
+                          label="Xóa & hoàn kho"
+                          variant="danger"
+                          disabled={
+                            !deleteQtyMap[product.id] ||
+                            deleteQtyMap[product.id] <= 0 ||
+                            !currentUser
                           }
+                          onClick={() => {
+                            if (!currentUser) {
+                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              return;
+                            }
+                            const qty =
+                              deleteQtyMap[product.id] ?? product.stock;
+                            if (!qty || qty <= 0) {
+                              alert("Vui lòng nhập số lượng > 0 để xóa");
+                              return;
+                            }
 
-                          // Check for active production orders
-                          const relatedBOMs = pinBOMs.filter(
-                            (bom) =>
-                              bom.productSku === product.sku ||
-                              bom.productName === product.name
-                          );
-                          const bomIds = relatedBOMs.map((bom) => bom.id);
-                          const activeOrders = productionOrders.filter(
-                            (order) =>
-                              bomIds.includes(order.bomId) &&
-                              order.status !== "Hoàn thành" &&
-                              order.status !== "Đã hủy"
-                          );
-
-                          if (activeOrders.length > 0) {
-                            alert(
-                              `⚠️ KHÔNG THỂ XÓA SẢN PHẨM!\n\n` +
-                              `Sản phẩm "${product.name}" có ${activeOrders.length} đơn hàng sản xuất đang hoạt động:\n` +
-                              `${activeOrders
-                                .map(
-                                  (order) => `• ${order.id} (${order.status})`
-                                )
-                                .join("\n")}\n\n` +
-                              `Vui lòng hoàn thành hoặc hủy các đơn hàng này trước khi xóa sản phẩm.`
+                            // Check for active production orders
+                            const relatedBOMs = pinBOMs.filter(
+                              (bom: PinBOM) =>
+                                bom.productSku === product.sku ||
+                                bom.productName === product.name
                             );
-                            return;
-                          }
+                            const bomIds = relatedBOMs.map(
+                              (bom: PinBOM) => bom.id
+                            );
+                            const activeOrders = productionOrders.filter(
+                              (order: ProductionOrder) =>
+                                bomIds.includes(order.bomId) &&
+                                order.status !== "Hoàn thành" &&
+                                order.status !== "Đã hủy"
+                            );
 
-                          // Show additional warnings for BOMs and completed orders
-                          const completedOrders = productionOrders.filter(
-                            (order) =>
-                              bomIds.includes(order.bomId) &&
-                              (order.status === "Hoàn thành" ||
-                                order.status === "Đã hủy")
-                          );
+                            if (activeOrders.length > 0) {
+                              alert(
+                                `⚠️ KHÔNG THỂ XÓA SẢN PHẨM!\n\n` +
+                                  `Sản phẩm "${product.name}" có ${activeOrders.length} đơn hàng sản xuất đang hoạt động:\n` +
+                                  `${activeOrders
+                                    .map(
+                                      (order: ProductionOrder) =>
+                                        `• ${order.id} (${order.status})`
+                                    )
+                                    .join("\n")}\n\n` +
+                                  `Vui lòng hoàn thành hoặc hủy các đơn hàng này trước khi xóa sản phẩm.`
+                              );
+                              return;
+                            }
 
-                          let warningMessage = `Xóa ${qty} đơn vị thành phẩm "${product.name}"?\n`;
-                          warningMessage += `Hệ thống sẽ hoàn kho NVL theo BOM và số lượng bạn đã chọn.\n\n`;
+                            // Show additional warnings for BOMs and completed orders
+                            const completedOrders = productionOrders.filter(
+                              (order: ProductionOrder) =>
+                                bomIds.includes(order.bomId) &&
+                                (order.status === "Hoàn thành" ||
+                                  order.status === "Đã hủy")
+                            );
 
-                          if (relatedBOMs.length > 0) {
-                            warningMessage += `⚠️ CẢNH BÁO: Sẽ ảnh hưởng đến ${relatedBOMs.length} công thức sản xuất (BOM)\n`;
-                          }
-                          if (completedOrders.length > 0) {
-                            warningMessage += `⚠️ CẢNH BÁO: Có ${completedOrders.length} đơn hàng đã hoàn thành liên quan\n`;
-                          }
+                            let warningMessage = `Xóa ${qty} đơn vị thành phẩm "${product.name}"?\n`;
+                            warningMessage += `Hệ thống sẽ hoàn kho NVL theo BOM và số lượng bạn đã chọn.\n\n`;
 
-                          warningMessage += `\nBạn có chắc chắn muốn tiếp tục?`;
+                            if (relatedBOMs.length > 0) {
+                              warningMessage += `⚠️ CẢNH BÁO: Sẽ ảnh hưởng đến ${relatedBOMs.length} công thức sản xuất (BOM)\n`;
+                            }
+                            if (completedOrders.length > 0) {
+                              warningMessage += `⚠️ CẢNH BÁO: Có ${completedOrders.length} đơn hàng đã hoàn thành liên quan\n`;
+                            }
 
-                          if (window.confirm(warningMessage)) {
-                            removePinProductAndReturnMaterials(product, qty);
-                          }
-                        }}
-                        disabled={
-                          !deleteQtyMap[product.id] ||
-                          deleteQtyMap[product.id] <= 0 ||
-                          !currentUser
-                        }
-                        className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
-                        title="Xóa và hoàn kho NVL"
-                      >
-                        🗑️
-                      </button>
+                            warningMessage += `\nBạn có chắc chắn muốn tiếp tục?`;
 
-                      {/* Advanced deletion options modal trigger */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!currentUser) {
-                            alert("Vui lòng đăng nhập để thực hiện thao tác");
-                            return;
-                          }
-                          setDeletionModalProduct(product);
-                        }}
-                        className="px-2 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700"
-                        title="Xóa nâng cao (tùy chọn hoàn NVL, xóa BOM, xử lý đơn liên quan)"
-                      >
-                        ⚙️
-                      </button>
+                            if (window.confirm(warningMessage)) {
+                              removePinProductAndReturnMaterials(product, qty);
+                            }
+                          }}
+                        />
+                      </div>
 
-                      {/* Edit buttons */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!currentUser) {
-                            alert("Vui lòng đăng nhập để thực hiện thao tác");
-                            return;
-                          }
-                          setEditingProduct(product);
-                          setIsModalOpen(true);
-                        }}
-                        disabled={!currentUser}
-                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
-                        title="Sửa giá bán"
-                      >
-                        💰
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!currentUser) {
-                            alert("Vui lòng đăng nhập để thực hiện thao tác");
-                            return;
-                          }
-                          alert(
-                            "Tính năng sửa thông tin sản phẩm sẽ được phát triển trong phiên bản tiếp theo."
-                          );
-                        }}
-                        disabled={!currentUser}
-                        className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 disabled:opacity-50"
-                        title="Sửa thông tin sản phẩm"
-                      >
-                        ✏️
-                      </button>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2">
+                        <ActionButton
+                          icon="gear"
+                          label="Xóa nâng cao"
+                          variant="warning"
+                          onClick={() => {
+                            if (!currentUser) {
+                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              return;
+                            }
+                            setDeletionModalProduct(product);
+                          }}
+                        />
+
+                        <ActionButton
+                          icon="money"
+                          label="Sửa giá bán"
+                          variant="primary"
+                          disabled={!currentUser}
+                          onClick={() => {
+                            if (!currentUser) {
+                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              return;
+                            }
+                            setEditingProduct(product);
+                            setIsModalOpen(true);
+                          }}
+                        />
+
+                        <ActionButton
+                          icon="pencil"
+                          label="Sửa thông tin"
+                          variant="muted"
+                          disabled={!currentUser}
+                          onClick={() => {
+                            if (!currentUser) {
+                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              return;
+                            }
+                            alert(
+                              "Tính năng sửa thông tin sản phẩm sẽ được phát triển trong phiên bản tiếp theo."
+                            );
+                          }}
+                        />
+                      </div>
                     </div>
                   </td>
                 </tr>
