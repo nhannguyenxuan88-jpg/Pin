@@ -14,23 +14,46 @@ const NotificationBell: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Check for new notifications every 30 seconds
+  // Check for new notifications every 5 minutes
   useEffect(() => {
     const checkNotifications = () => {
+      const existingNotifs = notificationService.getAllNotifications();
+      const existingIds = new Set(
+        existingNotifs.map(
+          (n) =>
+            `${n.type}-${
+              n.data?.materialId ||
+              n.data?.productId ||
+              n.data?.saleId ||
+              n.data?.repairId
+            }`
+        )
+      );
+
       // Check low stock
       const lowStockNotifs = notificationService.checkLowStock();
-      lowStockNotifs.forEach((n) => notificationService.addNotification(n));
+      lowStockNotifs.forEach((n) => {
+        const uniqueId = `${n.type}-${n.data?.materialId || n.data?.productId}`;
+        if (!existingIds.has(uniqueId)) {
+          notificationService.addNotification(n);
+        }
+      });
 
       // Check debt overdue
       const debtNotifs = notificationService.checkDebtOverdue();
-      debtNotifs.forEach((n) => notificationService.addNotification(n));
+      debtNotifs.forEach((n) => {
+        const uniqueId = `${n.type}-${n.data?.saleId || n.data?.repairId}`;
+        if (!existingIds.has(uniqueId)) {
+          notificationService.addNotification(n);
+        }
+      });
 
       // Update UI
       updateNotifications();
     };
 
     checkNotifications();
-    const interval = setInterval(checkNotifications, 30000); // 30 seconds
+    const interval = setInterval(checkNotifications, 300000); // 5 minutes
 
     return () => clearInterval(interval);
   }, [ctx.pinMaterials, ctx.pinProducts, ctx.pinSales, ctx.pinRepairOrders]);
