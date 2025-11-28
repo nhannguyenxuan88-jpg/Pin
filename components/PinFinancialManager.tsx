@@ -23,6 +23,7 @@ import {
 } from "./common/Icons";
 
 const PinFinancialManager: React.FC = () => {
+  const pinContext = usePinContext();
   const {
     fixedAssets,
     setFixedAssets,
@@ -32,8 +33,12 @@ const PinFinancialManager: React.FC = () => {
     addCashTransaction,
     currentUser,
     addToast,
-    deletePinCapitalInvestment, // Add delete function from context
-  } = usePinContext();
+    deletePinCapitalInvestment,
+    // FIX: Thêm các function từ context để sử dụng trong handlers
+    upsertPinFixedAsset,
+    deletePinFixedAsset,
+    upsertPinCapitalInvestment,
+  } = pinContext as any;
 
   const [activeTab, setActiveTab] = useState<
     "overview" | "assets" | "capital" | "cashflow"
@@ -226,8 +231,20 @@ const PinFinancialManager: React.FC = () => {
     };
 
     try {
-      // Delegate to FinanceService through PinContext
-      await (usePinContext() as any).upsertPinFixedAsset(asset as any);
+      // FIX: Sử dụng upsertPinFixedAsset từ context đã destructure
+      if (upsertPinFixedAsset) {
+        await upsertPinFixedAsset(asset as any);
+      } else {
+        // Fallback: Directly update local state and save to supabase
+        const { error } = await supabase.from("pin_fixed_assets").upsert(asset);
+        if (error) throw error;
+        setFixedAssets((prev: any[]) => {
+          const idx = prev.findIndex((a: any) => a.id === asset.id);
+          if (idx >= 0)
+            return prev.map((a: any) => (a.id === asset.id ? asset : a));
+          return [asset, ...prev];
+        });
+      }
 
       addToast({
         id: Date.now().toString(),
@@ -286,10 +303,24 @@ const PinFinancialManager: React.FC = () => {
     };
 
     try {
-      // Delegate to FinanceService through PinContext
-      await (usePinContext() as any).upsertPinCapitalInvestment(
-        investment as any
-      );
+      // FIX: Sử dụng upsertPinCapitalInvestment từ context đã destructure
+      if (upsertPinCapitalInvestment) {
+        await upsertPinCapitalInvestment(investment as any);
+      } else {
+        // Fallback: Directly update local state and save to supabase
+        const { error } = await supabase
+          .from("pin_capital_investments")
+          .upsert(investment);
+        if (error) throw error;
+        setCapitalInvestments((prev: any[]) => {
+          const idx = prev.findIndex((i: any) => i.id === investment.id);
+          if (idx >= 0)
+            return prev.map((i: any) =>
+              i.id === investment.id ? investment : i
+            );
+          return [investment, ...prev];
+        });
+      }
 
       addToast({
         id: Date.now().toString(),
@@ -394,8 +425,20 @@ const PinFinancialManager: React.FC = () => {
     }
 
     try {
-      // Delegate to FinanceService via context
-      await (usePinContext() as any).deletePinFixedAsset(assetId);
+      // FIX: Sử dụng deletePinFixedAsset từ context đã destructure
+      if (deletePinFixedAsset) {
+        await deletePinFixedAsset(assetId);
+      } else {
+        // Fallback
+        const { error } = await supabase
+          .from("pin_fixed_assets")
+          .delete()
+          .eq("id", assetId);
+        if (error) throw error;
+        setFixedAssets((prev: any[]) =>
+          prev.filter((a: any) => a.id !== assetId)
+        );
+      }
 
       addToast({
         id: Date.now().toString(),

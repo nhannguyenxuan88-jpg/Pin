@@ -234,7 +234,8 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       (m: any) => m.name.toLowerCase() === materialName.toLowerCase()
     );
     if (material) {
-      const currentStock = material.quantity || 0;
+      // FIX: Dùng m.stock thay vì m.quantity để kiểm tra tồn kho
+      const currentStock = material.stock || material.quantity || 0;
       const alreadyUsed =
         (formData.materialsUsed || [])
           .filter(
