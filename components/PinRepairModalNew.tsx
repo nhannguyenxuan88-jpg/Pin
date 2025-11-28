@@ -82,15 +82,17 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     address: "",
   });
 
-  // Filter materials based on search
+  // Filter materials based on search - chỉ hiển thị vật liệu còn tồn kho
   const filteredMaterials = useMemo(() => {
     if (!materialSearch.trim()) return [];
     const search = materialSearch.toLowerCase();
     return (pinMaterials || [])
       .filter(
         (m: any) =>
-          m.name.toLowerCase().includes(search) ||
-          m.sku?.toLowerCase().includes(search)
+          // Chỉ hiển thị vật liệu còn tồn kho (stock > 0)
+          (m.stock || 0) > 0 &&
+          (m.name.toLowerCase().includes(search) ||
+            m.sku?.toLowerCase().includes(search))
       )
       .slice(0, 10);
   }, [pinMaterials, materialSearch]);
@@ -862,8 +864,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                               }}
                               className="w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b dark:border-slate-700 last:border-0 transition-colors"
                             >
-                              <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                {material.name}
+                              <div className="font-semibold text-slate-900 dark:text-slate-100 flex justify-between">
+                                <span>{material.name}</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                                  Tồn: {material.stock || 0}
+                                </span>
                               </div>
                               <div className="text-xs text-slate-500 dark:text-slate-400 flex justify-between mt-0.5">
                                 <span>SKU: {material.sku}</span>

@@ -61,6 +61,7 @@ export default function ReceivablesNew() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [showSupplierPayModal, setShowSupplierPayModal] = useState(false);
+  const [preSelectedDebtId, setPreSelectedDebtId] = useState<string | undefined>(undefined);
 
   // Calculate customer receivables (from workorders and sales)
   const customerRows = useMemo(() => {
@@ -743,11 +744,16 @@ export default function ReceivablesNew() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="primary"
-                onClick={() =>
-                  activeTab === "customers"
-                    ? setShowCollectModal(true)
-                    : setShowSupplierPayModal(true)
-                }
+                onClick={() => {
+                  if (activeTab === "customers") {
+                    // Nếu có chọn 1 công nợ, tự động điền vào modal
+                    const firstSelectedId = selectedIds.length === 1 ? selectedIds[0] : undefined;
+                    setPreSelectedDebtId(firstSelectedId);
+                    setShowCollectModal(true);
+                  } else {
+                    setShowSupplierPayModal(true);
+                  }
+                }}
                 className="whitespace-nowrap"
               >
                 <Icon
@@ -769,12 +775,6 @@ export default function ReceivablesNew() {
               )}
             </div>
           </div>
-
-          <CardGrid cols={3}>
-            {activeSummaryCards.map((card) => (
-              <StatsCard key={card.title} {...card} />
-            ))}
-          </CardGrid>
         </div>
 
         {/* Search and Actions */}
@@ -839,7 +839,11 @@ export default function ReceivablesNew() {
       {/* Modals */}
       <DebtCollectionModal
         open={showCollectModal}
-        onClose={() => setShowCollectModal(false)}
+        onClose={() => {
+          setShowCollectModal(false);
+          setPreSelectedDebtId(undefined);
+        }}
+        preSelectedDebtId={preSelectedDebtId}
       />
       <SupplierPaymentModal
         open={showSupplierPayModal}

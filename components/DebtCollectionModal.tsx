@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
 import type { CashTransaction, PinSale, PinRepairOrder } from "../types";
 import { XMarkIcon } from "./common/Icons";
@@ -11,9 +11,10 @@ const formatCurrency = (amount: number) =>
 type Props = {
   open: boolean;
   onClose: () => void;
+  preSelectedDebtId?: string; // ID của công nợ đã được chọn từ danh sách
 };
 
-export default function DebtCollectionModal({ open, onClose }: Props) {
+export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }: Props) {
   const ctx = usePinContext();
   const currentUser = ctx.currentUser;
   const currentBranchId = (ctx as any).currentBranchId || "main";
@@ -27,6 +28,19 @@ export default function DebtCollectionModal({ open, onClose }: Props) {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
+
+  // Tự động chọn công nợ khi mở modal với preSelectedDebtId
+  useEffect(() => {
+    if (open && preSelectedDebtId) {
+      setSelectedDebtId(preSelectedDebtId);
+      setAmount(""); // Reset amount để user nhập lại
+    } else if (!open) {
+      // Reset khi đóng modal
+      setSelectedDebtId("");
+      setAmount("");
+      setNotes("");
+    }
+  }, [open, preSelectedDebtId]);
 
   // Lấy danh sách các đơn hàng/sửa chữa còn nợ
   const pendingDebts = useMemo(() => {
@@ -159,10 +173,26 @@ export default function DebtCollectionModal({ open, onClose }: Props) {
           (r: PinRepairOrder) => r.id === selectedDebtId
         );
         if (repair) {
+          // Đảm bảo có đầy đủ các field required trước khi update
+          if (!repair.deviceName) {
+            alert(
+              "Lỗi: Phiếu sửa chữa thiếu thông tin thiết bị. Vui lòng kiểm tra lại."
+            );
+            return;
+          }
           await upsertPinRepairOrder({
             ...repair,
-            partialPaymentAmount: newPaidAmount,
+            // Đảm bảo các field required không bị undefined
+            customerName:
+              repair.customerName || selectedDebt.customerName || "Khách lẻ",
+            customerPhone: repair.customerPhone || "",
+            deviceName: repair.deviceName,
+            issueDescription: repair.issueDescription || "",
+            status: repair.status || "Tiếp nhận",
+            laborCost: repair.laborCost || 0,
+            total: repair.total || selectedDebt.total,
             paymentStatus: isFullyPaid ? "paid" : "partial",
+            partialPaymentAmount: newPaidAmount,
             paymentMethod: paymentMethod,
             paymentDate: new Date().toISOString(),
           });

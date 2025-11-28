@@ -102,19 +102,29 @@ export function createRepairService(ctx: PinContextType): RepairService {
         }
 
         // 2) Build payload for pin_repair_orders (snake_case)
+        // Ensure required fields are not null
+        if (!order.deviceName) {
+          ctx.addToast?.({
+            title: "Lỗi dữ liệu",
+            message: "Thiếu thông tin tên thiết bị (deviceName)",
+            type: "error",
+          });
+          return;
+        }
+
         const basePayload: any = {
           id: order.id,
           creation_date: order.creationDate,
-          customer_name: order.customerName,
-          customer_phone: order.customerPhone,
+          customer_name: order.customerName || "Khách lẻ",
+          customer_phone: order.customerPhone || "",
           device_name: order.deviceName,
-          issue_description: order.issueDescription,
+          issue_description: order.issueDescription || "",
           technician_name: order.technicianName ?? null,
           status: order.status,
           // Let Supabase map JSON automatically; avoid stringifying to reduce type issues
           materials_used: order.materialsUsed ?? null,
-          labor_cost: order.laborCost,
-          total: order.total,
+          labor_cost: order.laborCost ?? 0,
+          total: order.total ?? 0,
           notes: order.notes ?? null,
           payment_status: order.paymentStatus,
           partial_payment_amount: order.partialPaymentAmount ?? null,

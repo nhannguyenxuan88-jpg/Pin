@@ -33,7 +33,7 @@ type Row = {
 
 export default function Receivables() {
   const ctx = usePinContext();
-  const workOrders = (ctx as any).workOrders || [];
+  const pinRepairOrders = ctx.pinRepairOrders || [];
   const sales = ctx.pinSales || [];
   const cashTransactions = ctx.cashTransactions || [];
   const currentBranchId = (ctx as any).currentBranchId;
@@ -43,81 +43,83 @@ export default function Receivables() {
   const goodsReceipts = (ctx as any).goodsReceipts || [];
 
   // Build lookup maps for quick sum of payments
-  const paidByWO = useMemo(() => {
+
+  // Calculate payments made to repair orders
+  // Priority: use partialPaymentAmount from order (this is the source of truth)
+  const paidByRepair = useMemo(() => {
     const m = new Map<string, number>();
-    for (const t of cashTransactions || []) {
-      if (
-        t.workOrderId &&
-        (!currentBranchId || t.branchId === currentBranchId)
-      ) {
-        m.set(
-          t.workOrderId,
-          (m.get(t.workOrderId) || 0) + (Number(t.amount) || 0)
-        );
-      }
+    // From repair orders themselves - partialPaymentAmount is the total paid so far
+    for (const r of pinRepairOrders || []) {
+      // partialPaymentAmount already includes all payments (deposit + subsequent payments)
+      const paidAmt = r.partialPaymentAmount || r.depositAmount || 0;
+      m.set(r.id, paidAmt);
     }
     return m;
-  }, [cashTransactions, currentBranchId]);
+  }, [pinRepairOrders]);
 
+  // Calculate payments made to sales - use paidAmount from sale record
   const paidBySale = useMemo(() => {
     const m = new Map<string, number>();
-    for (const t of cashTransactions || []) {
-      if (t.saleId && (!currentBranchId || t.branchId === currentBranchId)) {
-        m.set(t.saleId, (m.get(t.saleId) || 0) + (Number(t.amount) || 0));
-      }
+    for (const s of sales || []) {
+      // paidAmount is the source of truth for how much has been paid
+      const paidAmt = s.paidAmount || 0;
+      m.set(s.id, paidAmt);
     }
     return m;
-  }, [cashTransactions, currentBranchId]);
+  }, [sales]);
 
   const rows: Row[] = useMemo(() => {
     const list: Row[] = [];
 
-    // Work orders
-    (workOrders || [])
+    // Repair orders (use pinRepairOrders)
+    (pinRepairOrders || [])
       .filter(
-        (w: any) =>
-          (!currentBranchId || w.branchId === currentBranchId) &&
-          (Number(w.total) || 0) > 0
+        (r: any) =>
+          (!currentBranchId || r.branchId === currentBranchId) &&
+          (Number(r.total) || 0) > 0
       )
-      .forEach((w: any) => {
-        const paid = paidByWO.get(w.id) || 0;
-        const debt = Math.max(0, (Number(w.total) || 0) - paid);
+      .forEach((r: any) => {
+        // Check payment status - only include unpaid or partial
+        const status = r.paymentStatus || "unpaid";
+        if (status === "paid") return;
+
+        // Calculate paid amount: use paidByRepair if exists, otherwise use order's own fields
+        // paidByRepair already includes partialPaymentAmount + depositAmount + cash transactions
+        const paidFromMap = paidByRepair.get(r.id);
+        const paid = paidFromMap !== undefined ? paidFromMap : 0;
+        const debt = Math.max(0, (Number(r.total) || 0) - paid);
         if (debt <= 0) return;
+
         const details: string[] = [];
-        if (w.partsUsed && w.partsUsed.length) {
+        if (r.materialsUsed && r.materialsUsed.length) {
           details.push(
-            `Sản phẩm thêm: ` +
-              w.partsUsed
-                .map((p: any) => `${p.quantity} x ${p.partName}`)
+            `Vật liệu: ` +
+              r.materialsUsed
+                .map((m: any) => `${m.quantity} x ${m.materialName}`)
                 .join("; ")
           );
         }
-        if (w.quotationItems && w.quotationItems.length) {
-          details.push(
-            `Gia công/Đặt hàng: ` +
-              w.quotationItems
-                .map((q: any) => `${q.quantity} x ${q.description}`)
-                .join("; ")
-          );
+        if (r.laborCost) {
+          details.push(`Công sửa: ${fmt(r.laborCost)}`);
         }
-        const summary = w.issueDescription || "";
+        const summary = r.issueDescription || r.deviceName || "";
         list.push({
-          id: w.id,
+          id: r.id,
           kind: "workorder",
-          date: w.creationDate,
-          customerName: w.customerName,
-          customerPhone: w.customerPhone,
-          title: `Đơn Sửa Chữa: ${w.id}`,
+          date: r.creationDate,
+          customerName: r.customerName,
+          customerPhone: r.customerPhone,
+          title: `Phiếu Sửa Chữa: ${r.id}`,
           summary,
           details,
-          technician: w.technicianName,
-          amount: Number(w.total) || 0,
+          technician: r.technicianName,
+          amount: Number(r.total) || 0,
           paid,
           debt,
         });
       });
 
-    // Sales
+    // Sales - check paymentStatus
     (sales || [])
       .filter(
         (s: any) =>
@@ -125,29 +127,59 @@ export default function Receivables() {
           (Number(s.total) || 0) > 0
       )
       .forEach((s: any) => {
-        const paid = paidBySale.get(s.id) || 0;
-        const debt = Math.max(0, (Number(s.total) || 0) - paid);
+        // Check payment status - only include debt or partial
+        const status = s.paymentStatus || "paid";
+        if (status === "paid") return;
+
+        // Use paidAmount from sale record (source of truth)
+        const paidFromMap = paidBySale.get(s.id);
+        const paidAmt = paidFromMap !== undefined ? paidFromMap : 0;
+        const debt = Math.max(0, (Number(s.total) || 0) - paidAmt);
         if (debt <= 0) return;
+
         const details: string[] = [];
-        if (s.items && s.items.length) {
+        // Parse items if it's a string (from DB)
+        let items = s.items;
+        if (typeof items === "string") {
+          try {
+            items = JSON.parse(items);
+          } catch {
+            items = [];
+          }
+        }
+        if (items && items.length) {
           details.push(
-            `Sản phẩm đã bán: ` +
-              s.items
-                .map((it: any) => `${it.quantity} x ${it.partName}`)
+            `Sản phẩm: ` +
+              items
+                .map(
+                  (it: any) =>
+                    `${it.quantity} x ${it.name || it.partName || "SP"}`
+                )
                 .join("; ")
           );
         }
+
+        // Parse customer if it's a string
+        let customer = s.customer;
+        if (typeof customer === "string") {
+          try {
+            customer = JSON.parse(customer);
+          } catch {
+            customer = {};
+          }
+        }
+
         list.push({
           id: s.id,
           kind: "sale",
           date: s.date,
-          customerName: s.customer?.name || "Khách lẻ",
-          customerPhone: s.customer?.phone,
-          title: `Đơn Hàng: ${s.id}`,
+          customerName: customer?.name || "Khách lẻ",
+          customerPhone: customer?.phone,
+          title: `Đơn Hàng: ${s.code || s.id}`,
           summary: "",
           details,
           amount: Number(s.total) || 0,
-          paid,
+          paid: paidAmt,
           debt,
         });
       });
@@ -156,7 +188,7 @@ export default function Receivables() {
     return list.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [workOrders, sales, paidByWO, paidBySale, currentBranchId]);
+  }, [pinRepairOrders, sales, paidByRepair, paidBySale, currentBranchId]);
 
   const [activeTab, setActiveTab] = useState<"customers" | "suppliers">(
     "customers"
