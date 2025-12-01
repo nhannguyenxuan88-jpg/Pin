@@ -429,6 +429,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               | string
               | undefined,
             paymentDate: (row.payment_date || row.paymentdate || undefined) as string | undefined,
+            dueDate: (row.due_date || row.duedate || undefined) as string | undefined,
             cashTransactionId: (row.cash_transaction_id || row.cashtransactionid || undefined) as
               | string
               | undefined,

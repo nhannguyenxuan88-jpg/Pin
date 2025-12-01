@@ -1,5 +1,5 @@
 import type { PinContextType } from "../../contexts/types";
-import type { PinRepairOrder, PinProduct, PinMaterial, CashTransaction } from "../../types";
+import type { PinRepairOrder, PinMaterial, CashTransaction } from "../../types";
 import { supabase, IS_OFFLINE_MODE } from "../../supabaseClient";
 
 export interface RepairService {
@@ -9,25 +9,28 @@ export interface RepairService {
   upsertPinRepairOrder: (order: PinRepairOrder) => Promise<void>;
 }
 
+// Database column mapping - match actual Supabase table schema
 interface DBPinRepairOrder {
   id: string;
+  creation_date: string;
   customer_name: string;
   customer_phone: string;
-  customer_address: string;
-  product_id: string;
-  product_name: string;
-  problem_description: string;
+  device_name?: string;
+  issue_description: string;
+  technician_name?: string;
   status: string;
-  estimated_cost: number;
-  actual_cost?: number;
-  deposit_amount?: number;
-  materials_used?: string;
+  materials_used?: string; // JSONB stored as string
+  labor_cost: number;
+  total: number;
   notes?: string;
-  created_at: string;
-  updated_at?: string;
-  completed_at?: string;
-  user_id?: string;
-  user_name?: string;
+  payment_status: string;
+  partial_payment_amount?: number;
+  deposit_amount?: number;
+  payment_method?: string;
+  payment_date?: string;
+  due_date?: string;
+  cash_transaction_id?: string;
+  created_at?: string;
 }
 
 export function createRepairService(ctx: PinContextType): RepairService {
@@ -55,23 +58,24 @@ export function createRepairService(ctx: PinContextType): RepairService {
       try {
         const basePayload: DBPinRepairOrder = {
           id: order.id,
+          creation_date: order.creationDate,
           customer_name: order.customerName,
           customer_phone: order.customerPhone || "",
-          customer_address: order.customerAddress || "",
-          product_id: order.productId || "",
-          product_name: order.productName,
-          problem_description: order.problemDescription,
+          device_name: order.deviceName || "",
+          issue_description: order.issueDescription,
+          technician_name: order.technicianName || "",
           status: order.status,
-          estimated_cost: order.estimatedCost || 0,
-          actual_cost: order.actualCost,
-          deposit_amount: order.depositAmount || 0,
           materials_used: JSON.stringify(order.materialsUsed ?? []),
-          notes: order.notes,
-          created_at: order.createdAt,
-          updated_at: order.updatedAt,
-          completed_at: order.completedAt,
-          user_id: ctx.currentUser?.id ?? "",
-          user_name: ctx.currentUser?.name ?? "",
+          labor_cost: order.laborCost || 0,
+          total: order.total || 0,
+          notes: order.notes || "",
+          payment_status: order.paymentStatus || "unpaid",
+          partial_payment_amount: order.partialPaymentAmount,
+          deposit_amount: order.depositAmount || 0,
+          payment_method: order.paymentMethod,
+          payment_date: order.paymentDate,
+          due_date: order.dueDate,
+          cash_transaction_id: order.cashTransactionId,
         };
 
         const { error: insertErr } = await supabase.from("pin_repair_orders").insert(basePayload);
@@ -128,18 +132,21 @@ export function createRepairService(ctx: PinContextType): RepairService {
         const updatePayload: Partial<DBPinRepairOrder> = {
           customer_name: order.customerName,
           customer_phone: order.customerPhone || "",
-          customer_address: order.customerAddress || "",
-          product_id: order.productId || "",
-          product_name: order.productName,
-          problem_description: order.problemDescription,
+          device_name: order.deviceName || "",
+          issue_description: order.issueDescription,
+          technician_name: order.technicianName || "",
           status: order.status,
-          estimated_cost: order.estimatedCost || 0,
-          actual_cost: order.actualCost,
-          deposit_amount: order.depositAmount || 0,
           materials_used: JSON.stringify(order.materialsUsed ?? []),
-          notes: order.notes,
-          updated_at: new Date().toISOString(),
-          completed_at: order.completedAt,
+          labor_cost: order.laborCost || 0,
+          total: order.total || 0,
+          notes: order.notes || "",
+          payment_status: order.paymentStatus || "unpaid",
+          partial_payment_amount: order.partialPaymentAmount,
+          deposit_amount: order.depositAmount || 0,
+          payment_method: order.paymentMethod,
+          payment_date: order.paymentDate,
+          due_date: order.dueDate,
+          cash_transaction_id: order.cashTransactionId,
         };
 
         const { error: upErr } = await supabase
