@@ -516,8 +516,9 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
 
   // Footer - Payment & Summary
   const [notes, setNotes] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank" | "">("");
-  const [amountPaid, setAmountPaid] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash"); // Mặc định tiền mặt
+  const [isDebt, setIsDebt] = useState(false); // Mặc định thanh toán đủ
+  const [debtAmount, setDebtAmount] = useState(0); // Số tiền nợ khi ghi nợ
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
 
@@ -565,14 +566,17 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
 
   const totalAfterDiscount = subtotal - discount;
   const totalWithTax = totalAfterDiscount + tax;
+  
+  // Tính số tiền thanh toán thực tế
+  const amountPaid = isDebt ? (totalWithTax - debtAmount) : totalWithTax;
   const remaining = totalWithTax - amountPaid;
 
   // Tự động xác định trạng thái
   const paymentStatus = useMemo(() => {
-    if (amountPaid === 0) return "unpaid";
-    if (amountPaid >= totalWithTax) return "paid";
-    return "partial";
-  }, [amountPaid, totalWithTax]);
+    if (isDebt && debtAmount > 0) return "partial";
+    if (!isDebt) return "paid";
+    return "unpaid";
+  }, [isDebt, debtAmount]);
 
   // ===== HANDLERS =====
   const handleSelectSupplier = (supplier: Supplier) => {
@@ -1340,30 +1344,59 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
               </div>
             </div>
 
-            {/* Amount Paid */}
+            {/* Payment Type Toggle */}
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Thanh toán ngay:</label>
-              <input
-                type="number"
-                value={amountPaid || ""}
-                onChange={(e) => setAmountPaid(Number(e.target.value))}
-                className="w-full px-3 py-2.5 text-right text-base font-bold bg-slate-900/50 border-2 border-green-500/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
-                placeholder="0"
-              />
+              <label className="text-xs text-slate-400 mb-1.5 block">Hình thức thanh toán:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsDebt(false); setDebtAmount(0); }}
+                  className={`py-2.5 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-1 ${
+                    !isDebt
+                      ? "bg-green-500/20 border-2 border-green-500 text-green-400"
+                      : "bg-slate-900/50 border border-slate-600/50 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  ✅ Thanh toán đủ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDebt(true)}
+                  className={`py-2.5 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-1 ${
+                    isDebt
+                      ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
+                      : "bg-slate-900/50 border border-slate-600/50 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  📝 Ghi nợ
+                </button>
+              </div>
             </div>
 
-            {/* Remaining */}
-            {remaining > 0 && (
-              <div className="flex items-center justify-between p-2.5 bg-red-900/30 border border-red-500/30 rounded-xl">
-                <span className="text-xs text-red-400">Còn nợ:</span>
-                <span className="text-sm font-bold text-red-400">{formatCurrency(remaining)} đ</span>
+            {/* Debt Amount - Only show when isDebt */}
+            {isDebt && (
+              <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-xl space-y-2">
+                <label className="text-xs text-orange-400 font-medium block">Số tiền ghi nợ:</label>
+                <input
+                  type="number"
+                  value={debtAmount || ""}
+                  onChange={(e) => setDebtAmount(Math.min(Number(e.target.value), totalWithTax))}
+                  className="w-full px-3 py-2 text-right text-base font-bold bg-slate-900/50 border border-orange-500/50 rounded-lg text-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  placeholder="0"
+                  max={totalWithTax}
+                />
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Thanh toán ngay:</span>
+                  <span className="text-green-400 font-medium">{formatCurrency(amountPaid)} đ</span>
+                </div>
               </div>
             )}
 
-            {remaining < 0 && (
+            {/* Payment Summary */}
+            {!isDebt && (
               <div className="flex items-center justify-between p-2.5 bg-green-900/30 border border-green-500/30 rounded-xl">
-                <span className="text-xs text-green-400">Tiền thừa:</span>
-                <span className="text-sm font-bold text-green-400">{formatCurrency(Math.abs(remaining))} đ</span>
+                <span className="text-xs text-green-400">💰 Thanh toán:</span>
+                <span className="text-sm font-bold text-green-400">{formatCurrency(totalWithTax)} đ</span>
               </div>
             )}
 
