@@ -1765,6 +1765,291 @@ const MaterialDetailModal: React.FC<{
   );
 };
 
+// Material Edit Modal Component - Để chỉnh sửa thông tin vật liệu
+const MaterialEditModal: React.FC<{
+  isOpen: boolean;
+  material: PinMaterial | null;
+  onClose: () => void;
+  onSave: (updatedMaterial: PinMaterial) => Promise<void>;
+  suppliers: Supplier[];
+}> = ({ isOpen, material, onClose, onSave, suppliers }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    sku: "",
+    unit: "cái",
+    purchasePrice: 0,
+    retailPrice: 0,
+    wholesalePrice: 0,
+    supplier: "",
+    supplierPhone: "",
+    description: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && material) {
+      setFormData({
+        name: material.name || "",
+        sku: material.sku || "",
+        unit: material.unit || "cái",
+        purchasePrice: material.purchasePrice || 0,
+        retailPrice: material.retailPrice || 0,
+        wholesalePrice: material.wholesalePrice || 0,
+        supplier: material.supplier || "",
+        supplierPhone: (material as any).supplierPhone || "",
+        description: material.description || "",
+      });
+    }
+  }, [isOpen, material]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "number" ? Number(value) : value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!material || isSubmitting) return;
+
+    if (!formData.name.trim()) {
+      alert("Vui lòng nhập tên vật liệu!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const updatedMaterial: PinMaterial = {
+        ...material,
+        name: formData.name.trim(),
+        sku: formData.sku.trim(),
+        unit: formData.unit,
+        purchasePrice: formData.purchasePrice,
+        retailPrice: formData.retailPrice,
+        wholesalePrice: formData.wholesalePrice,
+        supplier: formData.supplier.trim(),
+        description: formData.description.trim(),
+      };
+      await onSave(updatedMaterial);
+      onClose();
+    } catch (error) {
+      console.error("Error saving material:", error);
+      alert("Lỗi khi lưu vật liệu: " + (error as any)?.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen || !material) return null;
+
+  const baseUnits = ["cái", "Cell", "kg", "mét", "lít", "cuộn", "bộ", "hộp", "thùng"];
+
+  return (
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl shadow-2xl border border-gray-200 dark:border-gray-600">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              ✏️ Chỉnh sửa vật liệu
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Cập nhật thông tin vật liệu
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-4">
+            {/* Tên và SKU */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tên vật liệu <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập tên vật liệu"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  SKU
+                </label>
+                <input
+                  type="text"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
+                  placeholder="SKU"
+                  readOnly
+                />
+              </div>
+            </div>
+
+            {/* Đơn vị và Giá nhập */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Đơn vị
+                </label>
+                <select
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {baseUnits.map(unit => (
+                    <option key={unit} value={unit}>{unit}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Giá nhập (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  name="purchasePrice"
+                  value={formData.purchasePrice}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Giá bán lẻ và Giá bán sỉ */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Giá bán lẻ (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  name="retailPrice"
+                  value={formData.retailPrice}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Giá bán sỉ (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  name="wholesalePrice"
+                  value={formData.wholesalePrice}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Nhà cung cấp */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nhà cung cấp
+                </label>
+                <input
+                  type="text"
+                  name="supplier"
+                  value={formData.supplier}
+                  onChange={handleChange}
+                  list="suppliers-list"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Chọn hoặc nhập mới"
+                />
+                <datalist id="suppliers-list">
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.name} />
+                  ))}
+                </datalist>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  SĐT nhà cung cấp
+                </label>
+                <input
+                  type="text"
+                  name="supplierPhone"
+                  value={formData.supplierPhone}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Số điện thoại"
+                />
+              </div>
+            </div>
+
+            {/* Ghi chú */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Ghi chú
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                placeholder="Ghi chú thêm..."
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Đang lưu...
+                </>
+              ) : (
+                <>
+                  <Icon name="check" weight="bold" className="w-4 h-4" />
+                  Lưu thay đổi
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Stock Adjustment Modal Component
 const StockAdjustmentModal: React.FC<{
   isOpen: boolean;
@@ -2835,6 +3120,11 @@ const MaterialManager: React.FC<{
   const [showStockAdjustmentModal, setShowStockAdjustmentModal] =
     useState(false);
   const [selectedMaterialForAdjustment, setSelectedMaterialForAdjustment] =
+    useState<PinMaterial | null>(null);
+  
+  // Material Edit Modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedMaterialForEdit, setSelectedMaterialForEdit] =
     useState<PinMaterial | null>(null);
 
   // Cấp 3 features states - Dự báo tồn kho và phân tích giá
@@ -4236,11 +4526,11 @@ const MaterialManager: React.FC<{
                               </button>
                               <button
                                 onClick={() => {
-                                  setEditingMaterial(material);
-                                  setShowForm(true);
+                                  setSelectedMaterialForEdit(material);
+                                  setShowEditModal(true);
                                 }}
                                 className="h-7 w-7 rounded-full flex items-center justify-center ring-1 ring-inset ring-slate-200 dark:ring-slate-600 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all"
-                                title="Nhập kho thêm"
+                                title="Chỉnh sửa thông tin"
                               >
                                 <Icon
                                   name="pencil"
@@ -4300,12 +4590,55 @@ const MaterialManager: React.FC<{
               }}
               onEdit={() => {
                 if (selectedMaterialForDetail) {
-                  setEditingMaterial(selectedMaterialForDetail);
-                  setShowForm(true);
+                  setSelectedMaterialForEdit(selectedMaterialForDetail);
+                  setShowEditModal(true);
                   setShowDetailModal(false);
                   setSelectedMaterialForDetail(null);
                 }
               }}
+            />
+
+            {/* Material Edit Modal */}
+            <MaterialEditModal
+              isOpen={showEditModal}
+              material={selectedMaterialForEdit}
+              onClose={() => {
+                setShowEditModal(false);
+                setSelectedMaterialForEdit(null);
+              }}
+              onSave={async (updatedMaterial) => {
+                try {
+                  // Update in database
+                  const { error } = await supabase
+                    .from("pin_materials")
+                    .update({
+                      name: updatedMaterial.name,
+                      unit: updatedMaterial.unit,
+                      purchase_price: updatedMaterial.purchasePrice,
+                      retail_price: updatedMaterial.retailPrice,
+                      wholesale_price: updatedMaterial.wholesalePrice,
+                      supplier: updatedMaterial.supplier || null,
+                      description: updatedMaterial.description || null,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", updatedMaterial.id);
+
+                  if (error) throw error;
+
+                  // Update local state
+                  setMaterials(
+                    materials.map((m) =>
+                      m.id === updatedMaterial.id ? updatedMaterial : m
+                    )
+                  );
+
+                  alert("Đã cập nhật vật liệu thành công!");
+                } catch (err) {
+                  console.error("Error updating material:", err);
+                  throw err;
+                }
+              }}
+              suppliers={suppliers}
             />
 
             {/* Stock Adjustment Modal */}
