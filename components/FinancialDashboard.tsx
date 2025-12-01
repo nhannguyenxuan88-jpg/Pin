@@ -24,10 +24,44 @@ const DASHBOARD_TABS: Array<{
 ];
 
 const FinancialDashboard: React.FC = () => {
-  const { fixedAssets = [], currentUser, addToast } = usePinContext();
-  // TODO: Wire real values from context/service when available
-  const cashFlows: CashFlow[] = [];
-  const capitalStructure: CapitalStructure[] = [];
+  const { fixedAssets = [], cashTransactions = [], pinSales = [], currentUser, addToast } = usePinContext();
+  
+  // Convert cash transactions to CashFlow format for analysis
+  const cashFlows: CashFlow[] = useMemo(() => {
+    return (cashTransactions || []).map(tx => ({
+      id: tx.id,
+      date: tx.date,
+      amount: tx.type === 'income' ? tx.amount : -tx.amount,
+      category: tx.category === 'inventory_purchase' ? 'investing' 
+        : tx.category === 'service_income' ? 'operating'
+        : tx.type === 'income' ? 'operating' : 'operating',
+      description: tx.notes || '',
+      reference: tx.saleId || tx.workOrderId || '',
+    }));
+  }, [cashTransactions]);
+
+  // Calculate capital structure from current data
+  const capitalStructure: CapitalStructure[] = useMemo(() => {
+    const currentDate = new Date();
+    const totalAssetValue = FinancialAnalyticsService.calculateTotalAssetValue(fixedAssets, currentDate);
+    
+    // Calculate total cash balance from transactions
+    const totalCash = (cashTransactions || []).reduce((sum, tx) => {
+      return sum + (tx.type === 'income' ? tx.amount : -tx.amount);
+    }, 0);
+
+    // Calculate total sales as a proxy for revenue
+    const totalRevenue = (pinSales || []).reduce((sum, sale) => sum + (sale.total || 0), 0);
+
+    return [{
+      date: currentDate.toISOString(),
+      totalAssets: totalAssetValue + Math.max(0, totalCash),
+      totalLiabilities: 0, // Would need supplier debts data
+      workingCapital: Math.max(0, totalCash),
+      cashBalance: totalCash,
+      inventoryValue: 0, // Would need inventory data
+    }];
+  }, [fixedAssets, cashTransactions, pinSales]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>("month");
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");

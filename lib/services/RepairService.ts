@@ -1,11 +1,12 @@
 import type { PinContextType } from "../../contexts/types";
-import type { PinRepairOrder, PinProduct, PinMaterial } from "../../types";
+import type { PinRepairOrder, PinProduct, PinMaterial, CashTransaction } from "../../types";
 import { supabase, IS_OFFLINE_MODE } from "../../supabaseClient";
 
 export interface RepairService {
   addRepairOrder: (order: PinRepairOrder) => Promise<void>;
   updateRepairOrder: (order: PinRepairOrder) => Promise<void>;
   deleteRepairOrder: (orderId: string) => Promise<void>;
+  upsertPinRepairOrder: (order: PinRepairOrder) => Promise<void>;
 }
 
 interface DBPinRepairOrder {
@@ -155,8 +156,9 @@ export function createRepairService(ctx: PinContextType): RepairService {
           return;
         }
 
-        // Deduct materials used if order is completed
-        if (order.status === "completed" && order.materialsUsed) {
+        // Deduct materials used if order is completed (check Vietnamese status)
+        const completedStatuses = ["completed", "Đã sửa xong", "Trả máy"];
+        if (completedStatuses.includes(order.status) && order.materialsUsed) {
           for (const m of order.materialsUsed) {
             const mat = ctx.pinMaterials.find(
               (material: PinMaterial) => material.id === m.materialId
@@ -172,6 +174,43 @@ export function createRepairService(ctx: PinContextType): RepairService {
                 material.id === m.materialId ? { ...material, stock: remaining } : material
               )
             );
+          }
+        }
+
+        // Create cash transaction for payment
+        const paidStatuses = ["paid", "partial"];
+        if (paidStatuses.includes(order.paymentStatus || "") && ctx.addCashTransaction) {
+          // Check if cash transaction already exists for this repair
+          const existingTx = ctx.cashTransactions?.find(
+            (t: CashTransaction) => t.workOrderId === order.id
+          );
+          
+          // Calculate payment amount
+          let paymentAmount = 0;
+          if (order.paymentStatus === "paid") {
+            paymentAmount = order.total || 0;
+          } else if (order.paymentStatus === "partial") {
+            paymentAmount = (order.depositAmount || 0) + (order.partialPaymentAmount || 0);
+          }
+          
+          // Only create/update if there's a payment and no existing transaction
+          if (paymentAmount > 0 && !existingTx) {
+            const cashTx: CashTransaction = {
+              id: `CT-REPAIR-${Date.now()}`,
+              type: "income",
+              date: new Date().toISOString(),
+              amount: paymentAmount,
+              contact: {
+                id: order.customerPhone || order.id,
+                name: order.customerName || "Khách sửa chữa",
+              },
+              notes: `Thu tiền sửa chữa: ${order.deviceName || order.productName || "Thiết bị"} - ${order.id} #app:pincorp`,
+              paymentSourceId: order.paymentMethod || "cash",
+              branchId: "main",
+              workOrderId: order.id,
+              category: "service_income",
+            };
+            await ctx.addCashTransaction(cashTx);
           }
         }
 
@@ -247,6 +286,20 @@ export function createRepairService(ctx: PinContextType): RepairService {
           message: errorMessage,
           type: "error",
         });
+      }
+    },
+
+    upsertPinRepairOrder: async (order) => {
+      // Check if order exists
+      const existing = ctx.pinRepairOrders?.find((o: PinRepairOrder) => o.id === order.id);
+      if (existing) {
+        // Update existing order
+        const service = createRepairService(ctx);
+        await service.updateRepairOrder(order);
+      } else {
+        // Add new order
+        const service = createRepairService(ctx);
+        await service.addRepairOrder(order);
       }
     },
   };

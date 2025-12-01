@@ -431,9 +431,11 @@ export function createSalesService(ctx: PinContextType): SalesService {
         const related = ctx.cashTransactions?.find((t: CashTransaction) => t.saleId === sale.id);
         if (related) {
           const tag = "#app:pincorp";
+          // Use paidAmount for partial payments, otherwise use total
+          const actualPaidAmount = sale.paidAmount ?? sale.total;
           const updatedTx: CashTransaction = {
             ...related,
-            amount: sale.total,
+            amount: actualPaidAmount,
             paymentSourceId: sale.paymentMethod,
             notes:
               (related.notes || `Cập nhật hoá đơn ${sale.id}`) +

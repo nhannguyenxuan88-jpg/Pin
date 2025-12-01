@@ -169,7 +169,16 @@ export default function ReceivablesNew() {
         continue;
       const total = Number((sale as any).total ?? 0);
       if (total <= 0) continue;
-      const paid = paidBySale.get(sale.id) || 0;
+      
+      // Check payment status first - skip fully paid sales
+      const paymentStatus = (sale as any).paymentStatus;
+      if (paymentStatus === "paid") continue;
+      
+      // Calculate paid amount from sale record first, then fallback to cash transactions
+      const salePaidAmount = Number((sale as any).paidAmount ?? 0);
+      const cashTxPaid = paidBySale.get(sale.id) || 0;
+      // Use the higher of the two (in case cash transaction was created but paidAmount not updated)
+      const paid = Math.max(salePaidAmount, cashTxPaid);
       const debt = Math.max(0, total - paid);
       if (debt <= 0) continue;
 
@@ -183,14 +192,24 @@ export default function ReceivablesNew() {
         details.push(...items);
       }
 
+      // Get customer info from sale.customer object
+      const customerObj = (sale as any).customer;
+      const customerName = typeof customerObj === 'object' 
+        ? (customerObj?.name || "") 
+        : ((sale as any).customerName || "");
+      const customerPhone = typeof customerObj === 'object'
+        ? (customerObj?.phone || "")
+        : ((sale as any).customerPhone || "");
+
       arr.push({
         id: sale.id,
         date:
+          (sale as any).date ||
           (sale as any).saleDate ||
           (sale as any).created_at ||
           new Date().toISOString(),
-        customerName: (sale as any).customerName || "",
-        customerPhone: (sale as any).customerPhone,
+        customerName,
+        customerPhone,
         title: `Đơn hàng: ${sale.code || sale.id}`,
         details,
         kind: "sale",

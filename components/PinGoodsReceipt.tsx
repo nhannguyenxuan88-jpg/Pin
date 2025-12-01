@@ -29,17 +29,22 @@ const generateUniqueId = (prefix = "") => {
   return `${prefix}${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
-const generateMaterialSKU = (existingMaterials: PinMaterial[] = []) => {
+const generateMaterialSKU = (existingMaterials: PinMaterial[] = [], additionalSkus: string[] = []) => {
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, "0");
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const yyyy = today.getFullYear();
   const dateStr = `${dd}${mm}${yyyy}`;
   const todayPrefix = `NL-${dateStr}`;
-  const countToday = existingMaterials.filter((m) =>
+  // Count existing materials with today's prefix
+  const countExisting = existingMaterials.filter((m) =>
     m.sku?.startsWith(todayPrefix)
   ).length;
-  const sequence = String(countToday + 1).padStart(3, "0");
+  // Count additional SKUs in current session (e.g., from receiptItems)
+  const countAdditional = additionalSkus.filter((sku) =>
+    sku?.startsWith(todayPrefix)
+  ).length;
+  const sequence = String(countExisting + countAdditional + 1).padStart(3, "0");
   return `NL-${dateStr}-${sequence}`;
 };
 
@@ -599,12 +604,14 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       setProductSearch("");
       setShowProductDropdown(false);
     } else {
-      // Sản phẩm mới - tạo item mới
+      // Sản phẩm mới - tạo item mới với SKU unique
+      // Collect existing SKUs from current receiptItems to avoid duplicates
+      const currentSkus = receiptItems.map((item) => item.sku);
       const newItem: ReceiptItem = {
         internalId: generateUniqueId("item-"),
         materialId: null,
         materialName: productSearch,
-        sku: generateMaterialSKU(materials || []),
+        sku: generateMaterialSKU(materials || [], currentSkus),
         unit: "cái",
         quantity: 1,
         purchasePrice: 0,
@@ -793,6 +800,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
 
       // Save NEW Materials to Supabase FIRST to get real UUIDs
       if (upsertPinMaterial) {
+        const savedMaterialIds: string[] = [];
+        
         for (const item of receiptItems) {
           if (item.isNew) {
             const localId = materialIdMap.get(item.internalId);
@@ -801,24 +810,55 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             );
             if (materialToSave) {
               try {
-                // Supabase will generate UUID and return it
-                await upsertPinMaterial(materialToSave);
-                // Fetch the created material to get the real UUID
-                const { data } = await supabase
+                // Insert directly to get the real UUID back
+                const { data: insertedData, error: insertError } = await supabase
                   .from("pin_materials")
+                  .insert({
+                    name: materialToSave.name,
+                    sku: materialToSave.sku,
+                    unit: materialToSave.unit,
+                    purchase_price: materialToSave.purchasePrice ?? 0,
+                    retail_price: materialToSave.retailPrice ?? 0,
+                    wholesale_price: materialToSave.wholesalePrice ?? 0,
+                    stock: materialToSave.stock ?? 0,
+                    committed_quantity: 0,
+                    supplier: materialToSave.supplier || null,
+                    description: materialToSave.description || null,
+                    updated_at: new Date().toISOString(),
+                  })
                   .select("id")
-                  .eq("sku", materialToSave.sku)
                   .single();
 
-                if (data?.id) {
+                if (insertError) {
+                  console.error("Error inserting material:", insertError);
+                  // If duplicate SKU, try to fetch existing
+                  if (insertError.code === "23505") {
+                    const { data: existingData } = await supabase
+                      .from("pin_materials")
+                      .select("id")
+                      .eq("sku", materialToSave.sku)
+                      .single();
+                    if (existingData?.id) {
+                      savedMaterialIds.push(existingData.id);
+                      materialIdMap.set(item.internalId, existingData.id);
+                      const historyIdx = newHistoryRecords.findIndex(
+                        (h) => h.materialId === localId
+                      );
+                      if (historyIdx >= 0) {
+                        newHistoryRecords[historyIdx].materialId = existingData.id;
+                      }
+                    }
+                  }
+                } else if (insertedData?.id) {
+                  savedMaterialIds.push(insertedData.id);
                   // Update mapping with real UUID from database
-                  materialIdMap.set(item.internalId, data.id);
+                  materialIdMap.set(item.internalId, insertedData.id);
                   // Update history records with real UUID
                   const historyIdx = newHistoryRecords.findIndex(
                     (h) => h.materialId === localId
                   );
                   if (historyIdx >= 0) {
-                    newHistoryRecords[historyIdx].materialId = data.id;
+                    newHistoryRecords[historyIdx].materialId = insertedData.id;
                   }
                 }
               } catch (err) {
@@ -927,6 +967,33 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       }
 
       alert("Nhập hàng thành công!");
+
+      // Reload materials from database to ensure local state is in sync
+      try {
+        const { data: refreshedMaterials, error: refreshError } = await supabase
+          .from("pin_materials")
+          .select("*");
+        
+        if (!refreshError && refreshedMaterials) {
+          const mappedMaterials = refreshedMaterials.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            sku: row.sku,
+            unit: row.unit,
+            purchasePrice: Number(row.purchase_price ?? row.purchaseprice ?? 0),
+            retailPrice: Number(row.retail_price ?? row.retailprice ?? 0),
+            wholesalePrice: Number(row.wholesale_price ?? row.wholesaleprice ?? 0),
+            stock: Number(row.stock ?? 0),
+            committedQuantity: Number(row.committed_quantity ?? row.committedquantity ?? 0),
+            supplier: row.supplier || undefined,
+            description: row.description || undefined,
+            created_at: row.created_at || row.createdat || undefined,
+          }));
+          setMaterials(mappedMaterials);
+        }
+      } catch (refreshErr) {
+        console.error("Error refreshing materials:", refreshErr);
+      }
 
       // Reset form
       setReceiptItems([]);

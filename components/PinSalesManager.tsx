@@ -318,7 +318,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     return discount;
   }, [discount, discountType, subtotal]);
 
-  const total = subtotal - discountAmount;
+  // Ensure total is never negative
+  const total = Math.max(0, subtotal - discountAmount);
   const totalCartItems = useMemo(
     () => cartItems.reduce((acc, item) => acc + item.quantity, 0),
     [cartItems]
