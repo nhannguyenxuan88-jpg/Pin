@@ -732,6 +732,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             wholesalePrice: item.wholesalePrice,
             stock: item.quantity,
             supplier: selectedSupplier?.name,
+            supplierPhone: selectedSupplier?.phone,
           };
           updatedMaterials.push(newMaterial);
         } else if (item.materialId) {
@@ -744,6 +745,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
               purchasePrice: item.purchasePrice,
               retailPrice: item.retailPrice,
               wholesalePrice: item.wholesalePrice,
+              supplier: selectedSupplier?.name || updatedMaterials[index].supplier,
+              supplierPhone: selectedSupplier?.phone || updatedMaterials[index].supplierPhone,
             };
             finalMaterialId = item.materialId;
           }
@@ -809,6 +812,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
               stock: material.stock ?? 0,
               committed_quantity: 0,
               supplier: material.supplier || null,
+              supplier_phone: material.supplierPhone || null,
               description: material.description || null,
               updated_at: new Date().toISOString(),
             })
@@ -825,11 +829,15 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                 .eq("sku", material.sku)
                 .single();
               if (existingData?.id) {
-                // Update stock of existing material
+                // Update stock of existing material + supplier info
                 const newStock = (existingData.stock || 0) + (material.stock || 0);
                 await supabase
                   .from("pin_materials")
-                  .update({ stock: newStock })
+                  .update({
+                    stock: newStock,
+                    supplier: material.supplier || undefined,
+                    supplier_phone: material.supplierPhone || undefined,
+                  })
                   .eq("id", existingData.id);
 
                 // Update history record with existing ID

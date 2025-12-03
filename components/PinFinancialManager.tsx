@@ -593,26 +593,76 @@ const PinFinancialManager: React.FC = () => {
   // Get category label in Vietnamese
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
-      sales: "Bán hàng",
-      service: "Dịch vụ",
-      services: "Dịch vụ",
-      revenue: "Doanh thu",
-      other_income: "Thu khác",
-      materials: "Nguyên liệu",
-      equipment: "Thiết bị",
-      utilities: "Tiện ích",
-      salary: "Lương",
-      salaries: "Lương nhân viên",
-      expense: "Chi phí",
-      other_expense: "Chi khác",
-      inventory_purchase: "Nhập kho",
-      purchase: "Mua hàng",
-      repair: "Sửa chữa",
-      rent: "Thuê mặt bằng",
-      marketing: "Marketing",
-      transport: "Vận chuyển",
+      // Thu nhập
+      sales: "💰 Bán hàng",
+      service: "🔧 Dịch vụ sửa chữa",
+      services: "🔧 Dịch vụ",
+      service_income: "🔧 Thu sửa chữa",
+      revenue: "📈 Doanh thu",
+      other_income: "💵 Thu khác",
+      deposit: "💳 Tiền đặt cọc",
+      refund_received: "↩️ Hoàn tiền nhận",
+      debt_collection: "📥 Thu nợ",
+
+      // Chi phí
+      inventory_purchase: "📦 Nhập kho/vật tư",
+      purchase: "🛒 Mua hàng",
+      materials: "🧱 Nguyên vật liệu",
+      equipment: "🖥️ Thiết bị",
+      utilities: "💡 Tiện ích (điện, nước)",
+      salary: "👤 Lương nhân viên",
+      salaries: "👥 Lương nhân viên",
+      expense: "💸 Chi phí",
+      other_expense: "💸 Chi khác",
+      rent: "🏠 Thuê mặt bằng",
+      marketing: "📣 Marketing/Quảng cáo",
+      transport: "🚚 Vận chuyển",
+      supplier_payment: "🏭 Thanh toán NCC",
+      repair_cost: "🔩 Chi phí sửa chữa",
+      refund: "↩️ Hoàn tiền khách",
     };
     return labels[category] || category || "Khác";
+  };
+
+  // Get transaction source description (nguồn giao dịch)
+  const getTransactionSource = (tx: CashTransaction): string => {
+    // Check for repair order
+    if (tx.workOrderId) {
+      if (String(tx.workOrderId).startsWith("SC-")) {
+        return "Phiếu sửa chữa";
+      }
+      if (String(tx.workOrderId).startsWith("LTN-SC")) {
+        return "Đơn sửa chữa LTN";
+      }
+    }
+
+    // Check for sale
+    if (tx.saleId) {
+      if (String(tx.saleId).startsWith("LTN-BH")) {
+        return "Đơn bán hàng";
+      }
+      return "Bán hàng";
+    }
+
+    // Check for supplier payment
+    if (tx.category === "supplier_payment" || tx.category === "inventory_purchase") {
+      return "Nhập kho/NCC";
+    }
+
+    // Check for debt collection
+    if (tx.category === "debt_collection") {
+      return "Thu nợ";
+    }
+
+    // Check notes for source hint
+    const notes = tx.notes?.toLowerCase() || "";
+    if (notes.includes("sửa chữa") || notes.includes("repair")) return "Sửa chữa";
+    if (notes.includes("bán hàng") || notes.includes("sale")) return "Bán hàng";
+    if (notes.includes("nhập kho") || notes.includes("import")) return "Nhập kho";
+    if (notes.includes("đặt cọc") || notes.includes("deposit")) return "Đặt cọc";
+    if (notes.includes("thanh toán ncc") || notes.includes("supplier")) return "Thanh toán NCC";
+
+    return "Thủ công";
   };
 
   // Kiểm tra giao dịch có phải là Chi không
@@ -856,29 +906,32 @@ const PinFinancialManager: React.FC = () => {
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b border-slate-700">
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Ngày
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Loại
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Nguồn GD
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Danh mục
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Đối tượng
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Nội dung
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Nguồn tiền
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Số tiền
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      Thao tác
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      TT
                     </th>
                   </tr>
                 </thead>
@@ -886,12 +939,12 @@ const PinFinancialManager: React.FC = () => {
                   {filteredCashTransactions.length > 0 ? (
                     filteredCashTransactions.map((tx) => (
                       <tr key={tx.id} className="hover:bg-slate-700/30 transition-colors">
-                        <td className="px-6 py-4 text-sm text-white">
+                        <td className="px-4 py-3 text-sm text-white whitespace-nowrap">
                           {new Date(tx.date).toLocaleDateString("vi-VN")}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               isExpenseTransaction(tx)
                                 ? "bg-red-500/20 text-red-400"
                                 : "bg-teal-500/20 text-teal-400"
@@ -900,21 +953,42 @@ const PinFinancialManager: React.FC = () => {
                             {isExpenseTransaction(tx) ? "↓ Chi" : "↑ Thu"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-300">
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-700 text-slate-300">
+                            {getTransactionSource(tx)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
                           {getCategoryLabel(tx.category || "")}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-300">
+                        <td className="px-4 py-3 text-sm text-gray-300">
                           {typeof tx.contact === "object" && tx.contact?.name
                             ? tx.contact.name
                             : "--"}
                         </td>
-                        <td className="px-6 py-4 text-sm text-white max-w-xs truncate">
+                        <td
+                          className="px-4 py-3 text-sm text-white max-w-[200px] truncate"
+                          title={tx.description || tx.notes || ""}
+                        >
                           {tx.description || tx.notes || "--"}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-300">
-                          {getPaymentSourceLabel(tx.paymentSourceId || "cash")}
+                        <td className="px-4 py-3 text-sm text-gray-300 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1 ${
+                              (tx.paymentSourceId?.toLowerCase() || "cash") === "bank" ||
+                              tx.paymentSourceId?.toLowerCase() === "ngan_hang"
+                                ? "text-blue-400"
+                                : "text-green-400"
+                            }`}
+                          >
+                            {(tx.paymentSourceId?.toLowerCase() || "cash") === "bank" ||
+                            tx.paymentSourceId?.toLowerCase() === "ngan_hang"
+                              ? "🏦"
+                              : "💵"}{" "}
+                            {getPaymentSourceLabel(tx.paymentSourceId || "cash")}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-right">
                           <span
                             className={`text-sm font-semibold ${
                               isExpenseTransaction(tx) ? "text-red-400" : "text-teal-400"
@@ -924,8 +998,8 @@ const PinFinancialManager: React.FC = () => {
                             {formatCurrency(Math.abs(tx.amount))}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => {
                                 setNewTransaction({
@@ -962,7 +1036,7 @@ const PinFinancialManager: React.FC = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center">
+                      <td colSpan={9} className="px-6 py-12 text-center">
                         <Wallet className="w-12 h-12 text-gray-500 mx-auto mb-3" />
                         <p className="text-gray-400">Chưa có giao dịch nào</p>
                         <button

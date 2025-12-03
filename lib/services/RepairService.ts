@@ -89,6 +89,27 @@ export function createRepairService(ctx: PinContextType): RepairService {
           return;
         }
 
+        // Create cash transaction for deposit (tiền đặt cọc khi tạo phiếu)
+        const depositAmount = order.depositAmount || 0;
+        if (depositAmount > 0 && ctx.addCashTransaction) {
+          const depositTx: CashTransaction = {
+            id: `CT-DEPOSIT-${order.id}-${Date.now()}`,
+            type: "income",
+            date: new Date().toISOString(),
+            amount: depositAmount,
+            contact: {
+              id: order.customerPhone || order.id,
+              name: order.customerName || "Khách sửa chữa",
+            },
+            notes: `Đặt cọc sửa chữa: ${order.deviceName || "Thiết bị"} - ${order.id} #app:pincorp`,
+            paymentSourceId: order.paymentMethod || "cash",
+            branchId: "main",
+            workOrderId: order.id,
+            category: "deposit",
+          };
+          await ctx.addCashTransaction(depositTx);
+        }
+
         ctx.setRepairOrders((prev: PinRepairOrder[]) => [order, ...prev]);
         ctx.addToast?.({
           title: "Đã tạo đơn sửa chữa",
@@ -191,7 +212,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           const existingTx = ctx.cashTransactions?.find(
             (t: CashTransaction) => t.workOrderId === order.id
           );
-          
+
           // Calculate payment amount
           let paymentAmount = 0;
           if (order.paymentStatus === "paid") {
@@ -199,7 +220,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           } else if (order.paymentStatus === "partial") {
             paymentAmount = (order.depositAmount || 0) + (order.partialPaymentAmount || 0);
           }
-          
+
           // Only create/update if there's a payment and no existing transaction
           if (paymentAmount > 0 && !existingTx) {
             const cashTx: CashTransaction = {

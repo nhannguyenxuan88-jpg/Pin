@@ -3914,24 +3914,8 @@ const MaterialManager: React.FC<{
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-wrap">
-          <button
-            onClick={loadMaterials}
-            className="px-2 md:px-3 py-1.5 bg-slate-500 hover:bg-slate-600 text-white rounded-lg text-xs md:text-sm font-medium shadow-sm transition-all"
-            disabled={loading}
-          >
-            {loading ? "..." : "🔄"}
-            <span className="hidden md:inline ml-1">Tải lại</span>
-          </button>
           {activeView === "materials" && (
             <>
-              <button
-                onClick={syncSupplierFromHistory}
-                className="flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium shadow-sm transition-all"
-                title="Đồng bộ thông tin NCC từ lịch sử nhập kho"
-                disabled={loading}
-              >
-                🔄 <span className="hidden md:inline">Đồng bộ NCC</span>
-              </button>
               <button
                 onClick={() => setShowImportModal(true)}
                 className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium shadow-sm transition-all"
@@ -4081,21 +4065,6 @@ const MaterialManager: React.FC<{
                       ))}
                     </select>
                   </div>
-
-                  {/* Stock Filter */}
-                  <div className="flex items-center gap-1">
-                    <Icon name="cube" className="w-4 h-4 text-amber-500 hidden md:block" />
-                    <select
-                      value={stockFilter}
-                      onChange={(e) => setStockFilter(e.target.value)}
-                      className="flex-1 md:flex-none px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:border-amber-400 focus:ring-1 focus:ring-amber-400/20 transition-all"
-                    >
-                      <option value="">Tồn kho</option>
-                      <option value="empty">🔴 Hết hàng</option>
-                      <option value="low">🟡 Sắp hết</option>
-                      <option value="normal">🟢 Còn hàng</option>
-                    </select>
-                  </div>
                 </div>
 
                 {/* Unit Filter */}
@@ -4115,15 +4084,36 @@ const MaterialManager: React.FC<{
                   </select>
                 </div>
 
-                {/* Results Count - Compact */}
-                <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-800 whitespace-nowrap text-xs">
-                  <span className="font-bold text-blue-600 dark:text-blue-400">
-                    {filteredMaterials.length}
-                  </span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    {" "}
-                    / {materials.length} kết quả
-                  </span>
+                {/* Stats - Tổng sản phẩm và giá trị tồn kho */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-800 whitespace-nowrap text-xs">
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {filteredMaterials.length}
+                    </span>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      {" "}
+                      / {materials.length} SP
+                    </span>
+                  </div>
+                  <div className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/40 rounded border border-emerald-200 dark:border-emerald-800 whitespace-nowrap text-xs">
+                    <span className="text-slate-600 dark:text-slate-400">Tồn: </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {materials
+                        .reduce((sum, m) => sum + (m.stock || 0), 0)
+                        .toLocaleString("vi-VN")}
+                    </span>
+                  </div>
+                  <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/40 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap text-xs">
+                    <span className="text-slate-600 dark:text-slate-400">Giá trị: </span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                      {formatCurrency(
+                        materials.reduce(
+                          (sum, m) => sum + (m.stock || 0) * (m.purchasePrice || 0),
+                          0
+                        )
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4140,6 +4130,86 @@ const MaterialManager: React.FC<{
                 {error}
               </div>
             )}
+
+            {/* Quick Stock Filter Tabs */}
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <button
+                onClick={() => setStockFilter("")}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  stockFilter === ""
+                    ? "bg-slate-700 dark:bg-slate-600 text-white shadow-sm"
+                    : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                }`}
+              >
+                Tất cả
+                <span
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                    stockFilter === ""
+                      ? "bg-slate-600 dark:bg-slate-500 text-white"
+                      : "bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  {materials.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setStockFilter("normal")}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  stockFilter === "normal"
+                    ? "bg-emerald-500 text-white shadow-sm"
+                    : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                }`}
+              >
+                Còn hàng
+                <span
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                    stockFilter === "normal"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-emerald-100 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-300"
+                  }`}
+                >
+                  {materials.filter((m) => (m.stock || 0) > 10).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setStockFilter("low")}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  stockFilter === "low"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                }`}
+              >
+                Sắp hết
+                <span
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                    stockFilter === "low"
+                      ? "bg-amber-600 text-white"
+                      : "bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-300"
+                  }`}
+                >
+                  {materials.filter((m) => (m.stock || 0) > 0 && (m.stock || 0) <= 10).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setStockFilter("empty")}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  stockFilter === "empty"
+                    ? "bg-red-500 text-white shadow-sm"
+                    : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50"
+                }`}
+              >
+                Hết hàng
+                <span
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                    stockFilter === "empty"
+                      ? "bg-red-600 text-white"
+                      : "bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300"
+                  }`}
+                >
+                  {materials.filter((m) => (m.stock || 0) === 0).length}
+                </span>
+              </button>
+            </div>
 
             {/* Materials Table - Desktop Only */}
             <div className="hidden md:block flex-1 overflow-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 shadow-md">

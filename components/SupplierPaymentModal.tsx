@@ -33,24 +33,20 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
       return;
     }
 
-    const supplier = (suppliers as any[]).find(
-      (s: any) => s.id === selectedSupplierId
-    );
+    const supplier = (suppliers as any[]).find((s: any) => s.id === selectedSupplierId);
     const tx: CashTransaction = {
       id: crypto.randomUUID(),
       type: "expense",
       date: new Date().toISOString(),
-      amount: Number(amount),
+      amount: -Math.abs(Number(amount)), // Đảm bảo số âm cho chi
       contact: {
         id: selectedSupplierId,
         name: supplier?.name || supplierQuery,
       },
-      notes:
-        notes ||
-        `Chi trả nợ cho nhà cung cấp ${supplier?.name || supplierQuery}`,
+      notes: notes || `Thanh toán NCC: ${supplier?.name || supplierQuery} #app:pincorp`,
       paymentSourceId: paymentMethod,
       branchId: currentBranchId,
-      category: "inventory_purchase",
+      category: "supplier_payment",
     };
 
     await addCashTransaction(tx);
@@ -69,9 +65,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
       <div className="bg-slate-800 rounded-lg w-full max-w-lg mx-4">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-100">
-            Chi trả nợ nhà cung cấp
-          </h3>
+          <h3 className="text-lg font-semibold text-slate-100">Chi trả nợ nhà cung cấp</h3>
         </div>
 
         {/* Body */}
@@ -84,9 +78,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
               value={selectedSupplierId}
               onChange={(e) => {
                 setSelectedSupplierId(e.target.value);
-                const supplier = (suppliers as any[]).find(
-                  (s: any) => s.id === e.target.value
-                );
+                const supplier = (suppliers as any[]).find((s: any) => s.id === e.target.value);
                 if (supplier) setSupplierQuery(supplier.name);
               }}
               className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-slate-100 focus:outline-none focus:border-sky-500"
@@ -94,8 +86,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
               <option value="">Chọn nhà cung cấp...</option>
               {(suppliers as any[]).map((sup: any) => (
                 <option key={sup.id} value={sup.id}>
-                  {sup.name} • Nợ:{" "}
-                  {new Intl.NumberFormat("vi-VN").format(sup.debt || 0)} ₫
+                  {sup.name} • Nợ: {new Intl.NumberFormat("vi-VN").format(sup.debt || 0)} ₫
                 </option>
               ))}
             </select>
@@ -103,9 +94,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm text-slate-300">
-                Nhập số tiền thanh toán
-              </label>
+              <label className="block text-sm text-slate-300">Nhập số tiền thanh toán</label>
               <span className="text-sm text-sky-400">0 ₫</span>
             </div>
             <input
@@ -133,9 +122,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-2">
-              Hình thức thanh toán:
-            </label>
+            <label className="block text-sm text-slate-300 mb-2">Hình thức thanh toán:</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-slate-300">
                 <input
@@ -161,9 +148,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm text-slate-300 mb-2">
-              Thời gian tạo phiếu chi
-            </label>
+            <label className="block text-sm text-slate-300 mb-2">Thời gian tạo phiếu chi</label>
             <input
               type="text"
               value={new Date().toLocaleString("vi-VN")}
