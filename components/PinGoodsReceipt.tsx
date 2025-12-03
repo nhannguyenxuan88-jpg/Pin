@@ -919,7 +919,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
           date: receiptDate,
           type: "expense",
           category: "inventory_purchase",
-          amount: amountPaid,
+          amount: -Math.abs(amountPaid), // ✅ Chi tiền = số âm
           contact: {
             id: selectedSupplierId!,
             name: selectedSupplier?.name || "Unknown",

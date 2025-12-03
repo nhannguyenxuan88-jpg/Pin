@@ -145,17 +145,42 @@ const PinFinancialManager: React.FC = () => {
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [cashTransactions, showAllApps, transactionFilter, paymentSourceFilter, timeFilter]);
+  // Helper: Kiểm tra giao dịch có phải là Chi không (dựa trên category)
+  const expenseCategories = [
+    "inventory_purchase",
+    "purchase",
+    "materials",
+    "equipment",
+    "utilities",
+    "salary",
+    "salaries",
+    "expense",
+    "other_expense",
+    "rent",
+    "marketing",
+    "transport",
+  ];
+
+  const checkIsExpense = (tx: CashTransaction) => {
+    if (expenseCategories.includes(tx.category || "")) return true;
+    if (tx.type === "expense") return true;
+    if (tx.amount < 0) return true;
+    return false;
+  };
+
   // Calculate cashbook summary
   const cashbookSummary = useMemo(() => {
     const transactions = filteredCashTransactions;
 
+    // Tính thu: KHÔNG phải expense category
     const totalIncome = transactions
-      .filter((tx) => tx.amount > 0)
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .filter((tx) => !checkIsExpense(tx))
+      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
-    const totalExpense = Math.abs(
-      transactions.filter((tx) => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0)
-    );
+    // Tính chi: expense category hoặc type=expense hoặc amount < 0
+    const totalExpense = transactions
+      .filter((tx) => checkIsExpense(tx))
+      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
     const difference = totalIncome - totalExpense;
 
@@ -165,14 +190,20 @@ const PinFinancialManager: React.FC = () => {
         const source = tx.paymentSourceId?.toLowerCase() || "cash";
         return source === "cash" || source === "tien_mat" || source === "tiền mặt";
       })
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => {
+        const isExpense = checkIsExpense(tx);
+        return sum + (isExpense ? -Math.abs(tx.amount) : Math.abs(tx.amount));
+      }, 0);
 
     const bankBalance = transactions
       .filter((tx) => {
         const source = tx.paymentSourceId?.toLowerCase() || "";
         return source === "bank" || source === "ngan_hang" || source === "ngân hàng";
       })
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .reduce((sum, tx) => {
+        const isExpense = checkIsExpense(tx);
+        return sum + (isExpense ? -Math.abs(tx.amount) : Math.abs(tx.amount));
+      }, 0);
 
     return {
       totalIncome,
@@ -574,8 +605,39 @@ const PinFinancialManager: React.FC = () => {
       salaries: "Lương nhân viên",
       expense: "Chi phí",
       other_expense: "Chi khác",
+      inventory_purchase: "Nhập kho",
+      purchase: "Mua hàng",
+      repair: "Sửa chữa",
+      rent: "Thuê mặt bằng",
+      marketing: "Marketing",
+      transport: "Vận chuyển",
     };
     return labels[category] || category || "Khác";
+  };
+
+  // Kiểm tra giao dịch có phải là Chi không
+  const isExpenseTransaction = (tx: CashTransaction) => {
+    // Các category luôn là Chi
+    const expenseCategories = [
+      "inventory_purchase",
+      "purchase",
+      "materials",
+      "equipment",
+      "utilities",
+      "salary",
+      "salaries",
+      "expense",
+      "other_expense",
+      "rent",
+      "marketing",
+      "transport",
+    ];
+    if (expenseCategories.includes(tx.category || "")) return true;
+    // Dựa vào type
+    if (tx.type === "expense") return true;
+    // Dựa vào amount
+    if (tx.amount < 0) return true;
+    return false;
   };
 
   // Get payment source label
@@ -830,12 +892,12 @@ const PinFinancialManager: React.FC = () => {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              tx.amount > 0
-                                ? "bg-teal-500/20 text-teal-400"
-                                : "bg-red-500/20 text-red-400"
+                              isExpenseTransaction(tx)
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-teal-500/20 text-teal-400"
                             }`}
                           >
-                            {tx.amount > 0 ? "↑ Thu" : "↓ Chi"}
+                            {isExpenseTransaction(tx) ? "↓ Chi" : "↑ Thu"}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-300">
@@ -855,11 +917,11 @@ const PinFinancialManager: React.FC = () => {
                         <td className="px-6 py-4 text-right">
                           <span
                             className={`text-sm font-semibold ${
-                              tx.amount > 0 ? "text-teal-400" : "text-red-400"
+                              isExpenseTransaction(tx) ? "text-red-400" : "text-teal-400"
                             }`}
                           >
-                            {tx.amount > 0 ? "+" : ""}
-                            {formatCurrency(tx.amount)}
+                            {isExpenseTransaction(tx) ? "-" : "+"}
+                            {formatCurrency(Math.abs(tx.amount))}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -867,7 +929,7 @@ const PinFinancialManager: React.FC = () => {
                             <button
                               onClick={() => {
                                 setNewTransaction({
-                                  type: tx.amount > 0 ? "income" : "expense",
+                                  type: isExpenseTransaction(tx) ? "expense" : "income",
                                   amount: Math.abs(tx.amount),
                                   description: tx.description || "",
                                   category: tx.category || "",

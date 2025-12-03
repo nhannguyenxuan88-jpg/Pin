@@ -91,8 +91,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         (m: any) =>
           // Chỉ hiển thị vật liệu còn tồn kho (stock > 0)
           (m.stock || 0) > 0 &&
-          (m.name.toLowerCase().includes(search) ||
-            m.sku?.toLowerCase().includes(search))
+          (m.name.toLowerCase().includes(search) || m.sku?.toLowerCase().includes(search))
       )
       .slice(0, 10);
   }, [pinMaterials, materialSearch]);
@@ -141,10 +140,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     if (!customerSearch.trim()) return [];
     const search = customerSearch.toLowerCase();
     return (pinCustomers || [])
-      .filter(
-        (c: any) =>
-          c.name?.toLowerCase().includes(search) || c.phone?.includes(search)
-      )
+      .filter((c: any) => c.name?.toLowerCase().includes(search) || c.phone?.includes(search))
       .slice(0, 8);
   }, [pinCustomers, customerSearch]);
 
@@ -196,9 +192,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -207,10 +201,10 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         name === "laborCost" || name === "depositAmount"
           ? parseCurrencyInput(value)
           : name === "dueDate"
-          ? value
-            ? new Date(value).toISOString()
-            : undefined
-          : value,
+            ? value
+              ? new Date(value).toISOString()
+              : undefined
+            : value,
     }));
     if (name === "customerName") {
       setCustomerSearch(value);
@@ -219,8 +213,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
   };
 
   const handleAddMaterial = () => {
-    const materialName =
-      materialSearch.trim() || materialInput.materialName.trim();
+    const materialName = materialSearch.trim() || materialInput.materialName.trim();
 
     if (!materialName) {
       alert("Vui lòng nhập tên vật liệu");
@@ -240,9 +233,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       const currentStock = material.stock || material.quantity || 0;
       const alreadyUsed =
         (formData.materialsUsed || [])
-          .filter(
-            (m) => m.materialName.toLowerCase() === materialName.toLowerCase()
-          )
+          .filter((m) => m.materialName.toLowerCase() === materialName.toLowerCase())
           .reduce((sum, m) => sum + m.quantity, 0) || 0;
       const availableStock = currentStock - alreadyUsed;
 
@@ -347,9 +338,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       // Validate payment method when deposit > 0 OR payment status is paid/partial
       const depositAmt = Number(formData.depositAmount || 0);
       const needsPaymentMethod =
-        depositAmt > 0 ||
-        formData.paymentStatus === "paid" ||
-        formData.paymentStatus === "partial";
+        depositAmt > 0 || formData.paymentStatus === "paid" || formData.paymentStatus === "partial";
 
       if (needsPaymentMethod && !formData.paymentMethod) {
         alert("Vui lòng chọn phương thức thanh toán");
@@ -360,9 +349,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       if (formData.paymentStatus === "partial") {
         const amt = Number(formData.partialPaymentAmount || 0);
         if (amt <= 0) {
-          alert(
-            "Vui lòng nhập số tiền thanh toán cho hình thức thanh toán một phần."
-          );
+          alert("Vui lòng nhập số tiền thanh toán cho hình thức thanh toán một phần.");
           setIsSubmitting(false);
           return;
         }
@@ -422,16 +409,14 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
     if (!initialOrder) {
       // Creating new order
-      const hasDeposit =
-        formData.depositAmount && Number(formData.depositAmount) > 0;
+      const hasDeposit = formData.depositAmount && Number(formData.depositAmount) > 0;
       return hasDeposit ? "💰 Đặt cọc & Tạo phiếu" : "✅ Tạo phiếu";
     }
 
     // Updating existing order
     const isReturning = formData.status === "Trả máy";
     const needsPayment =
-      formData.paymentStatus === "unpaid" ||
-      formData.paymentStatus === "partial";
+      formData.paymentStatus === "unpaid" || formData.paymentStatus === "partial";
 
     if (isReturning && needsPayment) {
       return "💳 Thanh toán & Trả máy";
@@ -442,15 +427,13 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
   const getHeaderTitle = () => {
     if (!initialOrder) {
-      const hasDeposit =
-        formData.depositAmount && Number(formData.depositAmount) > 0;
+      const hasDeposit = formData.depositAmount && Number(formData.depositAmount) > 0;
       return hasDeposit ? "Tạo phiếu & Đặt cọc" : "Tạo phiếu sửa chữa mới";
     }
 
     const isReturning = formData.status === "Trả máy";
     const needsPayment =
-      formData.paymentStatus === "unpaid" ||
-      formData.paymentStatus === "partial";
+      formData.paymentStatus === "unpaid" || formData.paymentStatus === "partial";
 
     if (isReturning && needsPayment) {
       return "Thanh toán & Trả máy cho khách";
@@ -465,9 +448,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         {/* Header với gradient xanh dương */}
         <div className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-600 flex justify-between items-center flex-shrink-0">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white">
-              {getHeaderTitle()}
-            </h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">{getHeaderTitle()}</h2>
             <p className="text-xs sm:text-sm text-blue-100 mt-1">
               Mã: {initialOrder?.id || "Tự động sinh"}
             </p>
@@ -512,11 +493,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                     <div className="flex-1 relative">
                       <input
                         type="text"
-                        value={
-                          formData.customerName
-                            ? formData.customerName
-                            : customerSearch
-                        }
+                        value={formData.customerName ? formData.customerName : customerSearch}
                         onChange={(e) => {
                           if (formData.customerName) {
                             return;
@@ -529,9 +506,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                             setShowCustomerDropdown(!!customerSearch.trim());
                           }
                         }}
-                        onBlur={() =>
-                          setTimeout(() => setShowCustomerDropdown(false), 200)
-                        }
+                        onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
                         className={`w-full px-4 py-2.5 ${
                           formData.customerName ? "pr-10" : ""
                         } border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all ${
@@ -612,9 +587,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                           d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                         />
                       </svg>
-                      <span className="font-medium">
-                        {formData.customerPhone}
-                      </span>
+                      <span className="font-medium">{formData.customerPhone}</span>
                     </div>
                   )}
                 </div>
@@ -685,8 +658,16 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
               {/* Card ngang: Trạng thái & Kỹ thuật viên */}
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 sm:p-5 border-2 border-amber-200 dark:border-amber-700 shadow-md hover:shadow-lg transition-shadow">
-                  <label className="block text-xs sm:text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-5 border-2 border-amber-200 dark:border-amber-700 shadow-md hover:shadow-lg transition-shadow">
+                  <label className="block text-xs sm:text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
                     Trạng thái phiếu
                   </label>
                   <select
@@ -702,16 +683,24 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                   </select>
                 </div>
 
-                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl p-4 sm:p-5 border-2 border-cyan-200 dark:border-cyan-700 shadow-md hover:shadow-lg transition-shadow">
-                  <label className="block text-xs sm:text-sm font-semibold text-cyan-800 dark:text-cyan-300 mb-2">
-                    Kỹ thuật viên phụ trách
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-5 border-2 border-cyan-200 dark:border-cyan-700 shadow-md hover:shadow-lg transition-shadow">
+                  <label className="block text-xs sm:text-sm font-semibold text-cyan-800 dark:text-cyan-300 mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                    Kỹ thuật viên
                   </label>
                   <input
                     name="technicianName"
                     type="text"
                     value={formData.technicianName || ""}
                     onChange={handleInputChange}
-                    placeholder="Chọn KTV"
+                    placeholder="Nhập tên KTV"
                     className="w-full px-4 py-2.5 border-2 border-cyan-300 dark:border-cyan-700 rounded-lg focus:ring-2 focus:ring-cyan-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium transition-all"
                   />
                 </div>
@@ -744,11 +733,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       type="text"
                       name="laborCost"
                       placeholder="100.000"
-                      value={
-                        formData.laborCost
-                          ? formatCurrencyInput(formData.laborCost)
-                          : ""
-                      }
+                      value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
                     />
@@ -762,9 +747,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       name="depositAmount"
                       placeholder="0"
                       value={
-                        formData.depositAmount
-                          ? formatCurrencyInput(formData.depositAmount)
-                          : ""
+                        formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""
                       }
                       onChange={handleInputChange}
                       className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
@@ -839,9 +822,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                           }));
                         }}
                         onFocus={() => setShowMaterialDropdown(true)}
-                        onBlur={() =>
-                          setTimeout(() => setShowMaterialDropdown(false), 200)
-                        }
+                        onBlur={() => setTimeout(() => setShowMaterialDropdown(false), 200)}
                         className="w-full px-4 py-2.5 border-2 border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all"
                       />
                       {showMaterialDropdown && filteredMaterials.length > 0 && (
@@ -854,10 +835,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                                 setMaterialInput({
                                   materialName: material.name,
                                   quantity: 1,
-                                  price:
-                                    material.retailPrice ||
-                                    material.purchasePrice ||
-                                    0,
+                                  price: material.retailPrice || material.purchasePrice || 0,
                                 });
                                 setMaterialSearch(material.name);
                                 setShowMaterialDropdown(false);
@@ -874,9 +852,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                                 <span>SKU: {material.sku}</span>
                                 <span className="font-semibold text-indigo-600 dark:text-indigo-400">
                                   {formatCurrency(
-                                    material.retailPrice ||
-                                      material.purchasePrice ||
-                                      0
+                                    material.retailPrice || material.purchasePrice || 0
                                   )}
                                 </span>
                               </div>
@@ -902,11 +878,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       <input
                         type="text"
                         placeholder="Giá (VNĐ)"
-                        value={
-                          materialInput.price
-                            ? formatCurrencyInput(materialInput.price)
-                            : ""
-                        }
+                        value={materialInput.price ? formatCurrencyInput(materialInput.price) : ""}
                         onChange={(e) =>
                           setMaterialInput((prev) => ({
                             ...prev,
@@ -1028,8 +1000,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                     <div>
                       <label className="block text-xs sm:text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
                         Phương thức thanh toán{" "}
-                        {(formData.depositAmount &&
-                          Number(formData.depositAmount) > 0) ||
+                        {(formData.depositAmount && Number(formData.depositAmount) > 0) ||
                         formData.paymentStatus === "paid" ||
                         formData.paymentStatus === "partial" ? (
                           <span className="text-red-500">*</span>
@@ -1066,9 +1037,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            partialPaymentAmount: parseCurrencyInput(
-                              e.target.value
-                            ),
+                            partialPaymentAmount: parseCurrencyInput(e.target.value),
                           }))
                         }
                         className="w-full px-4 py-2.5 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
@@ -1081,12 +1050,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               {/* Card: Tổng kết thanh toán */}
               <div className="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 rounded-xl p-5 sm:p-6 shadow-2xl shadow-blue-500/30">
                 <h3 className="text-base font-bold mb-4 text-white flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -1099,15 +1063,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                 <div className="space-y-2 text-white">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-blue-100">Tổng vật liệu:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(materialsTotal)}
-                    </span>
+                    <span className="font-semibold">{formatCurrency(materialsTotal)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-blue-100">Phí công:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(formData.laborCost || 0)}
-                    </span>
+                    <span className="font-semibold">{formatCurrency(formData.laborCost || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-blue-100">Đặt cọc:</span>
@@ -1118,9 +1078,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                   <div className="h-px bg-white/30 my-3"></div>
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">TỔNG CỘNG:</span>
-                    <span className="text-2xl sm:text-3xl font-bold">
-                      {formatCurrency(total)}
-                    </span>
+                    <span className="text-2xl sm:text-3xl font-bold">{formatCurrency(total)}</span>
                   </div>
                   {(formData.depositAmount || 0) > 0 && (
                     <div className="flex justify-between items-center pt-2 border-t border-white/30">
@@ -1136,28 +1094,24 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
           </div>
 
           {/* Footer Sticky - Action Buttons */}
-          <div className="sticky bottom-0 bg-white dark:bg-slate-900 pt-5 pb-5 px-4 sm:px-6 border-t-2 border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-            <div className="flex gap-4 max-w-7xl mx-auto">
+          <div className="sticky bottom-0 bg-white dark:bg-slate-900 pt-4 pb-4 px-4 sm:px-6 border-t-2 border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+            <div className="flex gap-3 max-w-7xl mx-auto">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                className="flex-1 px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Hủy bỏ
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3.5 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 hover:from-blue-700 hover:via-cyan-700 hover:to-teal-700 text-white rounded-xl font-bold text-base sm:text-lg shadow-xl shadow-blue-500/40 hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-[2] px-6 py-3 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 hover:from-blue-700 hover:via-cyan-700 hover:to-teal-700 text-white rounded-xl font-bold text-base shadow-xl shadow-blue-500/40 hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
-                    <svg
-                      className="animate-spin w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"
@@ -1175,22 +1129,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                     Đang lưu...
                   </>
                 ) : (
-                  <>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    {getButtonText()}
-                  </>
+                  getButtonText()
                 )}
               </button>
             </div>
@@ -1203,9 +1142,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 flex justify-between items-center rounded-t-2xl">
-              <h3 className="text-xl font-bold text-white">
-                Thêm khách hàng mới
-              </h3>
+              <h3 className="text-xl font-bold text-white">Thêm khách hàng mới</h3>
               <button
                 onClick={() => {
                   setShowAddCustomerModal(false);

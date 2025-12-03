@@ -281,13 +281,22 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             name: row.name as string,
             category: (row.category as FixedAsset["category"]) || "equipment",
             description: (row.description || undefined) as string | undefined,
-            purchaseDate: (row.purchasedate || row.purchase_date || row.purchaseDate || new Date().toISOString()) as string,
+            purchaseDate: (row.purchasedate ||
+              row.purchase_date ||
+              row.purchaseDate ||
+              new Date().toISOString()) as string,
             purchasePrice: Number(row.purchaseprice ?? row.purchase_price ?? 0),
-            currentValue: Number(row.currentvalue ?? row.current_value ?? row.purchaseprice ?? row.purchase_price ?? 0),
-            depreciationMethod: (row.depreciationmethod || row.depreciation_method || "straight_line") as FixedAsset["depreciationMethod"],
+            currentValue: Number(
+              row.currentvalue ?? row.current_value ?? row.purchaseprice ?? row.purchase_price ?? 0
+            ),
+            depreciationMethod: (row.depreciationmethod ||
+              row.depreciation_method ||
+              "straight_line") as FixedAsset["depreciationMethod"],
             usefulLife: Number(row.usefullife ?? row.useful_life ?? 5),
             salvageValue: Number(row.salvagevalue ?? row.salvage_value ?? 0),
-            accumulatedDepreciation: Number(row.accumulateddepreciation ?? row.accumulated_depreciation ?? 0),
+            accumulatedDepreciation: Number(
+              row.accumulateddepreciation ?? row.accumulated_depreciation ?? 0
+            ),
             location: (row.location || undefined) as string | undefined,
             status: (row.status as FixedAsset["status"]) || "active",
             branchId: (row.branchid || row.branch_id || undefined) as string | undefined,
@@ -663,7 +672,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
 
     // Repair
     upsertPinRepairOrder: repairSvc.upsertPinRepairOrder,
-    deletePinRepairOrder: repairSvc.deletePinRepairOrder,
+    deletePinRepairOrder: repairSvc.deleteRepairOrder,
 
     // Admin
     resetProductionData: adminSvc.resetProductionData,

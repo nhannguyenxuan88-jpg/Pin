@@ -16,6 +16,9 @@ const formatCurrency = (amount: number) =>
     currency: "VND",
   }).format(amount);
 
+// Date filter options
+type DateFilter = "all" | "today" | "week" | "month";
+
 const PinRepairManagerNew: React.FC = () => {
   const { pinRepairOrders, upsertPinRepairOrder, deletePinRepairOrder, currentUser } =
     usePinContext();
@@ -26,6 +29,7 @@ const PinRepairManagerNew: React.FC = () => {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -39,9 +43,16 @@ const PinRepairManagerNew: React.FC = () => {
       (o: PinRepairOrder) => o.status === "Đã sửa xong" || o.status === "Trả máy"
     ).length;
     const totalRevenue = orders.reduce((sum: number, o: PinRepairOrder) => sum + (o.total || 0), 0);
-    const unpaidAmount = orders
-      .filter((o: PinRepairOrder) => o.paymentStatus === "unpaid")
-      .reduce((sum: number, o: PinRepairOrder) => sum + (o.total || 0), 0);
+
+    // Calculate profit (assuming 30% margin on materials + full labor cost)
+    const totalProfit = orders.reduce((sum: number, o: PinRepairOrder) => {
+      const materialsCost = (o.materialsUsed || []).reduce(
+        (s, m) => s + m.quantity * m.price * 0.3,
+        0
+      );
+      const laborProfit = o.laborCost || 0;
+      return sum + materialsCost + laborProfit;
+    }, 0);
 
     return {
       total,
@@ -49,13 +60,40 @@ const PinRepairManagerNew: React.FC = () => {
       inProgress,
       completed,
       totalRevenue,
-      unpaidAmount,
+      totalProfit,
     };
   }, [pinRepairOrders]);
+
+  // Filter by date helper
+  const isInDateRange = (date: string, filter: DateFilter): boolean => {
+    if (filter === "all") return true;
+
+    const orderDate = new Date(date);
+    const now = new Date();
+
+    if (filter === "today") {
+      return orderDate.toDateString() === now.toDateString();
+    }
+
+    if (filter === "week") {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return orderDate >= weekAgo;
+    }
+
+    if (filter === "month") {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return orderDate >= monthAgo;
+    }
+
+    return true;
+  };
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {
     let filtered = pinRepairOrders || [];
+
+    // Date filter
+    filtered = filtered.filter((o: PinRepairOrder) => isInDateRange(o.creationDate, dateFilter));
 
     // Status filter
     if (statusFilter !== "all") {
@@ -84,7 +122,7 @@ const PinRepairManagerNew: React.FC = () => {
       (a: PinRepairOrder, b: PinRepairOrder) =>
         new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime()
     );
-  }, [pinRepairOrders, statusFilter, searchQuery]);
+  }, [pinRepairOrders, statusFilter, searchQuery, dateFilter]);
 
   const handleOpenModal = (order?: PinRepairOrder) => {
     setSelectedOrder(order || null);
@@ -480,114 +518,186 @@ const PinRepairManagerNew: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-6 pb-20 md:pb-0">
-      {/* Page Header with Stats */}
-      <div className="flex flex-col gap-3 md:gap-4">
-        <div className="flex-shrink-0">
-          <h1 className="text-xl md:text-3xl font-bold text-pin-gray-900 dark:text-pin-dark-900">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-pin-gray-900 dark:text-pin-dark-900">
             Quản lý Sửa chữa
           </h1>
-          <p className="text-xs md:text-sm text-pin-gray-500 dark:text-pin-dark-500 mt-1">
+          <p className="text-xs text-pin-gray-500 dark:text-pin-dark-500">
             Quản lý phiếu sửa chữa và bảo hành
           </p>
         </div>
+      </div>
 
-        {/* 4 Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-          <StatsCard
-            title="Tổng phiếu"
-            value={stats.total}
-            iconName="orders"
-            variant="primary"
-            compact
-          />
-          <StatsCard
-            title="Chờ xử lý"
-            value={stats.pending}
-            iconName="pending"
-            variant="warning"
-            compact
-          />
-          <StatsCard
-            title="Đang sửa"
-            value={stats.inProgress}
-            iconName="repairs"
-            variant="primary"
-            compact
-          />
-          <StatsCard
-            title="Hoàn thành"
-            value={stats.completed}
-            iconName="success"
-            variant="success"
-            compact
-          />
+      {/* Row 1: Stats Cards - 5 items in 1 row */}
+      <div className="grid grid-cols-5 gap-2 md:gap-3">
+        <button
+          onClick={() => setStatusFilter("all")}
+          className={`p-3 rounded-xl border-2 transition-all ${
+            statusFilter === "all"
+              ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-900/20"
+              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-blue-300"
+          }`}
+        >
+          <div className="text-2xl md:text-3xl font-bold text-pin-blue-600 dark:text-pin-blue-400">
+            {stats.total}
+          </div>
+          <div className="text-xs text-pin-gray-600 dark:text-pin-dark-600 mt-1">Tổng phiếu</div>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("pending")}
+          className={`p-3 rounded-xl border-2 transition-all ${
+            statusFilter === "pending"
+              ? "border-pin-amber-500 bg-pin-amber-50 dark:bg-pin-amber-900/20"
+              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-amber-300"
+          }`}
+        >
+          <div className="text-2xl md:text-3xl font-bold text-pin-amber-600 dark:text-pin-amber-400">
+            {stats.pending}
+          </div>
+          <div className="text-xs text-pin-gray-600 dark:text-pin-dark-600 mt-1">Chờ xử lý</div>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("inProgress")}
+          className={`p-3 rounded-xl border-2 transition-all ${
+            statusFilter === "inProgress"
+              ? "border-pin-cyan-500 bg-pin-cyan-50 dark:bg-pin-cyan-900/20"
+              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-cyan-300"
+          }`}
+        >
+          <div className="text-2xl md:text-3xl font-bold text-pin-cyan-600 dark:text-pin-cyan-400">
+            {stats.inProgress}
+          </div>
+          <div className="text-xs text-pin-gray-600 dark:text-pin-dark-600 mt-1">Đang sửa</div>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("completed")}
+          className={`p-3 rounded-xl border-2 transition-all ${
+            statusFilter === "completed"
+              ? "border-pin-green-500 bg-pin-green-50 dark:bg-pin-green-900/20"
+              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-green-300"
+          }`}
+        >
+          <div className="text-2xl md:text-3xl font-bold text-pin-green-600 dark:text-pin-green-400">
+            {stats.completed}
+          </div>
+          <div className="text-xs text-pin-gray-600 dark:text-pin-dark-600 mt-1">Hoàn thành</div>
+        </button>
+
+        <div className="p-3 rounded-xl border-2 border-pin-emerald-200 dark:border-pin-emerald-700 bg-gradient-to-br from-pin-emerald-50 to-pin-green-50 dark:from-pin-emerald-900/20 dark:to-pin-green-900/20">
+          <div className="text-lg md:text-xl font-bold text-pin-emerald-600 dark:text-pin-emerald-400 truncate">
+            {formatCurrency(stats.totalRevenue)}
+          </div>
+          <div className="text-xs text-pin-gray-600 dark:text-pin-dark-600 mt-1">Doanh thu</div>
         </div>
       </div>
 
-      {/* Revenue Stats - 2 Cards */}
-      <div className="grid grid-cols-2 gap-2 md:gap-4">
-        <StatsCard
-          title="Tổng doanh thu"
-          value={formatCurrency(stats.totalRevenue)}
-          iconName="money"
-          variant="success"
-        />
-        <StatsCard
-          title="Chưa thanh toán"
-          value={formatCurrency(stats.unpaidAmount)}
-          iconName="calendar"
-          variant="danger"
-        />
-      </div>
-
-      {/* Filters */}
-      <Card padding="sm" className="md:p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:gap-4">
-          {/* Search */}
-          <div className="flex-1">
+      {/* Row 2: Search + Date Filter + Create Button + Profit */}
+      <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+        {/* Search */}
+        <div className="flex-1 min-w-0">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400">🔍</span>
             <input
               type="text"
-              placeholder="Tìm theo tên, SĐT, thiết bị..."
+              placeholder="Tìm theo tên, SĐT, thiết bị, mã phiếu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 md:px-4 py-2 bg-pin-gray-50 dark:bg-pin-dark-100 border border-pin-gray-200 dark:border-pin-dark-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pin-blue-500"
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-pin-dark-100 border-2 border-pin-gray-200 dark:border-pin-dark-400 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pin-blue-500 focus:border-pin-blue-500"
             />
-          </div>
-
-          {/* Status Filter + Add Button Row */}
-          <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-pin-gray-50 dark:bg-pin-dark-100 border border-pin-gray-200 dark:border-pin-dark-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pin-blue-500"
-            >
-              <option value="all">Tất cả</option>
-              <option value="pending">Chờ xử lý</option>
-              <option value="inProgress">Đang sửa</option>
-              <option value="completed">Hoàn thành</option>
-            </select>
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={<PlusIcon className="w-4 h-4 md:w-5 md:h-5" />}
-              onClick={() => handleOpenModal()}
-              className="flex-shrink-0 whitespace-nowrap"
-            >
-              <span className="hidden md:inline">Tạo phiếu mới</span>
-              <span className="md:hidden">Tạo</span>
-            </Button>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-pin-gray-400 hover:text-pin-gray-600"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
-      </Card>
+
+        {/* Date Filter */}
+        <div className="flex gap-1 bg-pin-gray-100 dark:bg-pin-dark-200 rounded-xl p-1">
+          {[
+            { value: "all", label: "Tất cả" },
+            { value: "today", label: "Hôm nay" },
+            { value: "week", label: "Tuần" },
+            { value: "month", label: "Tháng" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setDateFilter(opt.value as DateFilter)}
+              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
+                dateFilter === opt.value
+                  ? "bg-white dark:bg-pin-dark-100 text-pin-blue-600 shadow-sm"
+                  : "text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-blue-600"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Create Button */}
+        <Button
+          variant="primary"
+          size="md"
+          leftIcon={<PlusIcon className="w-5 h-5" />}
+          onClick={() => handleOpenModal()}
+          className="flex-shrink-0 whitespace-nowrap shadow-lg shadow-pin-blue-500/30"
+        >
+          <span className="hidden sm:inline">Tạo phiếu mới</span>
+          <span className="sm:hidden">Tạo</span>
+        </Button>
+
+        {/* Profit Card */}
+        <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-pin-purple-200 dark:border-pin-purple-700 bg-gradient-to-r from-pin-purple-50 to-pin-pink-50 dark:from-pin-purple-900/20 dark:to-pin-pink-900/20">
+          <div>
+            <div className="text-xs text-pin-gray-500">Lợi nhuận ước tính</div>
+            <div className="text-lg font-bold text-pin-purple-600 dark:text-pin-purple-400">
+              {formatCurrency(stats.totalProfit)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Results info bar */}
+      <div className="flex items-center justify-between px-1">
+        <div className="text-sm text-pin-gray-500 dark:text-pin-dark-500">
+          Hiển thị <span className="font-semibold text-pin-blue-600">{filteredOrders.length}</span>{" "}
+          phiếu
+          {statusFilter !== "all" && (
+            <span className="ml-2 px-2 py-0.5 bg-pin-blue-100 dark:bg-pin-blue-900/30 text-pin-blue-600 rounded-full text-xs">
+              {statusFilter === "pending" && "Chờ xử lý"}
+              {statusFilter === "inProgress" && "Đang sửa"}
+              {statusFilter === "completed" && "Hoàn thành"}
+            </span>
+          )}
+          {dateFilter !== "all" && (
+            <span className="ml-2 px-2 py-0.5 bg-pin-amber-100 dark:bg-pin-amber-900/30 text-pin-amber-600 rounded-full text-xs">
+              {dateFilter === "today" && "Hôm nay"}
+              {dateFilter === "week" && "7 ngày qua"}
+              {dateFilter === "month" && "30 ngày qua"}
+            </span>
+          )}
+        </div>
+
+        {/* Mobile profit display */}
+        <div className="lg:hidden text-right">
+          <div className="text-xs text-pin-gray-500">Lợi nhuận</div>
+          <div className="text-sm font-bold text-pin-purple-600 dark:text-pin-purple-400">
+            {formatCurrency(stats.totalProfit)}
+          </div>
+        </div>
+      </div>
 
       {/* Orders Table */}
       <Card padding="none">
-        <div className="p-3 md:p-6 border-b border-pin-gray-200 dark:border-pin-dark-300">
-          <CardTitle icon={<WrenchScrewdriverIcon className="w-4 h-4 md:w-5 md:h-5" />}>
-            <span className="text-sm md:text-base">Danh sách phiếu ({filteredOrders.length})</span>
-          </CardTitle>
-        </div>
-        <div className="p-2 md:p-6 overflow-x-auto">
+        <div className="p-2 md:p-4 overflow-x-auto">
           <DataTable
             columns={columns}
             data={filteredOrders}

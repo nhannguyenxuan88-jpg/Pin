@@ -3118,6 +3118,7 @@ const MaterialManager: React.FC<{
         wholesale_price: base.wholesaleprice,
         stock: base.stock,
         supplier: base.supplier,
+        supplier_phone: base.supplierphone, // ✅ Thêm SĐT NCC
         description: base.description,
         created_at: base.created_at,
         updated_at: base.updated_at,
@@ -3698,6 +3699,144 @@ const MaterialManager: React.FC<{
     };
   };
 
+  // Đồng bộ thông tin NCC + TẠO MỚI VẬT LIỆU BỊ THIẾU từ lịch sử nhập kho
+  const syncSupplierFromHistory = async () => {
+    if (
+      !window.confirm(
+        "Đồng bộ dữ liệu từ lịch sử nhập kho?\n\n" +
+          "✅ Tạo mới các vật liệu bị thiếu\n" +
+          "✅ Cập nhật thông tin NCC cho vật liệu đã có"
+      )
+    )
+      return;
+
+    setLoading(true);
+    try {
+      // 1. Lấy tất cả lịch sử nhập kho (đầy đủ thông tin)
+      const { data: historyData, error: historyError } = await supabase
+        .from("pin_material_history")
+        .select("*")
+        .order("import_date", { ascending: false });
+
+      if (historyError) throw historyError;
+
+      // 2. Lấy danh sách vật liệu hiện có
+      const { data: existingMaterials, error: matError } = await supabase
+        .from("pin_materials")
+        .select("id, name, sku, supplier");
+
+      if (matError) throw matError;
+
+      const existingSkuSet = new Set((existingMaterials || []).map((m: any) => m.sku));
+      const existingNameSet = new Set(
+        (existingMaterials || []).map((m: any) => m.name?.toLowerCase())
+      );
+
+      // 3. Tổng hợp dữ liệu từ lịch sử theo tên vật liệu
+      const materialMap = new Map<
+        string,
+        {
+          name: string;
+          sku: string;
+          quantity: number;
+          purchasePrice: number;
+          supplier: string;
+        }
+      >();
+
+      historyData?.forEach((h: any) => {
+        const name = h.material_name || "";
+        const sku = h.material_sku || "";
+        const key = name.toLowerCase();
+
+        if (!materialMap.has(key)) {
+          materialMap.set(key, {
+            name,
+            sku,
+            quantity: Number(h.quantity || 0),
+            purchasePrice: Number(h.purchase_price || h.purchaseprice || 0),
+            supplier: h.supplier || "",
+          });
+        } else {
+          // Cộng dồn số lượng
+          const existing = materialMap.get(key)!;
+          existing.quantity += Number(h.quantity || 0);
+          // Lấy supplier nếu chưa có
+          if (!existing.supplier && h.supplier) {
+            existing.supplier = h.supplier;
+          }
+        }
+      });
+
+      // 4. Tạo mới các vật liệu bị thiếu
+      let createdCount = 0;
+      let updatedCount = 0;
+
+      for (const [key, data] of materialMap) {
+        const nameExists = existingNameSet.has(key);
+        const skuExists = data.sku && existingSkuSet.has(data.sku);
+
+        if (!nameExists && !skuExists && data.name) {
+          // Tạo mới vật liệu
+          const newSku = data.sku || `NL-SYNC-${Date.now()}-${createdCount}`;
+          const { error: insertError } = await supabase.from("pin_materials").insert({
+            name: data.name,
+            sku: newSku,
+            unit: "Cell",
+            purchase_price: data.purchasePrice,
+            retail_price: Math.round(data.purchasePrice * 1.2),
+            wholesale_price: Math.round(data.purchasePrice * 1.1),
+            stock: data.quantity,
+            supplier: data.supplier,
+            description: `Đồng bộ từ lịch sử nhập kho`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+          if (!insertError) {
+            createdCount++;
+            console.log(`✅ Tạo mới: ${data.name} (${data.quantity} cái)`);
+          } else {
+            console.error(`❌ Lỗi tạo ${data.name}:`, insertError);
+          }
+        }
+      }
+
+      // 5. Cập nhật supplier cho vật liệu đã có nhưng thiếu NCC
+      for (const material of existingMaterials || []) {
+        if (!material.supplier || material.supplier.trim() === "" || material.supplier === "-") {
+          const key = material.name?.toLowerCase();
+          const historyInfo = materialMap.get(key);
+          if (historyInfo?.supplier) {
+            const { error: updateError } = await supabase
+              .from("pin_materials")
+              .update({
+                supplier: historyInfo.supplier,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", material.id);
+
+            if (!updateError) {
+              updatedCount++;
+            }
+          }
+        }
+      }
+
+      await loadMaterials();
+      alert(
+        `✅ Đồng bộ hoàn tất!\n\n` +
+          `📦 Tạo mới: ${createdCount} vật liệu\n` +
+          `🏢 Cập nhật NCC: ${updatedCount} vật liệu`
+      );
+    } catch (err) {
+      console.error("Sync error:", err);
+      alert("Lỗi đồng bộ: " + (err as any)?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Get unique suppliers and units for filter options
   const uniqueSuppliers = [...new Set(materials.map((m) => m.supplier).filter(Boolean))];
   const uniqueUnits = [...new Set(materials.map((m) => m.unit).filter(Boolean))];
@@ -3785,6 +3924,14 @@ const MaterialManager: React.FC<{
           </button>
           {activeView === "materials" && (
             <>
+              <button
+                onClick={syncSupplierFromHistory}
+                className="flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium shadow-sm transition-all"
+                title="Đồng bộ thông tin NCC từ lịch sử nhập kho"
+                disabled={loading}
+              >
+                🔄 <span className="hidden md:inline">Đồng bộ NCC</span>
+              </button>
               <button
                 onClick={() => setShowImportModal(true)}
                 className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-2 md:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium shadow-sm transition-all"
