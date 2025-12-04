@@ -200,9 +200,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const [isCustomerListOpen, setIsCustomerListOpen] = useState(false);
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const customerInputRef = useRef<HTMLDivElement>(null);
+  const [showAllProducts, setShowAllProducts] = useState(false);
+  const PRODUCTS_LIMIT = 20;
 
   // Convert materials to product-like format for display
-  const availableItems = useMemo(() => {
+  const allAvailableItems = useMemo(() => {
     const filteredProducts = products.filter(
       (p) =>
         p.stock > 0 &&
@@ -244,6 +246,17 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     // Show both products and materials
     return [...productsWithType, ...filteredMaterials];
   }, [products, pinMaterials, searchTerm, salesCategory]);
+
+  // Giới hạn số sản phẩm hiển thị để tăng hiệu suất
+  const availableItems = useMemo(() => {
+    // Khi đang tìm kiếm, hiển thị tất cả kết quả tìm kiếm
+    if (searchTerm.trim()) return allAvailableItems;
+    // Khi không tìm kiếm, giới hạn 20 sản phẩm trừ khi user chọn xem tất cả
+    if (showAllProducts) return allAvailableItems;
+    return allAvailableItems.slice(0, PRODUCTS_LIMIT);
+  }, [allAvailableItems, showAllProducts, searchTerm]);
+
+  const hasMoreProducts = allAvailableItems.length > PRODUCTS_LIMIT && !searchTerm.trim();
 
   // Keep backward compatibility
   const availableProducts = availableItems;
@@ -528,12 +541,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       </div>
 
       {activeTab === "pos" && (
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6 h-full">
+        <div
+          className={`lg:grid lg:gap-6 h-full transition-all duration-300 ${cartItems.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}
+        >
           {/* Product List */}
           <div
             className={`${
               mobileView === "products" ? "flex" : "hidden"
-            } lg:flex flex-col bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border dark:border-slate-700 h-full lg:col-span-2`}
+            } lg:flex flex-col bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border dark:border-slate-700 h-full ${cartItems.length > 0 ? "lg:col-span-2" : "lg:col-span-1"}`}
           >
             <input
               type="text"
@@ -690,7 +705,31 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : null}
+
+              {/* Nút xem thêm khi có nhiều hơn 20 sản phẩm */}
+              {hasMoreProducts && !showAllProducts && (
+                <div className="mt-3 text-center">
+                  <button
+                    onClick={() => setShowAllProducts(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900/30 dark:hover:bg-sky-800/50 text-sky-700 dark:text-sky-300 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    📦 Xem thêm {allAvailableItems.length - PRODUCTS_LIMIT} sản phẩm khác
+                  </button>
+                </div>
+              )}
+              {showAllProducts && hasMoreProducts && (
+                <div className="mt-3 text-center">
+                  <button
+                    onClick={() => setShowAllProducts(false)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    ⬆️ Thu gọn
+                  </button>
+                </div>
+              )}
+
+              {availableProducts.length === 0 && (
                 <div className="text-center py-16 text-slate-500 dark:text-slate-400">
                   <CubeIcon className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-500" />
                   <p className="mt-4 font-semibold">
@@ -728,105 +767,248 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
             </div>
           </div>
 
-          {/* Cart & Checkout */}
-          <div
-            className={`${
-              mobileView === "cart" ? "flex" : "hidden"
-            } lg:flex w-full lg:w-auto flex-col bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border dark:border-slate-700 mt-6 lg:mt-0 h-full lg:col-span-1`}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <button
-                  onClick={() => setMobileView("products")}
-                  className="lg:hidden p-2 mr-2 -ml-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                >
-                  <ArrowUturnLeftIcon className="w-5 h-5" />
-                </button>
-                <h2 className="text-xl font-bold flex items-center text-slate-800 dark:text-slate-100">
-                  <ShoppingCartIcon className="w-6 h-6 mr-3 text-orange-500" />
-                  Hóa đơn
-                </h2>
-              </div>
-              {cartItems.length > 0 && (
-                <span className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full text-xs font-medium">
-                  {cartItems.length} SP
-                </span>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto pr-2 -mr-2">
-              {cartItems.length === 0 ? (
-                <div className="text-center py-16 text-slate-500 dark:text-slate-400">
-                  <ShoppingCartIcon className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-                  <p className="font-semibold mb-2">Giỏ hàng trống</p>
-                  <p className="text-sm">Thêm sản phẩm để bắt đầu bán hàng</p>
+          {/* Cart & Checkout - Chỉ hiện khi có sản phẩm trong giỏ */}
+          {(cartItems.length > 0 || mobileView === "cart") && (
+            <div
+              className={`${
+                mobileView === "cart" ? "flex" : "hidden lg:flex"
+              } w-full lg:w-auto flex-col bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border dark:border-slate-700 mt-6 lg:mt-0 lg:col-span-1 animate-in slide-in-from-right-5 duration-300 h-fit`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setMobileView("products")}
+                    className="lg:hidden p-2 mr-2 -ml-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  >
+                    <ArrowUturnLeftIcon className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-xl font-bold flex items-center text-slate-800 dark:text-slate-100">
+                    <ShoppingCartIcon className="w-6 h-6 mr-3 text-orange-500" />
+                    Hóa đơn
+                  </h2>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {cartItems.map((item) => (
-                    <div
-                      key={`${item.productId}-${item.priceType || "retail"}`}
-                      className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 group hover:border-orange-300 dark:hover:border-orange-600 transition-colors"
+                {cartItems.length > 0 && (
+                  <span className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded-full text-xs font-medium">
+                    {cartItems.length} SP
+                  </span>
+                )}
+              </div>
+
+              {/* 1. Khách hàng - Đặt trên cùng */}
+              <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                <div ref={customerInputRef}>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    👤 Khách hàng
+                  </label>
+
+                  {/* Selected Customer Display */}
+                  {selectedCustomer && (
+                    <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                            {selectedCustomer.name}
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-300">
+                            📞 {selectedCustomer.phone}
+                          </p>
+                          {selectedCustomer.address && (
+                            <p className="text-xs text-blue-600 dark:text-blue-300">
+                              📍 {selectedCustomer.address}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedCustomer(null);
+                            setCustomerSearch("");
+                          }}
+                          className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                          title="Bỏ chọn khách hàng"
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <div className="flex">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          placeholder={
+                            selectedCustomer
+                              ? "Tìm khách hàng khác..."
+                              : "Tìm theo tên hoặc số điện thoại..."
+                          }
+                          value={customerSearch}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            setIsCustomerListOpen(true);
+                            if (e.target.value === "") {
+                              setSelectedCustomer(null);
+                            }
+                          }}
+                          onFocus={() => setIsCustomerListOpen(true)}
+                          className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-l-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        />
+                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsNewCustomerModalOpen(true)}
+                        disabled={!currentUser}
+                        title={
+                          !currentUser
+                            ? "Bạn phải đăng nhập để thêm khách hàng"
+                            : "Thêm khách hàng mới"
+                        }
+                        className={`px-4 py-2 border-t border-b border-r rounded-r-md h-[42px] flex items-center justify-center transition-colors ${
+                          currentUser
+                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 border-blue-300 dark:border-blue-600"
+                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed border-slate-300 dark:border-slate-600"
+                        }`}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {isCustomerListOpen && (customerSearch || filteredCustomers.length > 0) && (
+                      <div className="absolute bottom-full mb-2 z-20 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                        <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                            📋 Danh bạ khách hàng ({filteredCustomers.length} kết quả)
+                          </p>
+                        </div>
+
+                        {filteredCustomers.length > 0 ? (
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredCustomers.map((c, index) => (
+                              <div
+                                key={c.id}
+                                onClick={() => handleSelectCustomer(c)}
+                                className={`p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-slate-100 dark:border-slate-700 transition-colors group ${
+                                  index === filteredCustomers.length - 1 ? "border-b-0" : ""
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                                      👤 {c.name}
+                                    </p>
+                                    <div className="mt-1 space-y-1">
+                                      <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                        📞 {c.phone}
+                                      </p>
+                                      {c.address && (
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                          📍 {c.address}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <ChevronRightIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-6 text-center">
+                            <div className="text-slate-400 mb-2">
+                              <UsersIcon className="w-12 h-12 mx-auto" />
+                            </div>
+                            <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                              Không tìm thấy khách hàng
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-500">
+                              Thử tìm với từ khóa khác hoặc thêm khách hàng mới
+                            </p>
+                            <button
+                              onClick={() => {
+                                setIsNewCustomerModalOpen(true);
+                                setIsCustomerListOpen(false);
+                              }}
+                              disabled={!currentUser}
+                              className="mt-3 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                              ➕ Thêm khách hàng mới
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedCustomer({
+                          id: "guest",
+                          name: "Khách vãng lai",
+                          phone: "0000000000",
+                          address: "",
+                        });
+                        setCustomerSearch("");
+                        setIsCustomerListOpen(false);
+                      }}
+                      className="flex-1 px-3 py-2 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600"
                     >
-                      {/* Product Header */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-tight truncate">
-                              {item.name}
-                            </h3>
-                            {/* Badge giá sỉ/lẻ */}
-                            {item.priceType && (
+                      🚶 Khách vãng lai
+                    </button>
+                    {customers.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setCustomerSearch("");
+                          setIsCustomerListOpen(true);
+                        }}
+                        className="px-3 py-2 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-2 border border-blue-200 dark:border-blue-600"
+                      >
+                        📋 Danh bạ ({customers.length})
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Cart Items List - Đặt dưới Khách hàng */}
+              {cartItems.length > 0 && (
+                <div className="space-y-2 mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    🛒 Sản phẩm trong giỏ:
+                  </p>
+                  <div className="space-y-2">
+                    {cartItems.map((item) => (
+                      <div
+                        key={`${item.productId}-${item.priceType || "retail"}`}
+                        className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg p-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">
+                                {item.name}
+                              </span>
                               <span
-                                className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${
+                                className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
                                   item.priceType === "wholesale"
                                     ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                                     : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 }`}
                               >
-                                {item.priceType === "wholesale" ? "💰 Sỉ" : "🛒 Lẻ"}
+                                {item.priceType === "wholesale" ? "Sỉ" : "Lẻ"}
                               </span>
-                            )}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {formatCurrency(item.sellingPrice)} × {item.quantity} ={" "}
+                              <span className="font-semibold text-orange-600 dark:text-orange-400">
+                                {formatCurrency(item.sellingPrice * item.quantity)}
+                              </span>
+                            </p>
                           </div>
-                          <p className="text-xs font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 px-2 py-1 rounded inline-block">
-                            SKU: {item.sku || "N/A"}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            // Cập nhật hàm xóa để xét cả priceType
-                            setCartItems((prev) =>
-                              prev.filter(
-                                (i) =>
-                                  !(
-                                    i.productId === item.productId &&
-                                    (i.priceType || "retail") === (item.priceType || "retail")
-                                  )
-                              )
-                            );
-                          }}
-                          className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                          title="Xóa khỏi giỏ hàng"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Price and Quantity */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-slate-600 dark:text-slate-400">
-                            Đơn giá
-                          </span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-100">
-                            {formatCurrency(item.sellingPrice)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-slate-600 dark:text-slate-400">
-                            Số lượng
-                          </span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <button
                               onClick={() =>
                                 updateQuantity(
@@ -835,226 +1017,46 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                   item.priceType
                                 )
                               }
-                              className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                              disabled={item.quantity <= 1}
+                              className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500"
                             >
-                              <MinusIcon className="w-4 h-4" />
+                              <MinusIcon className="w-3 h-3" />
                             </button>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                updateQuantity(
-                                  item.productId,
-                                  Math.max(1, Number(e.target.value) || 1),
-                                  item.priceType
-                                )
-                              }
-                              className="w-12 text-center border border-slate-300 dark:border-slate-600 rounded-md text-sm py-1 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium"
-                              min="1"
-                            />
+                            <span className="w-6 text-center text-sm font-medium">
+                              {item.quantity}
+                            </span>
                             <button
                               onClick={() =>
                                 updateQuantity(item.productId, item.quantity + 1, item.priceType)
                               }
-                              className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                              className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500"
                             >
-                              <PlusIcon className="w-4 h-4" />
+                              <PlusIcon className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                setCartItems((prev) =>
+                                  prev.filter(
+                                    (i) =>
+                                      !(
+                                        i.productId === item.productId &&
+                                        (i.priceType || "retail") === (item.priceType || "retail")
+                                      )
+                                  )
+                                )
+                              }
+                              className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded ml-1"
+                            >
+                              <TrashIcon className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
-
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                            Thành tiền
-                          </span>
-                          <span className="font-bold text-orange-600 dark:text-orange-400">
-                            {formatCurrency(item.sellingPrice * item.quantity)}
-                          </span>
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
-            <div className="mt-auto pt-6 border-t-2 border-slate-200 dark:border-slate-700 space-y-4">
-              <div ref={customerInputRef}>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  👤 Khách hàng
-                </label>
 
-                {/* Selected Customer Display */}
-                {selectedCustomer && (
-                  <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                          {selectedCustomer.name}
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-300">
-                          📞 {selectedCustomer.phone}
-                        </p>
-                        {selectedCustomer.address && (
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            📍 {selectedCustomer.address}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(null);
-                          setCustomerSearch("");
-                        }}
-                        className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
-                        title="Bỏ chọn khách hàng"
-                      >
-                        <XMarkIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="relative">
-                  <div className="flex">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        placeholder={
-                          selectedCustomer
-                            ? "Tìm khách hàng khác..."
-                            : "Tìm theo tên hoặc số điện thoại..."
-                        }
-                        value={customerSearch}
-                        onChange={(e) => {
-                          setCustomerSearch(e.target.value);
-                          setIsCustomerListOpen(true);
-                          if (e.target.value === "") {
-                            setSelectedCustomer(null);
-                          }
-                        }}
-                        onFocus={() => setIsCustomerListOpen(true)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-l-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
-                      <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsNewCustomerModalOpen(true)}
-                      disabled={!currentUser}
-                      title={
-                        !currentUser
-                          ? "Bạn phải đăng nhập để thêm khách hàng"
-                          : "Thêm khách hàng mới"
-                      }
-                      className={`px-4 py-2 border-t border-b border-r rounded-r-md h-[42px] flex items-center justify-center transition-colors ${
-                        currentUser
-                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 border-blue-300 dark:border-blue-600"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed border-slate-300 dark:border-slate-600"
-                      }`}
-                    >
-                      <PlusIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {isCustomerListOpen && (customerSearch || filteredCustomers.length > 0) && (
-                    <div className="absolute bottom-full mb-2 z-20 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-                      <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          📋 Danh bạ khách hàng ({filteredCustomers.length} kết quả)
-                        </p>
-                      </div>
-
-                      {filteredCustomers.length > 0 ? (
-                        <div className="max-h-48 overflow-y-auto">
-                          {filteredCustomers.map((c, index) => (
-                            <div
-                              key={c.id}
-                              onClick={() => handleSelectCustomer(c)}
-                              className={`p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-slate-100 dark:border-slate-700 transition-colors group ${
-                                index === filteredCustomers.length - 1 ? "border-b-0" : ""
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300">
-                                    👤 {c.name}
-                                  </p>
-                                  <div className="mt-1 space-y-1">
-                                    <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                      📞 {c.phone}
-                                    </p>
-                                    {c.address && (
-                                      <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                        📍 {c.address}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center">
-                                  <ChevronRightIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-6 text-center">
-                          <div className="text-slate-400 mb-2">
-                            <UsersIcon className="w-12 h-12 mx-auto" />
-                          </div>
-                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                            Không tìm thấy khách hàng
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-500">
-                            Thử tìm với từ khóa khác hoặc thêm khách hàng mới
-                          </p>
-                          <button
-                            onClick={() => {
-                              setIsNewCustomerModalOpen(true);
-                              setIsCustomerListOpen(false);
-                            }}
-                            disabled={!currentUser}
-                            className="mt-3 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-                          >
-                            ➕ Thêm khách hàng mới
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick Actions */}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedCustomer({
-                        id: "guest",
-                        name: "Khách vãng lai",
-                        phone: "0000000000",
-                        address: "",
-                      });
-                      setCustomerSearch("");
-                      setIsCustomerListOpen(false);
-                    }}
-                    className="flex-1 px-3 py-2 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600"
-                  >
-                    🚶 Khách vãng lai
-                  </button>
-                  {customers.length > 0 && (
-                    <button
-                      onClick={() => {
-                        setCustomerSearch("");
-                        setIsCustomerListOpen(true);
-                      }}
-                      className="px-3 py-2 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-2 border border-blue-200 dark:border-blue-600"
-                    >
-                      📋 Danh bạ ({customers.length})
-                    </button>
-                  )}
-                </div>
-              </div>
-              {/* Order Summary */}
+              {/* 3. Order Summary */}
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg space-y-3">
                 <h3 className="font-semibold text-slate-700 dark:text-slate-300 text-sm mb-3">
                   📋 Tổng kết đơn hàng
@@ -1115,6 +1117,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   </div>
                 </div>
               </div>
+
               {/* Payment Method */}
               <div className="space-y-3">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -1223,6 +1226,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   )}
                 </div>
               </div>
+
               {/* Checkout Options */}
               <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
                 <label className="flex items-center text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
@@ -1283,7 +1287,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 )}
               </button>
             </div>
-          </div>
+          )}
         </div>
       )}
 

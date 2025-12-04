@@ -1,11 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import type {
-  PinBOM,
-  PinMaterial,
-  ProductionOrder,
-  User,
-  AdditionalCost,
-} from "../types";
+import type { PinBOM, PinMaterial, ProductionOrder, User, AdditionalCost } from "../types";
 import {
   PlusIcon,
   TrashIcon,
@@ -17,9 +11,7 @@ import {
 import Pagination from "./common/Pagination";
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    amount
-  );
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
 const generateUuid = () =>
   typeof crypto !== "undefined" && (crypto as any).randomUUID
@@ -56,6 +48,8 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [materialSearchTerms, setMaterialSearchTerms] = useState<{ [key: number]: string }>({});
+  const [openMaterialDropdown, setOpenMaterialDropdown] = useState<number | null>(null);
 
   // Production Order creation state
   const [orderQuantity, setOrderQuantity] = useState(1);
@@ -77,8 +71,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
     const term = searchTerm.toLowerCase();
     return boms.filter(
       (bom) =>
-        bom.productName.toLowerCase().includes(term) ||
-        bom.notes?.toLowerCase().includes(term)
+        bom.productName.toLowerCase().includes(term) || bom.notes?.toLowerCase().includes(term)
     );
   }, [boms, searchTerm]);
 
@@ -92,6 +85,19 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Chỉ đóng nếu click hoàn toàn bên ngoài container
+      if (openMaterialDropdown !== null && !target.closest(".material-search-container")) {
+        setOpenMaterialDropdown(null);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [openMaterialDropdown]);
 
   const handleCreateBOM = () => {
     setIsCreating(true);
@@ -139,9 +145,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
       productName: bomForm.productName.trim(),
       productSku: bomForm.productSku.trim(),
       notes: bomForm.notes.trim(),
-      materials: bomForm.materials.filter(
-        (m) => m.materialId && m.quantity > 0
-      ),
+      materials: bomForm.materials.filter((m) => m.materialId && m.quantity > 0),
       created_at: new Date().toISOString(),
     };
 
@@ -170,9 +174,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
   ) => {
     setBomForm((prev) => ({
       ...prev,
-      materials: prev.materials.map((mat, i) =>
-        i === index ? { ...mat, [field]: value } : mat
-      ),
+      materials: prev.materials.map((mat, i) => (i === index ? { ...mat, [field]: value } : mat)),
     }));
   };
 
@@ -197,10 +199,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
     }
 
     const materialsCost = calculateBOMCost(selectedBOM, orderQuantity);
-    const additionalCostsTotal = additionalCosts.reduce(
-      (sum, cost) => sum + cost.amount,
-      0
-    );
+    const additionalCostsTotal = additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
     const totalCost = materialsCost + additionalCostsTotal;
 
     const order: ProductionOrder = {
@@ -298,11 +297,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                   onClick={handleCreateBOM}
                   disabled={!currentUser}
                   className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-                  title={
-                    !currentUser
-                      ? "Vui lòng đăng nhập để tạo BOM"
-                      : "Tạo BOM mới"
-                  }
+                  title={!currentUser ? "Vui lòng đăng nhập để tạo BOM" : "Tạo BOM mới"}
                 >
                   <PlusIcon className="w-4 h-4" />
                   <span>Tạo BOM</span>
@@ -356,9 +351,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                           onClick={(e) => {
                             e.stopPropagation();
                             if (
-                              window.confirm(
-                                `Bạn có chắc chắn muốn xóa BOM "${bom.productName}"?`
-                              )
+                              window.confirm(`Bạn có chắc chắn muốn xóa BOM "${bom.productName}"?`)
                             ) {
                               onDeleteBOM(bom.id);
                             }
@@ -457,56 +450,113 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                       </button>
                     </div>
 
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {bomForm.materials.map((mat, index) => (
-                        <div
-                          key={index}
-                          className="flex space-x-2 items-center"
-                        >
-                          <select
-                            value={mat.materialId}
-                            onChange={(e) =>
-                              handleUpdateMaterial(
-                                index,
-                                "materialId",
-                                e.target.value
-                              )
-                            }
-                            className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-                          >
-                            <option value="">Chọn nguyên liệu</option>
-                            {materials.map((material) => (
-                              <option key={material.id} value={material.id}>
-                                {material.name} ({material.stock}{" "}
-                                {material.unit})
-                              </option>
-                            ))}
-                          </select>
+                    <div className="space-y-2 max-h-60 overflow-visible">
+                      {bomForm.materials.map((mat, index) => {
+                        const selectedMaterial = materials.find((m) => m.id === mat.materialId);
+                        const searchValue = materialSearchTerms[index] || "";
+                        // Filter materials - nếu có searchValue thì filter, nếu không thì show tất cả
+                        const filteredMaterials = searchValue.trim()
+                          ? materials.filter(
+                              (m) =>
+                                m.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+                                m.sku?.toLowerCase().includes(searchValue.toLowerCase())
+                            )
+                          : materials;
 
-                          <input
-                            type="number"
-                            value={mat.quantity}
-                            onChange={(e) =>
-                              handleUpdateMaterial(
-                                index,
-                                "quantity",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="w-20 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-                            placeholder="SL"
-                            min="0"
-                            step="0.1"
-                          />
+                        return (
+                          <div key={index} className="flex space-x-2 items-center">
+                            <div className="flex-1 relative material-search-container">
+                              <input
+                                type="text"
+                                placeholder="Tìm nguyên liệu..."
+                                value={selectedMaterial ? selectedMaterial.name : searchValue}
+                                onChange={(e) => {
+                                  setMaterialSearchTerms((prev) => ({
+                                    ...prev,
+                                    [index]: e.target.value,
+                                  }));
+                                  setOpenMaterialDropdown(index);
+                                  // Clear selection if typing
+                                  if (mat.materialId) {
+                                    handleUpdateMaterial(index, "materialId", "");
+                                  }
+                                }}
+                                onFocus={() => setOpenMaterialDropdown(index)}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+                              />
+                              {selectedMaterial && (
+                                <button
+                                  onClick={() => {
+                                    handleUpdateMaterial(index, "materialId", "");
+                                    setMaterialSearchTerms((prev) => ({ ...prev, [index]: "" }));
+                                  }}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                >
+                                  <XMarkIcon className="w-4 h-4" />
+                                </button>
+                              )}
+                              {openMaterialDropdown === index && (
+                                <div
+                                  className="absolute left-0 top-full z-[9999] w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto"
+                                  style={{ minWidth: "100%" }}
+                                >
+                                  {filteredMaterials.length > 0 ? (
+                                    filteredMaterials.slice(0, 10).map((material) => (
+                                      <div
+                                        key={material.id}
+                                        onClick={() => {
+                                          handleUpdateMaterial(index, "materialId", material.id);
+                                          setMaterialSearchTerms((prev) => ({
+                                            ...prev,
+                                            [index]: "",
+                                          }));
+                                          setOpenMaterialDropdown(null);
+                                        }}
+                                        className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0"
+                                      >
+                                        <div className="font-medium text-slate-800 dark:text-slate-100 text-sm">
+                                          {material.name}
+                                        </div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                                          SKU: {material.sku || "N/A"} • Tồn: {material.stock}{" "}
+                                          {material.unit}
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="px-3 py-4 text-center text-slate-500 text-sm">
+                                      Không tìm thấy nguyên liệu
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
 
-                          <button
-                            onClick={() => handleRemoveMaterial(index)}
-                            className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                            <input
+                              type="number"
+                              value={mat.quantity}
+                              onChange={(e) =>
+                                handleUpdateMaterial(
+                                  index,
+                                  "quantity",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-20 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+                              placeholder="SL"
+                              min="0"
+                              step="0.1"
+                            />
+
+                            <button
+                              onClick={() => handleRemoveMaterial(index)}
+                              className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -549,9 +599,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                     <input
                       type="number"
                       value={orderQuantity}
-                      onChange={(e) =>
-                        setOrderQuantity(parseInt(e.target.value) || 1)
-                      }
+                      onChange={(e) => setOrderQuantity(parseInt(e.target.value) || 1)}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
                       min="1"
                     />
@@ -572,9 +620,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                             <span className="font-medium">{req.name}</span>
                             <span
                               className={`ml-2 ${
-                                req.isSufficient
-                                  ? "text-green-600"
-                                  : "text-red-600"
+                                req.isSufficient ? "text-green-600" : "text-red-600"
                               }`}
                             >
                               ({req.stock}/{req.required})
@@ -603,9 +649,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                       </h4>
                       <button
                         onClick={handleAddCost}
-                        disabled={
-                          !newCost.description.trim() || newCost.amount <= 0
-                        }
+                        disabled={!newCost.description.trim() || newCost.amount <= 0}
                         className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-2 py-1 rounded text-sm"
                       >
                         <PlusIcon className="w-3 h-3" />
@@ -646,15 +690,10 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                     {additionalCosts.length > 0 && (
                       <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 space-y-2 max-h-32 overflow-y-auto">
                         {additionalCosts.map((cost, index) => (
-                          <div
-                            key={index}
-                            className="flex justify-between items-center text-sm"
-                          >
+                          <div key={index} className="flex justify-between items-center text-sm">
                             <span>{cost.description}</span>
                             <div className="flex items-center space-x-2">
-                              <span className="font-semibold">
-                                {formatCurrency(cost.amount)}
-                              </span>
+                              <span className="font-semibold">{formatCurrency(cost.amount)}</span>
                               <button
                                 onClick={() => handleRemoveCost(index)}
                                 className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 p-1 rounded"
@@ -688,9 +727,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                       <div className="flex justify-between">
                         <span>Chi phí nguyên vật liệu:</span>
                         <span className="font-semibold">
-                          {formatCurrency(
-                            calculateBOMCost(selectedBOM, orderQuantity)
-                          )}
+                          {formatCurrency(calculateBOMCost(selectedBOM, orderQuantity))}
                         </span>
                       </div>
                       {additionalCosts.length > 0 && (
@@ -698,10 +735,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                           <span>Chi phí phát sinh:</span>
                           <span className="font-semibold">
                             {formatCurrency(
-                              additionalCosts.reduce(
-                                (sum, cost) => sum + cost.amount,
-                                0
-                              )
+                              additionalCosts.reduce((sum, cost) => sum + cost.amount, 0)
                             )}
                           </span>
                         </div>
@@ -711,10 +745,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                         <span className="text-blue-600 dark:text-blue-400">
                           {formatCurrency(
                             calculateBOMCost(selectedBOM, orderQuantity) +
-                              additionalCosts.reduce(
-                                (sum, cost) => sum + cost.amount,
-                                0
-                              )
+                              additionalCosts.reduce((sum, cost) => sum + cost.amount, 0)
                           )}
                         </span>
                       </div>
@@ -738,11 +769,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                     onClick={handleCreateOrder}
                     disabled={!isStockSufficient}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg disabled:cursor-not-allowed"
-                    title={
-                      !isStockSufficient
-                        ? "Không đủ nguyên vật liệu"
-                        : "Tạo lệnh sản xuất"
-                    }
+                    title={!isStockSufficient ? "Không đủ nguyên vật liệu" : "Tạo lệnh sản xuất"}
                   >
                     Tạo lệnh sản xuất
                   </button>
@@ -757,9 +784,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                       {selectedBOM.productName}
                     </h3>
                     {selectedBOM.notes && (
-                      <p className="text-slate-600 dark:text-slate-400 mt-1">
-                        {selectedBOM.notes}
-                      </p>
+                      <p className="text-slate-600 dark:text-slate-400 mt-1">{selectedBOM.notes}</p>
                     )}
                   </div>
                   <button
@@ -783,9 +808,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                   </h4>
                   <div className="space-y-2">
                     {selectedBOM.materials.map((bomMat) => {
-                      const material = materials.find(
-                        (m) => m.id === bomMat.materialId
-                      );
+                      const material = materials.find((m) => m.id === bomMat.materialId);
                       return (
                         <div
                           key={bomMat.materialId}
@@ -796,8 +819,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                               {material?.name || "N/A"}
                             </p>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                              Tồn kho: {material?.stock || 0}{" "}
-                              {material?.unit || "đơn vị"}
+                              Tồn kho: {material?.stock || 0} {material?.unit || "đơn vị"}
                             </p>
                           </div>
                           <div className="text-right">
@@ -805,9 +827,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                               {bomMat.quantity} {material?.unit || "đơn vị"}
                             </p>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                              {formatCurrency(
-                                (material?.purchasePrice || 0) * bomMat.quantity
-                              )}
+                              {formatCurrency((material?.purchasePrice || 0) * bomMat.quantity)}
                             </p>
                           </div>
                         </div>
