@@ -220,23 +220,32 @@ const PinImportHistory: React.FC = () => {
       setSuccessMessage(null);
 
       const usedSkus = new Set<string>();
-      let historyUpdated = 0;
       let materialsUpdated = 0;
+      let historyUpdated = 0;
 
-      // 1. First, get ALL materials from pin_materials
+      // 1. Get ALL materials from pin_materials
       const { data: allMaterials, error: fetchMatErr } = await supabase
         .from("pin_materials")
         .select("id, sku, name");
 
       if (fetchMatErr) {
-        console.error("Lỗi lấy danh sách materials:", fetchMatErr.message);
+        throw new Error("Lỗi lấy danh sách materials: " + fetchMatErr.message);
       }
 
-      // 2. Update all materials in pin_materials table
+      // 2. Create mapping: material name -> new SKU
+      const nameToSkuMap = new Map<string, string>();
+
+      // Update all materials in pin_materials table
       if (allMaterials && allMaterials.length > 0) {
         for (const mat of allMaterials) {
           const newSku = generateNewSKU(usedSkus);
           usedSkus.add(newSku);
+          
+          // Store mapping by name (normalized)
+          const normalizedName = mat.name?.trim().toLowerCase() || "";
+          if (normalizedName) {
+            nameToSkuMap.set(normalizedName, newSku);
+          }
 
           const { error: matErr } = await supabase
             .from("pin_materials")
@@ -245,37 +254,33 @@ const PinImportHistory: React.FC = () => {
 
           if (!matErr) {
             materialsUpdated++;
-
-            // Also update all history records that reference this material
-            const { error: histErr } = await supabase
-              .from("pin_material_history")
-              .update({ material_sku: newSku })
-              .eq("material_id", mat.id);
-
-            if (!histErr) {
-              // Count how many history records were updated
-              const { count } = await supabase
-                .from("pin_material_history")
-                .select("*", { count: "exact", head: true })
-                .eq("material_id", mat.id);
-              historyUpdated += count || 0;
-            }
           } else {
             console.error(`Lỗi cập nhật material ${mat.id}:`, matErr.message);
           }
         }
       }
 
-      // 3. Update any remaining history records without material_id (orphans)
-      const { data: orphanHistory } = await supabase
+      // 3. Update ALL history records - match by material name
+      const { data: allHistory, error: fetchHistErr } = await supabase
         .from("pin_material_history")
-        .select("id")
-        .or("material_id.is.null,material_id.eq.");
+        .select("id, material_name, material_sku");
 
-      if (orphanHistory && orphanHistory.length > 0) {
-        for (const hist of orphanHistory) {
-          const newSku = generateNewSKU(usedSkus);
-          usedSkus.add(newSku);
+      if (fetchHistErr) {
+        console.error("Lỗi lấy history:", fetchHistErr.message);
+      }
+
+      if (allHistory && allHistory.length > 0) {
+        for (const hist of allHistory) {
+          const normalizedName = hist.material_name?.trim().toLowerCase() || "";
+          
+          // Try to find matching SKU from material name
+          let newSku = nameToSkuMap.get(normalizedName);
+          
+          // If no match found, generate a new unique SKU
+          if (!newSku) {
+            newSku = generateNewSKU(usedSkus);
+            usedSkus.add(newSku);
+          }
 
           const { error: histErr } = await supabase
             .from("pin_material_history")
@@ -284,14 +289,16 @@ const PinImportHistory: React.FC = () => {
 
           if (!histErr) {
             historyUpdated++;
+          } else {
+            console.error(`Lỗi cập nhật history ${hist.id}:`, histErr.message);
           }
         }
       }
 
       setSuccessMessage(
-        `✅ Đã cập nhật:\n` +
-          `• ${materialsUpdated} vật liệu trong Danh sách\n` +
-          `• ${historyUpdated} bản ghi trong Lịch sử`
+        `✅ Đã cập nhật thành công!\n` +
+          `• ${materialsUpdated}/${allMaterials?.length || 0} vật liệu trong Danh sách\n` +
+          `• ${historyUpdated}/${allHistory?.length || 0} bản ghi trong Lịch sử`
       );
 
       // Refresh data
