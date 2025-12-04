@@ -240,7 +240,7 @@ const PinImportHistory: React.FC = () => {
         for (const mat of allMaterials) {
           const newSku = generateNewSKU(usedSkus);
           usedSkus.add(newSku);
-          
+
           // Store mapping by name (normalized)
           const normalizedName = mat.name?.trim().toLowerCase() || "";
           if (normalizedName) {
@@ -272,10 +272,10 @@ const PinImportHistory: React.FC = () => {
       if (allHistory && allHistory.length > 0) {
         for (const hist of allHistory) {
           const normalizedName = hist.material_name?.trim().toLowerCase() || "";
-          
+
           // Try to find matching SKU from material name
           let newSku = nameToSkuMap.get(normalizedName);
-          
+
           // If no match found, generate a new unique SKU
           if (!newSku) {
             newSku = generateNewSKU(usedSkus);
