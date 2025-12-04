@@ -226,7 +226,8 @@ const ProductModal: React.FC<{
   onClose: () => void;
   onSave: (product: PinMaterial) => void;
   existingMaterials?: PinMaterial[];
-}> = ({ isOpen, onClose, onSave, existingMaterials = [] }) => {
+  additionalSkus?: string[];
+}> = ({ isOpen, onClose, onSave, existingMaterials = [], additionalSkus = [] }) => {
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -298,7 +299,7 @@ const ProductModal: React.FC<{
     const newProduct: PinMaterial = {
       id: generateUniqueId("M-"),
       name: formData.name.trim(),
-      sku: formData.sku.trim() || generateMaterialSKU(existingMaterials),
+      sku: formData.sku.trim() || generateMaterialSKU(existingMaterials, additionalSkus),
       unit: finalUnit,
       purchasePrice: formData.purchasePrice,
       retailPrice: formData.retailPrice || Math.round(formData.purchasePrice * 1.4),
@@ -601,21 +602,23 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       setShowProductDropdown(false);
     } else {
       // Sản phẩm mới - tạo item mới với SKU unique
-      // Collect existing SKUs from current receiptItems to avoid duplicates
-      const currentSkus = receiptItems.map((item) => item.sku);
-      const newItem: ReceiptItem = {
-        internalId: generateUniqueId("item-"),
-        materialId: null,
-        materialName: productSearch,
-        sku: generateMaterialSKU(materials || [], currentSkus),
-        unit: "cái",
-        quantity: 1,
-        purchasePrice: 0,
-        retailPrice: 0,
-        wholesalePrice: 0,
-        isNew: true,
-      };
-      setReceiptItems((prev) => [...prev, newItem]);
+      // Use functional update to get latest receiptItems state
+      setReceiptItems((prev) => {
+        const currentSkus = prev.map((item) => item.sku);
+        const newItem: ReceiptItem = {
+          internalId: generateUniqueId("item-"),
+          materialId: null,
+          materialName: productSearch,
+          sku: generateMaterialSKU(materials || [], currentSkus),
+          unit: "cái",
+          quantity: 1,
+          purchasePrice: 0,
+          retailPrice: 0,
+          wholesalePrice: 0,
+          isNew: true,
+        };
+        return [...prev, newItem];
+      });
       setProductSearch("");
       setShowProductDropdown(false);
     }
@@ -1793,6 +1796,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         onClose={() => setShowProductModal(false)}
         onSave={handleSaveNewProduct}
         existingMaterials={materials || []}
+        additionalSkus={receiptItems.map((item) => item.sku)}
       />
     </div>
   );
