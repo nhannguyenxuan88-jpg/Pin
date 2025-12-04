@@ -2938,6 +2938,29 @@ const MaterialManager: React.FC<{
   const [activeView, setActiveView] = useState<"materials" | "history">("materials");
   // Note: History view now self-fetches; no need to trigger context reload here
 
+  // Tổng giá trị nhập kho từ lịch sử (để hiển thị chính xác)
+  const [totalImportValue, setTotalImportValue] = useState<number>(0);
+
+  // Fetch tổng giá trị từ lịch sử nhập kho
+  useEffect(() => {
+    const fetchTotalImportValue = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("pin_material_history")
+          .select("total_cost");
+        
+        if (!error && data) {
+          const total = data.reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0);
+          setTotalImportValue(total);
+        }
+      } catch (e) {
+        console.error("Error fetching total import value:", e);
+      }
+    };
+    
+    fetchTotalImportValue();
+  }, [materials]); // Refresh when materials change
+
   // Load modal states from localStorage on mount
   useEffect(() => {
     const savedModalStates = localStorage.getItem("materialManagerModalStates");
@@ -4143,12 +4166,7 @@ const MaterialManager: React.FC<{
                   <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/40 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap text-xs">
                     <span className="text-slate-600 dark:text-slate-400">Giá trị: </span>
                     <span className="font-bold text-amber-600 dark:text-amber-400">
-                      {formatCurrency(
-                        materials.reduce(
-                          (sum, m) => sum + (m.stock || 0) * (m.purchasePrice || 0),
-                          0
-                        )
-                      )}
+                      {formatCurrency(totalImportValue)}
                     </span>
                   </div>
                 </div>
