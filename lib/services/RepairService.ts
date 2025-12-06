@@ -212,7 +212,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
         const inProgressStatuses = ["Đang sửa", "in_progress", "working"];
         const completedStatuses = ["completed", "Đã sửa xong", "Trả máy"];
         const deductibleStatuses = [...inProgressStatuses, ...completedStatuses];
-        
+
         const shouldDeductMaterials =
           deductibleStatuses.includes(order.status) &&
           order.materialsUsed &&
@@ -221,7 +221,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
 
         if (shouldDeductMaterials) {
           const warnings: string[] = [];
-          
+
           for (const m of order.materialsUsed!) {
             // Tìm material bằng ID hoặc theo tên
             let mat = ctx.pinMaterials.find(
@@ -240,7 +240,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
 
             const currentStock = mat.stock || 0;
             const requestedQty = m.quantity || 0;
-            
+
             // ⚠️ Cảnh báo nếu không đủ hàng
             if (currentStock < requestedQty) {
               warnings.push(
@@ -250,7 +250,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
 
             // Cho phép trừ kho (có thể âm để phản ánh thiếu hàng thực tế)
             const remaining = currentStock - requestedQty;
-            
+
             await supabase.from("pin_materials").update({ stock: remaining }).eq("id", mat.id);
             ctx.setPinMaterials((prev: PinMaterial[]) =>
               prev.map((material: PinMaterial) =>
@@ -363,7 +363,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
         // ===== HOÀN TRẢ KHO KHI HỦY PHIẾU =====
         // Tìm đơn sửa chữa cần xóa
         const orderToDelete = ctx.pinRepairOrders?.find((o: PinRepairOrder) => o.id === orderId);
-        
+
         // Nếu đơn đã trừ kho, hoàn trả lại vật tư
         if (orderToDelete?.materialsDeducted && orderToDelete.materialsUsed) {
           for (const m of orderToDelete.materialsUsed) {
@@ -387,7 +387,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
               )
             );
           }
-          
+
           ctx.addToast?.({
             title: "✅ Đã hoàn trả vật tư về kho",
             message: `Phiếu ${orderId}`,
