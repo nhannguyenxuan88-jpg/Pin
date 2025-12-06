@@ -456,7 +456,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               if (Array.isArray(materialsData)) {
                 return materialsData;
               }
-              if (typeof materialsData === 'string') {
+              if (typeof materialsData === "string") {
                 try {
                   const parsed = JSON.parse(materialsData);
                   return Array.isArray(parsed) ? parsed : [];
