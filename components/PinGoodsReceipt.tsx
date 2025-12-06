@@ -947,7 +947,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             name: selectedSupplier?.name || "Unknown",
           },
           notes: notes || `Nhập hàng từ ${selectedSupplier?.name}`,
-          paymentSourceId: "default",
+          paymentSourceId: paymentMethod === "bank" ? "bank" : "cash",
           branchId: "main",
         };
 

@@ -385,7 +385,7 @@ export default function ReceivablesNew() {
           },
           notes: `Thu nợ cho ${
             row.kind === "workorder" ? "phiếu sửa chữa" : "đơn hàng"
-          } #${row.id}`,
+          } #${row.id} #app:pincorp`,
           paymentSourceId: "cash",
           branchId: currentBranchId,
           category: row.kind === "workorder" ? "service_income" : "sale_income",
@@ -409,7 +409,7 @@ export default function ReceivablesNew() {
             id: row.id,
             name: row.customerName,
           },
-          notes: `Thanh toán công nợ NCC ${row.customerName}`,
+          notes: `Thanh toán công nợ NCC ${row.customerName} #app:pincorp`,
           paymentSourceId: "cash",
           branchId: currentBranchId,
           category: "inventory_purchase",

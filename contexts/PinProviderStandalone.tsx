@@ -450,11 +450,22 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               row.technicianName ||
               "") as string,
             status: row.status as string,
-            materialsUsed: Array.isArray(row.materials_used)
-              ? row.materials_used
-              : Array.isArray(row.materialsused)
-                ? row.materialsused
-                : [],
+            materialsUsed: (() => {
+              // Parse materials_used if it's a JSON string
+              const materialsData = row.materials_used || row.materialsused;
+              if (Array.isArray(materialsData)) {
+                return materialsData;
+              }
+              if (typeof materialsData === 'string') {
+                try {
+                  const parsed = JSON.parse(materialsData);
+                  return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            })(),
             laborCost: Number(row.labor_cost ?? row.laborcost ?? 0),
             total: Number(row.total ?? 0),
             notes: (row.notes || "") as string,

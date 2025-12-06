@@ -170,22 +170,38 @@ const PinFinancialManager: React.FC = () => {
 
   // Calculate cashbook summary
   const cashbookSummary = useMemo(() => {
-    const transactions = filteredCashTransactions;
+    // Lọc giao dịch cho hiển thị (có áp dụng bộ lọc thời gian)
+    const displayTransactions = filteredCashTransactions;
 
-    // Tính thu: KHÔNG phải expense category
-    const totalIncome = transactions
+    // Lọc giao dịch cho tính số dư (KHÔNG áp dụng bộ lọc thời gian - tính toàn bộ)
+    let allTransactions = cashTransactions || [];
+
+    // Chỉ lọc theo app nếu cần
+    if (!showAllApps) {
+      allTransactions = allTransactions.filter((tx) => {
+        if (tx.workOrderId && String(tx.workOrderId).startsWith("LTN-SC")) {
+          return false;
+        }
+        const notes: string = tx.notes || "";
+        const hasAppTag = /#app:(pin|pincorp)/i.test(notes);
+        const isPinSale = tx.saleId && String(tx.saleId).startsWith("LTN-BH");
+        return hasAppTag || isPinSale;
+      });
+    }
+
+    // Tính thu/chi từ giao dịch hiển thị (có bộ lọc thời gian)
+    const totalIncome = displayTransactions
       .filter((tx) => !checkIsExpense(tx))
       .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
-    // Tính chi: expense category hoặc type=expense hoặc amount < 0
-    const totalExpense = transactions
+    const totalExpense = displayTransactions
       .filter((tx) => checkIsExpense(tx))
       .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
     const difference = totalIncome - totalExpense;
 
-    // Calculate by payment source
-    const cashBalance = transactions
+    // Tính số dư thực tế từ TOÀN BỘ giao dịch (không phụ thuộc bộ lọc thời gian)
+    const cashBalance = allTransactions
       .filter((tx) => {
         const source = tx.paymentSourceId?.toLowerCase() || "cash";
         return source === "cash" || source === "tien_mat" || source === "tiền mặt";
@@ -195,7 +211,7 @@ const PinFinancialManager: React.FC = () => {
         return sum + (isExpense ? -Math.abs(tx.amount) : Math.abs(tx.amount));
       }, 0);
 
-    const bankBalance = transactions
+    const bankBalance = allTransactions
       .filter((tx) => {
         const source = tx.paymentSourceId?.toLowerCase() || "";
         return source === "bank" || source === "ngan_hang" || source === "ngân hàng";
@@ -212,7 +228,7 @@ const PinFinancialManager: React.FC = () => {
       cashBalance,
       bankBalance,
     };
-  }, [filteredCashTransactions]);
+  }, [filteredCashTransactions, cashTransactions, showAllApps]);
 
   // Form states for adding transactions
   const [newTransaction, setNewTransaction] = useState({
