@@ -206,31 +206,51 @@ export function createRepairService(ctx: PinContextType): RepairService {
           return;
         }
 
-        // Deduct materials used if order is completed (check Vietnamese status)
-        // Chỉ trừ kho khi chuyển sang status hoàn thành VÀ chưa trừ trước đó
+        // ===== LOGIC TRỪ KHO CẢI TIẾN =====
+        // Trừ kho khi chuyển sang "Đang sửa" hoặc trạng thái hoàn thành
+        // CHỈ TRỪ 1 LẦN DUY NHẤT - không trừ lại khi cập nhật sau
+        const inProgressStatuses = ["Đang sửa", "in_progress", "working"];
         const completedStatuses = ["completed", "Đã sửa xong", "Trả máy"];
+        const deductibleStatuses = [...inProgressStatuses, ...completedStatuses];
+        
         const shouldDeductMaterials =
-          completedStatuses.includes(order.status) &&
+          deductibleStatuses.includes(order.status) &&
           order.materialsUsed &&
           order.materialsUsed.length > 0 &&
-          !order.materialsDeducted; // Kiểm tra đã trừ kho chưa
+          !order.materialsDeducted; // ✅ Chỉ trừ nếu chưa trừ trước đó
 
         if (shouldDeductMaterials) {
+          const warnings: string[] = [];
+          
           for (const m of order.materialsUsed!) {
             // Tìm material bằng ID hoặc theo tên
             let mat = ctx.pinMaterials.find(
               (material: PinMaterial) => material.id === m.materialId
             );
-            // Nếu không tìm thấy theo ID, tìm theo tên
             if (!mat && m.materialName) {
               mat = ctx.pinMaterials.find(
                 (material: PinMaterial) =>
                   material.name.toLowerCase() === m.materialName.toLowerCase()
               );
             }
-            if (!mat) continue;
+            if (!mat) {
+              warnings.push(`⚠️ Không tìm thấy vật tư: ${m.materialName}`);
+              continue;
+            }
 
-            const remaining = Math.max(0, (mat.stock || 0) - (m.quantity || 0));
+            const currentStock = mat.stock || 0;
+            const requestedQty = m.quantity || 0;
+            
+            // ⚠️ Cảnh báo nếu không đủ hàng
+            if (currentStock < requestedQty) {
+              warnings.push(
+                `⚠️ ${mat.name}: Tồn kho ${currentStock}, cần ${requestedQty} (thiếu ${requestedQty - currentStock})`
+              );
+            }
+
+            // Cho phép trừ kho (có thể âm để phản ánh thiếu hàng thực tế)
+            const remaining = currentStock - requestedQty;
+            
             await supabase.from("pin_materials").update({ stock: remaining }).eq("id", mat.id);
             ctx.setPinMaterials((prev: PinMaterial[]) =>
               prev.map((material: PinMaterial) =>
@@ -239,7 +259,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
             );
           }
 
-          // Cập nhật flag đã trừ kho
+          // Cập nhật flag đã trừ kho (ĐẢM BẢO CHỈ TRỪ 1 LẦN)
           await supabase
             .from("pin_repair_orders")
             .update({
@@ -248,9 +268,17 @@ export function createRepairService(ctx: PinContextType): RepairService {
             })
             .eq("id", order.id);
 
-          // Update local state
           order.materialsDeducted = true;
           order.materialsDeductedAt = new Date().toISOString();
+
+          // Hiển thị cảnh báo nếu có
+          if (warnings.length > 0) {
+            ctx.addToast?.({
+              title: "⚠️ Cảnh báo tồn kho",
+              message: warnings.join("\n"),
+              type: "warn",
+            });
+          }
         }
 
         // Create cash transaction for payment
@@ -332,6 +360,41 @@ export function createRepairService(ctx: PinContextType): RepairService {
       }
 
       try {
+        // ===== HOÀN TRẢ KHO KHI HỦY PHIẾU =====
+        // Tìm đơn sửa chữa cần xóa
+        const orderToDelete = ctx.pinRepairOrders?.find((o: PinRepairOrder) => o.id === orderId);
+        
+        // Nếu đơn đã trừ kho, hoàn trả lại vật tư
+        if (orderToDelete?.materialsDeducted && orderToDelete.materialsUsed) {
+          for (const m of orderToDelete.materialsUsed) {
+            let mat = ctx.pinMaterials.find(
+              (material: PinMaterial) => material.id === m.materialId
+            );
+            if (!mat && m.materialName) {
+              mat = ctx.pinMaterials.find(
+                (material: PinMaterial) =>
+                  material.name.toLowerCase() === m.materialName.toLowerCase()
+              );
+            }
+            if (!mat) continue;
+
+            // Hoàn trả số lượng về kho
+            const restoredStock = (mat.stock || 0) + (m.quantity || 0);
+            await supabase.from("pin_materials").update({ stock: restoredStock }).eq("id", mat.id);
+            ctx.setPinMaterials((prev: PinMaterial[]) =>
+              prev.map((material: PinMaterial) =>
+                material.id === mat!.id ? { ...material, stock: restoredStock } : material
+              )
+            );
+          }
+          
+          ctx.addToast?.({
+            title: "✅ Đã hoàn trả vật tư về kho",
+            message: `Phiếu ${orderId}`,
+            type: "success",
+          });
+        }
+
         const { error: delErr } = await supabase
           .from("pin_repair_orders")
           .delete()
