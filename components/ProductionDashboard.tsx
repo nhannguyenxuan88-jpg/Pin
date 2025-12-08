@@ -9,7 +9,9 @@ import {
   ClockIcon,
   CurrencyDollarIcon,
   ExclamationTriangleIcon,
+  PencilSquareIcon,
   PlusIcon,
+  TrashIcon,
   UserIcon,
 } from "./common/Icons";
 
@@ -275,6 +277,9 @@ interface ProductionDashboardProps {
   boms?: PinBOM[];
   onCreateOrder?: () => void;
   onManageBOMs?: () => void;
+  onCreateOrderFromBOM?: (bomId: string) => void;
+  onEditBOM?: (bomId: string) => void;
+  onDeleteBOM?: (bomId: string) => void;
   completeOrder?: (orderId: string) => Promise<void>;
 }
 
@@ -286,6 +291,9 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
   boms = [],
   onCreateOrder,
   onManageBOMs,
+  onCreateOrderFromBOM,
+  onEditBOM,
+  onDeleteBOM,
   completeOrder,
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
@@ -381,52 +389,19 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
             <input
               type="text"
               placeholder="🔍 Tìm kiếm lệnh sản xuất..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
-
-            <button
-              onClick={onCreateOrder}
-              disabled={!currentUser}
-              className={`flex items-center gap-1 px-4 py-2 font-medium rounded-lg shadow-sm transition-all ${
-                currentUser
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5"
-                  : "bg-blue-300 text-white/80 cursor-not-allowed opacity-50"
-              }`}
-              title={
-                !currentUser ? "Vui lòng đăng nhập để tạo lệnh sản xuất" : "Tạo lệnh sản xuất mới"
-              }
-            >
-              <PlusIcon className="w-5 h-5" />
-              <span>Tạo lệnh sản xuất</span>
-            </button>
           </div>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-fadeIn">
-          {/* Pending Orders */}
-          <div className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800 shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-amber-700 dark:text-amber-300 font-medium uppercase tracking-wide">
-                  Đang chờ
-                </p>
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {ordersByStatus["Đang chờ"].length}
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
-                <ClockIcon className="w-5 h-5 text-white" />
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 animate-fadeIn">
           {/* In Progress Orders */}
           <div className="relative bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-800 shadow-md">
             <div className="flex items-center justify-between">
@@ -483,46 +458,149 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
           </div>
         </div>
 
-        {/* Kanban Board */}
-        <div className="flex space-x-6 overflow-x-auto pb-4">
-          <KanbanColumn
-            title="Đang chờ"
-            status="Đang chờ"
-            orders={ordersByStatus["Đang chờ"]}
-            onMove={handleMove}
-            onViewDetails={handleViewDetails}
-            currentUser={currentUser}
-            icon={<ClockIcon className="w-5 h-5" />}
-            bgColor="bg-amber-500"
-            textColor="text-white"
-            completingOrderId={completingOrderId}
-          />
+        {/* Main Layout: BOM List (Left) + Kanban Board (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left Side: BOM Management */}
+          <div className="lg:col-span-3 space-y-3">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-lg">
+              {/* BOM Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <BeakerIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <h3 className="font-bold text-slate-900 dark:text-white">
+                    Quản lý Công thức Sản xuất (BOM)
+                  </h3>
+                </div>
+              </div>
 
-          <KanbanColumn
-            title="Đang sản xuất"
-            status="Đang sản xuất"
-            orders={ordersByStatus["Đang sản xuất"]}
-            onMove={handleMove}
-            onViewDetails={handleViewDetails}
-            currentUser={currentUser}
-            icon={<ArrowPathIcon className="w-5 h-5" />}
-            bgColor="bg-blue-500"
-            textColor="text-white"
-            completingOrderId={completingOrderId}
-          />
+              {/* BOM List */}
+              <div className="p-3">
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm BOM..."
+                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
+                  />
+                </div>
 
-          <KanbanColumn
-            title="Hoàn thành"
-            status="Hoàn thành"
-            orders={ordersByStatus["Hoàn thành"]}
-            onMove={handleMove}
-            onViewDetails={handleViewDetails}
-            currentUser={currentUser}
-            icon={<CheckCircleIcon className="w-5 h-5" />}
-            bgColor="bg-green-500"
-            textColor="text-white"
-            completingOrderId={completingOrderId}
-          />
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {/* Danh sách BOM (1) - Hiển thị item đầu tiên */}
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                    Danh sách BOM ({boms.length})
+                  </div>
+
+                  {boms.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+                      <BeakerIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Chưa có BOM</p>
+                    </div>
+                  ) : (
+                    boms.map((bom) => {
+                      const totalCost = bom.materials.reduce((sum, mat) => {
+                        const material = materials.find((m) => m.id === mat.materialId);
+                        return sum + (material?.purchasePrice || 0) * mat.quantity;
+                      }, 0);
+
+                      return (
+                        <div
+                          key={bom.id}
+                          className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg p-3 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all group"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div
+                              className="flex-1 min-w-0 cursor-pointer"
+                              onClick={() => onCreateOrderFromBOM?.(bom.id)}
+                            >
+                              <h4 className="font-semibold text-slate-900 dark:text-white text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {bom.productName}
+                              </h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {bom.materials.length} nguyên liệu
+                              </p>
+                            </div>
+                            <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditBOM?.(bom.id);
+                                }}
+                                className="p-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                title="Chỉnh sửa BOM"
+                              >
+                                <PencilSquareIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Bạn có chắc muốn xóa BOM "${bom.productName}"?`)) {
+                                    onDeleteBOM?.(bom.id);
+                                  }
+                                }}
+                                className="p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors"
+                                title="Xóa BOM"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            className="text-xs text-green-600 dark:text-green-400 font-semibold cursor-pointer"
+                            onClick={() => onCreateOrderFromBOM?.(bom.id)}
+                          >
+                            {formatCurrency(totalCost)}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <button
+                  onClick={onManageBOMs}
+                  disabled={!currentUser}
+                  className={`w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg shadow-sm transition-all ${
+                    currentUser
+                      ? "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-500/30"
+                      : "bg-purple-300 text-white/80 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  <span>Tạo BOM</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side: Kanban Board */}
+          <div className="lg:col-span-9">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
+              <KanbanColumn
+                title="Đang sản xuất"
+                status="Đang sản xuất"
+                orders={ordersByStatus["Đang sản xuất"]}
+                onMove={handleMove}
+                onViewDetails={handleViewDetails}
+                currentUser={currentUser}
+                icon={<ArrowPathIcon className="w-5 h-5" />}
+                bgColor="bg-blue-500"
+                textColor="text-white"
+                completingOrderId={completingOrderId}
+              />
+
+              <KanbanColumn
+                title="Hoàn thành"
+                status="Hoàn thành"
+                orders={ordersByStatus["Hoàn thành"]}
+                onMove={handleMove}
+                onViewDetails={handleViewDetails}
+                currentUser={currentUser}
+                icon={<CheckCircleIcon className="w-5 h-5" />}
+                bgColor="bg-green-500"
+                textColor="text-white"
+                completingOrderId={completingOrderId}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

@@ -27,6 +27,8 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
 }) => {
   const [showBOMModal, setShowBOMModal] = useState(false);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [selectedBomIdForOrder, setSelectedBomIdForOrder] = useState<string | undefined>();
+  const [editingBomId, setEditingBomId] = useState<string | undefined>();
 
   // Persist modal states
   useEffect(() => {
@@ -100,11 +102,32 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
 
   const handleManageBOMs = () => {
     setShowBOMModal(true);
+    setShowCreateOrderModal(false); // Chỉ quản lý BOM, không tạo order
   };
 
   const handleCreateOrderFromDashboard = () => {
     setShowCreateOrderModal(true);
     setShowBOMModal(true);
+  };
+
+  const handleCreateOrderFromBOM = (bomId: string) => {
+    // Khi click vào BOM từ danh sách, mở modal để tạo order từ BOM đó
+    setSelectedBomIdForOrder(bomId);
+    setShowCreateOrderModal(true);
+    setShowBOMModal(true);
+  };
+
+  const handleEditBOM = (bomId: string) => {
+    // Mở modal để chỉnh sửa BOM
+    setEditingBomId(bomId);
+    setSelectedBomIdForOrder(undefined);
+    setShowCreateOrderModal(false);
+    setShowBOMModal(true);
+  };
+
+  const handleDeleteBOMFromDashboard = (bomId: string) => {
+    // Xóa BOM trực tiếp từ dashboard
+    handleDeleteBOM(bomId);
   };
 
   return (
@@ -117,6 +140,9 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
         boms={boms}
         onCreateOrder={handleCreateOrderFromDashboard}
         onManageBOMs={handleManageBOMs}
+        onCreateOrderFromBOM={handleCreateOrderFromBOM}
+        onEditBOM={handleEditBOM}
+        onDeleteBOM={handleDeleteBOMFromDashboard}
         completeOrder={completeOrder}
       />
 
@@ -126,15 +152,25 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
           onClose={() => {
             setShowBOMModal(false);
             setShowCreateOrderModal(false);
+            setSelectedBomIdForOrder(undefined);
+            setEditingBomId(undefined);
           }}
           boms={boms}
           materials={materials}
           currentUser={currentUser}
           onSaveBOM={handleSaveBOM}
           onDeleteBOM={handleDeleteBOM}
-          onCreateProductionOrder={
-            showCreateOrderModal ? handleCreateOrder : undefined
+          onCreateProductionOrder={showCreateOrderModal ? handleCreateOrder : undefined}
+          mode={
+            editingBomId
+              ? "edit-bom"
+              : selectedBomIdForOrder
+                ? "create-order-from-bom"
+                : showCreateOrderModal
+                  ? "list-and-create"
+                  : "create-only"
           }
+          selectedBomId={editingBomId || selectedBomIdForOrder}
         />
       )}
     </>

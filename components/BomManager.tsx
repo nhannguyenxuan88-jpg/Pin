@@ -431,8 +431,10 @@ const BomModal: React.FC<{
     const finalBom = buildFinalBom();
     if (finalBom) {
       onSaveAndContinue(finalBom);
-      // Reset form for next entry
+      // Reset form HOÀN TOÀN để tạo BOM mới (bao gồm cả id)
       setFormData({ materials: [] });
+      setSkuEdited(false); // Reset SKU edited flag
+      setMaterialSearch(""); // Clear search
     }
   };
 
