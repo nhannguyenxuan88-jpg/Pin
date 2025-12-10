@@ -257,11 +257,11 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
 
     const order: ProductionOrder = {
       id: generateUuid(),
-      creationDate: new Date().toLocaleDateString("vi-VN"),
+      creationDate: new Date().toISOString(),
       bomId: selectedBOM.id,
       productName: selectedBOM.productName,
       quantityProduced: orderQuantity,
-      status: "Đang chờ",
+      status: "Đang sản xuất",
       materialsCost,
       additionalCosts,
       totalCost,
@@ -279,6 +279,9 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
     setAdditionalCosts([]);
     setNewCost({ description: "", amount: 0 });
     setOrderNotes("");
+    
+    // Đóng modal sau khi tạo lệnh thành công
+    onClose();
   };
 
   const handleAddCost = () => {
