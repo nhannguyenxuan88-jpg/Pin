@@ -279,7 +279,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
     setAdditionalCosts([]);
     setNewCost({ description: "", amount: 0 });
     setOrderNotes("");
-    
+
     // Đóng modal sau khi tạo lệnh thành công
     onClose();
   };
