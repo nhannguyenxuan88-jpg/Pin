@@ -4,6 +4,7 @@ import type { BusinessSettings } from "../types/business";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Icon } from "./common/Icon";
+import { BusinessSettingsService } from "../lib/services/BusinessSettingsService";
 
 export default function BusinessSettingsPage() {
   const { currentUser, addToast } = usePinContext();
@@ -17,6 +18,7 @@ export default function BusinessSettingsPage() {
     taxCode: "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,17 +26,22 @@ export default function BusinessSettingsPage() {
   }, []);
 
   const loadSettings = async () => {
+    setIsLoading(true);
     try {
-      const saved = localStorage.getItem("businessSettings");
+      const saved = await BusinessSettingsService.getSettings();
       if (saved) {
-        const parsed = JSON.parse(saved);
-        setSettings(parsed);
-        if (parsed.logoUrl) {
-          setLogoPreview(parsed.logoUrl);
+        setSettings((prev) => ({
+          ...prev,
+          ...saved,
+        }));
+        if (saved.logoUrl) {
+          setLogoPreview(saved.logoUrl);
         }
       }
     } catch (error) {
       console.error("Error loading settings:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,8 +88,8 @@ export default function BusinessSettingsPage() {
         updated_at: new Date().toISOString(),
       };
 
-      // Save to localStorage (hoặc có thể lưu vào Supabase)
-      localStorage.setItem("businessSettings", JSON.stringify(updatedSettings));
+      // Save to Supabase
+      await BusinessSettingsService.saveSettings(updatedSettings);
 
       addToast?.({
         title: "Thành công",
