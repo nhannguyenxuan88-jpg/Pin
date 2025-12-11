@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import type { PinRepairOrder } from "../../types";
+import type { PinRepairOrder, PinRepairMaterial } from "../../types";
 import type { BusinessSettings } from "../../types/business";
-import QRCode from "qrcode";
 
 interface RepairInvoiceTemplateProps {
   repairOrder: PinRepairOrder;
@@ -30,7 +29,6 @@ export default function RepairInvoiceTemplate({
   onClose,
 }: RepairInvoiceTemplateProps) {
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 
   useEffect(() => {
     // Load business settings
@@ -38,294 +36,256 @@ export default function RepairInvoiceTemplate({
     if (saved) {
       setBusinessSettings(JSON.parse(saved));
     }
-
-    // Generate QR code for bank transfer
-    if (saved) {
-      const settings: BusinessSettings = JSON.parse(saved);
-      if (settings.bankAccount) {
-        const qrData = `Bank: ${settings.bankName}\nSTK: ${settings.bankAccount}\nCTK: ${settings.bankBranch}`;
-        QRCode.toDataURL(qrData, { width: 120, margin: 1 })
-          .then((url) => setQrCodeUrl(url))
-          .catch((err) => console.error(err));
-      }
-    }
   }, []);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Calculate totals from actual data
+  const materialsCost =
+    repairOrder.materialsUsed?.reduce((sum, mat) => sum + mat.price * mat.quantity, 0) || 0;
+  const laborCost = repairOrder.laborCost || 0;
+  const total = repairOrder.total || 0;
+
+  // Số tiền đã thanh toán: ưu tiên depositAmount, sau đó partialPaymentAmount
+  // Nếu paymentStatus = "paid" thì đã thanh toán hết
+  const paidAmount =
+    repairOrder.paymentStatus === "paid"
+      ? total
+      : (repairOrder.depositAmount || 0) + (repairOrder.partialPaymentAmount || 0);
+
+  // Còn nợ
+  const remainingAmount = total - paidAmount;
 
   if (!businessSettings) {
     return (
       <div className="p-8 text-center">
-        <p className="text-slate-600">
-          Vui lòng cấu hình thông tin doanh nghiệp trong phần Cài đặt
-        </p>
+        <p className="text-gray-800">Vui lòng cấu hình thông tin doanh nghiệp trong phần Cài đặt</p>
+        <a href="#/business-settings" className="text-blue-600 underline mt-2 inline-block">
+          Đi đến Cài đặt
+        </a>
       </div>
     );
   }
 
-  const total = Number((repairOrder as any).total || 0);
-  const deposit = Number((repairOrder as any).depositAmount || 0);
-  const remaining = total - deposit;
-
+  // A5 size: 148mm x 210mm
   return (
-    <div className="bg-white">
-      {/* Print buttons */}
-      <div className="no-print fixed top-4 right-4 z-50 flex gap-2">
-        <button
-          onClick={handlePrint}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-lg"
-        >
-          In phiếu
-        </button>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg shadow-lg"
-          >
-            Đóng
-          </button>
-        )}
-      </div>
-
-      {/* Invoice content */}
-      <div className="max-w-3xl mx-auto p-8 invoice-content">
-        {/* Header */}
-        <div className="border-2 border-slate-800 p-4 mb-4">
-          <div className="flex items-start justify-between mb-3">
-            {/* Logo and business info */}
-            <div className="flex items-start gap-3">
-              {businessSettings.logoUrl && (
-                <img
-                  src={businessSettings.logoUrl}
-                  alt="Logo"
-                  className="w-16 h-16 object-contain"
-                />
-              )}
-              <div>
-                <h1 className="text-lg font-bold text-slate-900">
-                  {businessSettings.businessName}
-                </h1>
-                {businessSettings.slogan && (
-                  <p className="text-xs text-slate-600 italic">{businessSettings.slogan}</p>
-                )}
-              </div>
-            </div>
-
-            {/* QR Code for payment */}
-            {qrCodeUrl && (
-              <div className="text-center">
-                <img src={qrCodeUrl} alt="QR Payment" className="w-20 h-20" />
-                <p className="text-[8px] text-slate-600 mt-1">QR Thanh toán</p>
-              </div>
-            )}
-          </div>
-
-          {/* Contact info */}
-          <div className="text-xs space-y-0.5 text-slate-700">
-            <p>
-              <span className="inline-block w-4">📍</span> {businessSettings.address}
-              {businessSettings.ward && `, ${businessSettings.ward}`}
-              {businessSettings.district && `, ${businessSettings.district}`}
-              {businessSettings.city && `, ${businessSettings.city}`}
-            </p>
-            <div className="flex gap-6">
-              <p>
-                <span className="inline-block w-4">📞</span> {businessSettings.phone}
-              </p>
-              {businessSettings.email && (
-                <p>
-                  <span className="inline-block w-4">✉️</span> {businessSettings.email}
-                </p>
-              )}
-            </div>
-            {businessSettings.taxCode && (
-              <p>
-                <span className="inline-block w-4">🏢</span> MST: {businessSettings.taxCode}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Title */}
-        <h2 className="text-center text-xl font-bold text-slate-900 mb-2">
-          PHIẾU DỊCH VỤ SỬA CHỮA
-        </h2>
-        <div className="text-center text-sm text-slate-700 mb-4">
-          <span className="font-semibold">Mã số:</span> {repairOrder.id}
-        </div>
-
-        {/* Customer info */}
-        <div className="mb-4">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-            <div>
-              <span className="font-semibold">Khách hàng:</span>{" "}
-              {(repairOrder as any).customerName || ""}
-            </div>
-            <div>
-              <span className="font-semibold">SĐT:</span> {(repairOrder as any).customerPhone || ""}
-            </div>
-            <div>
-              <span className="font-semibold">Loại xe:</span>{" "}
-              {(repairOrder as any).deviceModel || (repairOrder as any).deviceName || ""}
-            </div>
-            <div>
-              <span className="font-semibold">Biển số:</span>{" "}
-              {(repairOrder as any).licensePlate || ""}
+    <div
+      className="bg-white text-gray-900 mx-auto"
+      style={{
+        fontFamily: "Arial, sans-serif",
+        width: "148mm",
+        minHeight: "210mm",
+        padding: "8mm",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Header with Logo, Business Info, Bank Info and QR */}
+      <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b-2 border-gray-300">
+        {/* Left: Logo and Business Info */}
+        <div className="flex items-start gap-2">
+          {businessSettings.logoUrl && (
+            <img
+              src={businessSettings.logoUrl}
+              alt="Logo"
+              className="w-12 h-12 object-contain rounded"
+            />
+          )}
+          <div>
+            <h1 className="text-base font-bold text-green-700">{businessSettings.businessName}</h1>
+            <div className="text-[10px] text-gray-700 space-y-0.5 mt-0.5">
+              <p>📍 {businessSettings.address}</p>
+              <p>📞 {businessSettings.phone}</p>
             </div>
           </div>
         </div>
 
-        {/* Issue description */}
-        <div className="mb-4 text-sm">
-          <div className="font-semibold mb-1">Mô tả sự cố:</div>
-          <div className="border border-slate-300 p-2 rounded min-h-[40px] text-slate-700">
-            {(repairOrder as any).issueDescription || "Không có mô tả"}
-          </div>
-        </div>
-
-        {/* Service items table */}
-        <div className="mb-4">
-          <div className="text-sm font-semibold mb-2">Phụ tùng sử dụng:</div>
-          <table className="w-full border-collapse border border-slate-400 text-sm">
-            <thead>
-              <tr className="bg-slate-100">
-                <th className="border border-slate-400 px-2 py-1.5 text-left">Tên phụ tùng</th>
-                <th className="border border-slate-400 px-2 py-1.5 text-center w-16">SL</th>
-                <th className="border border-slate-400 px-2 py-1.5 text-right w-24">Đơn giá</th>
-                <th className="border border-slate-400 px-2 py-1.5 text-right w-28">Thành tiền</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(repairOrder as any).partsUsed?.map((part: any, index: number) => (
-                <tr key={index}>
-                  <td className="border border-slate-400 px-2 py-1.5">
-                    {part.partName || part.part_name || part.name || ""}
-                  </td>
-                  <td className="border border-slate-400 px-2 py-1.5 text-center">
-                    {part.quantity || 1}
-                  </td>
-                  <td className="border border-slate-400 px-2 py-1.5 text-right">
-                    {formatCurrency(part.price || 0)}
-                  </td>
-                  <td className="border border-slate-400 px-2 py-1.5 text-right font-medium">
-                    {formatCurrency((part.price || 0) * (part.quantity || 1))}
-                  </td>
-                </tr>
-              ))}
-
-              {/* Labor cost */}
-              {(repairOrder as any).laborCost && (repairOrder as any).laborCost > 0 && (
-                <tr>
-                  <td className="border border-slate-400 px-2 py-1.5">Công sửa chữa</td>
-                  <td className="border border-slate-400 px-2 py-1.5 text-center">1</td>
-                  <td className="border border-slate-400 px-2 py-1.5 text-right">
-                    {formatCurrency((repairOrder as any).laborCost)}
-                  </td>
-                  <td className="border border-slate-400 px-2 py-1.5 text-right font-medium">
-                    {formatCurrency((repairOrder as any).laborCost)}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Summary */}
-        <div className="border-t-2 border-slate-800 pt-3 mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-semibold">Tiền phụ tùng:</span>
-            <span className="text-base font-medium">
-              {formatCurrency(total - (repairOrder as any).laborCost || 0)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-semibold">Phí dịch vụ:</span>
-            <span className="text-base font-medium">
-              {formatCurrency((repairOrder as any).laborCost || 0)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm">Giá công/Đặt hàng:</span>
-            <span className="text-base">0 đ</span>
-          </div>
-          <div className="flex justify-between items-center text-lg font-bold border-t border-slate-400 pt-2 mb-2">
-            <span>TỔNG CỘNG:</span>
-            <span className="text-red-600">{formatCurrency(total)}</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span>Đã thanh toán:</span>
-            <span className="font-medium">{formatCurrency(deposit)}</span>
-          </div>
-          <div className="flex justify-between items-center text-base font-bold text-red-600 mt-1">
-            <span>Hình thức thanh toán:</span>
-            <span>Tiền mặt</span>
-          </div>
-        </div>
-
-        {/* Bank info */}
+        {/* Right: Bank Info and QR */}
         {businessSettings.bankAccount && (
-          <div className="bg-amber-50 border border-amber-300 p-3 mb-4 text-xs">
-            <div className="font-semibold mb-1">Chuyển khoản:</div>
-            <div>
-              <span className="font-medium">{businessSettings.bankName}</span> - STK:{" "}
-              {businessSettings.bankAccount}
+          <div className="flex items-start gap-2">
+            <div className="text-right text-[10px]">
+              <p className="font-bold text-green-700">🏦 {businessSettings.bankName}</p>
+              <p>
+                STK: <span className="font-bold text-blue-700">{businessSettings.bankAccount}</span>
+              </p>
+              <p className="text-gray-700">{businessSettings.bankAccountName}</p>
             </div>
-            <div>CTK: {businessSettings.bankBranch}</div>
+            {businessSettings.bankQRUrl && (
+              <img
+                src={businessSettings.bankQRUrl}
+                alt="QR Payment"
+                className="w-14 h-14 rounded border border-gray-300"
+              />
+            )}
           </div>
         )}
+      </div>
 
-        {/* Footer note */}
-        {businessSettings.invoiceFooterNote && (
-          <div className="bg-yellow-50 border-2 border-yellow-400 p-3 text-center text-xs font-medium mb-4">
-            {businessSettings.invoiceFooterNote}
-          </div>
-        )}
-
-        {/* Signatures */}
-        <div className="grid grid-cols-2 gap-8 text-center text-sm mt-6">
-          <div>
-            <div className="font-semibold mb-12">Khách hàng</div>
-            <div className="text-xs italic text-slate-600">(Ký và ghi rõ họ tên)</div>
-          </div>
-          <div>
-            <div className="font-semibold mb-12">Nhân viên</div>
-            <div className="text-xs">
-              {businessSettings.representativeName || (repairOrder as any).technician || ""}
-            </div>
-          </div>
-        </div>
-
-        {/* Timestamp */}
-        <div className="text-center text-xs text-slate-500 mt-6">
-          {formatDateTime((repairOrder as any).createdDate || repairOrder.created_at || new Date())}
+      {/* Title */}
+      <div className="text-center mb-3">
+        <h2 className="text-lg font-bold text-blue-700 tracking-wide">PHIẾU DỊCH VỤ SỬA CHỮA</h2>
+        <div className="flex justify-center items-center gap-4 mt-1 text-[11px] text-gray-700">
+          <span>
+            {formatDateTime(repairOrder.creationDate || repairOrder.created_at || new Date())}
+          </span>
+          <span>
+            Mã: <span className="font-bold text-blue-700">{repairOrder.id}</span>
+          </span>
         </div>
       </div>
 
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .invoice-content, .invoice-content * {
-            visibility: visible;
-          }
-          .invoice-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .no-print {
-            display: none !important;
-          }
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-        }
-      `}</style>
+      {/* Customer Info Box */}
+      <div className="bg-gray-100 rounded p-2 mb-3 border border-gray-300">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+          <div>
+            <span className="text-gray-600">Khách hàng:</span>{" "}
+            <span className="font-semibold text-gray-900">{repairOrder.customerName || "N/A"}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">SĐT:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {repairOrder.customerPhone || "N/A"}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600">Thiết bị:</span>{" "}
+            <span className="font-semibold text-gray-900">{repairOrder.deviceName || "N/A"}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Trạng thái:</span>{" "}
+            <span className="font-semibold text-gray-900">{repairOrder.status || "N/A"}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Issue Description */}
+      <div className="mb-3">
+        <div className="flex items-start gap-1 text-[11px]">
+          <span className="font-semibold text-gray-800 whitespace-nowrap">Mô tả sự cố:</span>
+          <span className="bg-gray-100 px-2 py-1 rounded flex-1 text-gray-900 border border-gray-300">
+            {repairOrder.issueDescription || "Không có mô tả"}
+          </span>
+        </div>
+      </div>
+
+      {/* Materials/Parts Table */}
+      <div className="mb-3">
+        <p className="text-[11px] font-bold text-gray-800 mb-1">Vật liệu sử dụng:</p>
+        <table className="w-full text-[10px] border-collapse">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border border-gray-400 px-2 py-1 text-left font-bold text-gray-900">
+                Vật liệu
+              </th>
+              <th className="border border-gray-400 px-2 py-1 text-center font-bold text-gray-900 w-10">
+                SL
+              </th>
+              <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-20">
+                Đơn giá
+              </th>
+              <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-24">
+                Thành tiền
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {repairOrder.materialsUsed && repairOrder.materialsUsed.length > 0 ? (
+              repairOrder.materialsUsed.map((mat: PinRepairMaterial, index: number) => (
+                <tr key={index}>
+                  <td className="border border-gray-400 px-2 py-1 text-gray-900">
+                    {mat.materialName}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-center text-gray-900">
+                    {mat.quantity}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-right text-gray-900">
+                    {formatCurrency(mat.price)}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-right font-semibold text-gray-900">
+                    {formatCurrency(mat.price * mat.quantity)}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="border border-gray-400 px-2 py-2 text-center text-gray-600 italic"
+                >
+                  Không có vật liệu
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Summary Box */}
+      <div className="bg-white border-2 border-gray-400 rounded p-3 mb-3">
+        <div className="space-y-1 text-[11px]">
+          <div className="flex justify-between">
+            <span className="font-semibold text-gray-800">Tiền vật liệu:</span>
+            <span className="text-right font-semibold text-blue-700">
+              {formatCurrency(materialsCost)}
+            </span>
+          </div>
+          {laborCost > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-700">Tiền công:</span>
+              <span className="text-right text-blue-700">{formatCurrency(laborCost)}</span>
+            </div>
+          )}
+          <div className="flex justify-between pt-1 border-t-2 border-gray-400 text-sm font-bold">
+            <span className="text-gray-900">TỔNG CỘNG:</span>
+            <span className="text-red-600 text-base">{formatCurrency(total)}</span>
+          </div>
+          <div className="flex justify-between pt-0.5">
+            <span className="text-gray-700">Đã thanh toán:</span>
+            <span className="text-right font-semibold text-green-700">
+              {formatCurrency(paidAmount)}
+            </span>
+          </div>
+          {remainingAmount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-700">Còn nợ:</span>
+              <span className="text-right font-semibold text-red-600">
+                {formatCurrency(remainingAmount)}
+              </span>
+            </div>
+          )}
+          {repairOrder.paymentStatus === "paid" && (
+            <div className="text-center text-green-700 font-semibold mt-1">✓ Đã thanh toán đủ</div>
+          )}
+          <div className="flex justify-between text-[10px] pt-1">
+            <span className="text-gray-700">Hình thức:</span>
+            <span className="text-right text-gray-900">
+              {repairOrder.paymentMethod === "bank" || repairOrder.paymentMethod === "transfer"
+                ? "Chuyển khoản"
+                : repairOrder.paymentMethod === "card"
+                  ? "Thẻ"
+                  : "Tiền mặt"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Signatures */}
+      <div className="grid grid-cols-2 gap-6 text-center text-[11px] mt-4 pt-3 border-t border-gray-300">
+        <div>
+          <p className="font-bold text-gray-900">Khách hàng</p>
+          <p className="text-[10px] text-gray-600">(Ký và ghi rõ họ tên)</p>
+          <div className="h-10"></div>
+        </div>
+        <div>
+          <p className="font-bold text-gray-900">Nhân viên</p>
+          <p className="text-[10px] text-gray-800">{repairOrder.technicianName || ""}</p>
+          <div className="h-10"></div>
+        </div>
+      </div>
+
+      {/* Footer Note */}
+      {businessSettings.invoiceFooterNote && (
+        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-400 rounded text-center text-[10px] text-gray-800">
+          {businessSettings.invoiceFooterNote}
+        </div>
+      )}
     </div>
   );
 }

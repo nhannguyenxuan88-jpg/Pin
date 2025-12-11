@@ -9,6 +9,8 @@ import { Button } from "./ui/Button";
 import { WrenchScrewdriverIcon, PlusIcon, PrinterIcon, TrashIcon } from "./common/Icons";
 import { PinRepairModalNew } from "./PinRepairModalNew";
 import { Icon } from "./common/Icon";
+import { InvoicePreviewModal } from "./invoices/InvoicePreviewModal";
+import RepairInvoiceTemplate from "./invoices/RepairInvoiceTemplate";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", {
@@ -30,6 +32,8 @@ const PinRepairManagerNew: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoiceRepairOrder, setInvoiceRepairOrder] = useState<PinRepairOrder | null>(null);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -133,6 +137,12 @@ const PinRepairManagerNew: React.FC = () => {
     await upsertPinRepairOrder(order);
     setModalOpen(false);
     setSelectedOrder(null);
+
+    // Show invoice preview for new or completed orders
+    if (!order.id || order.status === "Đã sửa xong" || order.status === "Trả máy") {
+      setInvoiceRepairOrder(order);
+      setShowInvoicePreview(true);
+    }
   };
 
   const handleDeleteClick = (id: string) => {
@@ -498,9 +508,12 @@ const PinRepairManagerNew: React.FC = () => {
             ✏️
           </button>
           <button
-            onClick={() => handlePrint(order)}
+            onClick={() => {
+              setInvoiceRepairOrder(order);
+              setShowInvoicePreview(true);
+            }}
             className="p-2 text-pin-green-600 hover:bg-pin-green-50 dark:hover:bg-pin-green-900/20 rounded-lg transition-colors"
-            title="In phiếu"
+            title="Xem/In phiếu"
           >
             <PrinterIcon className="w-4 h-4" />
           </button>
@@ -742,6 +755,20 @@ const PinRepairManagerNew: React.FC = () => {
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* Invoice Preview Modal */}
+      {showInvoicePreview && invoiceRepairOrder && (
+        <InvoicePreviewModal
+          isOpen={showInvoicePreview}
+          onClose={() => setShowInvoicePreview(false)}
+          title={`Phiếu sửa chữa ${invoiceRepairOrder.id}`}
+        >
+          <RepairInvoiceTemplate
+            repairOrder={invoiceRepairOrder}
+            onClose={() => setShowInvoicePreview(false)}
+          />
+        </InvoicePreviewModal>
+      )}
     </div>
   );
 };

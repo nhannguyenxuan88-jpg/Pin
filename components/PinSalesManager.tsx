@@ -17,7 +17,8 @@ import {
   UsersIcon,
   PrinterIcon,
 } from "./common/Icons";
-import PinReceiptModal from "./PinReceiptModal";
+import { InvoicePreviewModal } from "./invoices/InvoicePreviewModal";
+import SalesInvoiceTemplate from "./invoices/SalesInvoiceTemplate";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
@@ -193,6 +194,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const [isReceiptVisible, setIsReceiptVisible] = useState(false);
   const [lastSaleData, setLastSaleData] = useState<PinSale | null>(null);
   const [activeTab, setActiveTab] = useState<"pos" | "history">("pos");
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoiceSaleData, setInvoiceSaleData] = useState<PinSale | null>(null);
 
   // Customer state
   const [customerSearch, setCustomerSearch] = useState("");
@@ -431,14 +434,21 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     };
     handleSale(saleData);
 
+    const completedSale: PinSale = {
+      ...saleData,
+      id: `SALE-${Date.now()}`,
+      date: new Date().toISOString(),
+      userId: currentUser?.id || "",
+      userName: currentUser?.name || "",
+      code: `HD${Date.now().toString().slice(-8)}`,
+    };
+
+    // Show invoice preview
+    setInvoiceSaleData(completedSale);
+    setShowInvoicePreview(true);
+
     if (printReceipt) {
-      setLastSaleData({
-        ...saleData,
-        id: `SALE-${Date.now()}`,
-        date: new Date().toISOString(),
-        userId: "",
-        userName: "",
-      });
+      setLastSaleData(completedSale);
       setIsReceiptVisible(true);
     }
 
@@ -510,11 +520,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         onSave={handleSaveNewCustomer}
         initialName={customerSearch}
       />
-      <PinReceiptModal
-        isOpen={isReceiptVisible}
-        onClose={() => setIsReceiptVisible(false)}
-        saleData={lastSaleData}
-      />
+      {/* Invoice Preview Modal for Print */}
+      {isReceiptVisible && lastSaleData && (
+        <InvoicePreviewModal
+          isOpen={isReceiptVisible}
+          onClose={() => setIsReceiptVisible(false)}
+          title={`Hóa đơn ${lastSaleData.code || lastSaleData.id}`}
+        >
+          <SalesInvoiceTemplate sale={lastSaleData} onClose={() => setIsReceiptVisible(false)} />
+        </InvoicePreviewModal>
+      )}
       {/* Mobile-optimized Tab Navigation */}
       <div className="mb-2 md:mb-4 border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-4 md:space-x-8" aria-label="Tabs">
@@ -1330,10 +1345,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => {
-                      setLastSaleData(s);
-                      setIsReceiptVisible(true);
+                      setInvoiceSaleData(s);
+                      setShowInvoicePreview(true);
                     }}
                     className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
+                    title="Xem/In hóa đơn"
                   >
                     <PrinterIcon className="w-4 h-4" />
                   </button>
@@ -1397,10 +1413,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     <td className="p-3 text-right">
                       <button
                         onClick={() => {
-                          setLastSaleData(s);
-                          setIsReceiptVisible(true);
+                          setInvoiceSaleData(s);
+                          setShowInvoicePreview(true);
                         }}
-                        title="In hóa đơn"
+                        title="Xem/In hóa đơn"
                         className="mr-2 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                       >
                         <PrinterIcon className="w-5 h-5" />
@@ -1539,6 +1555,20 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           total={total}
           onClick={() => setMobileView("cart")}
         />
+      )}
+
+      {/* Invoice Preview Modal */}
+      {showInvoicePreview && invoiceSaleData && (
+        <InvoicePreviewModal
+          isOpen={showInvoicePreview}
+          onClose={() => setShowInvoicePreview(false)}
+          title={`Hóa đơn bán hàng ${invoiceSaleData.code || ""}`}
+        >
+          <SalesInvoiceTemplate
+            sale={invoiceSaleData}
+            onClose={() => setShowInvoicePreview(false)}
+          />
+        </InvoicePreviewModal>
       )}
     </>
   );

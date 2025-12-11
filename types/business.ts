@@ -26,7 +26,9 @@ export interface BusinessSettings {
   // Thông tin ngân hàng
   bankName?: string;
   bankAccount?: string;
+  bankAccountName?: string; // Chủ tài khoản
   bankBranch?: string;
+  bankQRUrl?: string; // Mã QR thanh toán (ảnh upload)
 
   // Logo và branding
   logoUrl?: string;

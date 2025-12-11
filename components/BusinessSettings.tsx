@@ -224,55 +224,19 @@ export default function BusinessSettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Địa chỉ <span className="text-red-500">*</span>
+              Địa chỉ cửa hàng <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={settings.address}
               onChange={(e) => handleChange("address", e.target.value)}
-              placeholder="Số nhà, tên đường"
+              placeholder="VD: 123 Nguyễn Văn Linh, TP. Cao Lãnh, Đồng Tháp"
               className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Phường/Xã
-            </label>
-            <input
-              type="text"
-              value={settings.ward || ""}
-              onChange={(e) => handleChange("ward", e.target.value)}
-              placeholder="VD: Phường Bến Nghé"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Quận/Huyện
-            </label>
-            <input
-              type="text"
-              value={settings.district || ""}
-              onChange={(e) => handleChange("district", e.target.value)}
-              placeholder="VD: Quận 1"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Tỉnh/Thành phố
-            </label>
-            <input
-              type="text"
-              value={settings.city || ""}
-              onChange={(e) => handleChange("city", e.target.value)}
-              placeholder="VD: TP. Hồ Chí Minh"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-            />
+            <p className="text-xs text-slate-500 mt-1">
+              Nhập đầy đủ địa chỉ bao gồm số nhà, đường, thành phố/huyện, tỉnh
+            </p>
           </div>
         </div>
       </Card>
@@ -416,7 +380,20 @@ export default function BusinessSettingsPage() {
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Chủ tài khoản <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={settings.bankAccountName || ""}
+              onChange={(e) => handleChange("bankAccountName", e.target.value)}
+              placeholder="VD: NGUYEN VAN A"
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Chi nhánh
             </label>
@@ -424,9 +401,60 @@ export default function BusinessSettingsPage() {
               type="text"
               value={settings.bankBranch || ""}
               onChange={(e) => handleChange("bankBranch", e.target.value)}
-              placeholder="VD: VO THANH LAM"
+              placeholder="VD: Đồng Tháp"
               className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
             />
+          </div>
+
+          {/* Bank QR Code Upload */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Mã QR thanh toán
+            </label>
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                {settings.bankQRUrl ? (
+                  <img
+                    src={settings.bankQRUrl}
+                    alt="Bank QR"
+                    className="w-32 h-32 object-contain border-2 border-slate-200 dark:border-slate-700 rounded-lg p-1"
+                  />
+                ) : (
+                  <div className="w-32 h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center">
+                    <span className="text-3xl">📱</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        handleChange("bankQRUrl", reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 dark:file:bg-green-900/20 dark:file:text-green-400"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Tải lên mã QR từ ngân hàng (VietQR, QR thanh toán từ app ngân hàng)
+                </p>
+                {settings.bankQRUrl && (
+                  <button
+                    type="button"
+                    onClick={() => handleChange("bankQRUrl", "")}
+                    className="text-xs text-red-600 hover:text-red-800 mt-2"
+                  >
+                    Xóa mã QR
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </Card>
