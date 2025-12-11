@@ -155,12 +155,16 @@ export default function ReceivablesNew() {
 
       const details: string[] = [];
       if ((sale as any).items?.length) {
-        const items = (sale as any).items.slice(0, 4).map((itm: any) => {
-          const name = itm.productName || itm.product_name || "N/A";
+        const items = (sale as any).items.slice(0, 3).map((itm: any) => {
+          const name = itm.name || itm.productName || itm.product_name || "Sản phẩm";
           const qty = itm.quantity || 1;
-          return `${name} x${qty}`;
+          const price = itm.sellingPrice || 0;
+          return `${name} (${qty} x ${price.toLocaleString("vi-VN")}đ)`;
         });
         details.push(...items);
+        if ((sale as any).items.length > 3) {
+          details.push(`... và ${(sale as any).items.length - 3} sản phẩm khác`);
+        }
       }
 
       // Get customer info from sale.customer object
@@ -455,27 +459,28 @@ export default function ReceivablesNew() {
       key: "details" as const,
       label: "Chi tiết",
       render: (row: Row) => (
-        <div className="space-y-1">
+        <div className="space-y-1 max-w-md">
           {row.summary && (
-            <div className="text-sm text-slate-700 dark:text-slate-300">
+            <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               {row.summary}
-              {row.kind === "workorder" && (
-                <Badge variant="success" className="ml-2">
-                  Kiểm tra
-                </Badge>
-              )}
             </div>
           )}
           {row.details.length > 0 && (
-            <div className="space-y-0.5">
-              {row.details.slice(0, 3).map((d, i) => (
-                <div key={i} className="text-xs text-slate-600 dark:text-slate-400">
-                  {d}
-                </div>
+            <ul className="space-y-0.5 text-xs">
+              {row.details.map((d, i) => (
+                <li key={i} className="text-slate-600 dark:text-slate-400 flex items-start">
+                  <span className="text-blue-500 mr-1">•</span>
+                  <span className="flex-1">{d}</span>
+                </li>
               ))}
+            </ul>
+          )}
+          {row.technician && (
+            <div className="text-xs text-slate-500 mt-1 italic">
+              <Icon name="user" className="w-3 h-3 inline mr-1" />
+              {row.technician}
             </div>
           )}
-          {row.technician && <div className="text-xs text-slate-500">NV: {row.technician}</div>}
         </div>
       ),
     },
@@ -484,8 +489,11 @@ export default function ReceivablesNew() {
       label: "Tổng tiền",
       sortable: true,
       align: "right" as const,
+      width: "120px",
       render: (row: Row) => (
-        <span className="font-medium text-slate-800 dark:text-slate-100">{fmt(row.amount)}</span>
+        <div className="text-right">
+          <span className="font-medium text-slate-800 dark:text-slate-100">{fmt(row.amount)}</span>
+        </div>
       ),
     },
     {
@@ -493,8 +501,11 @@ export default function ReceivablesNew() {
       label: "Đã trả",
       sortable: true,
       align: "right" as const,
+      width: "120px",
       render: (row: Row) => (
-        <span className="text-slate-600 dark:text-slate-400">{fmt(row.paid)}</span>
+        <div className="text-right">
+          <span className="text-slate-600 dark:text-slate-400">{fmt(row.paid)}</span>
+        </div>
       ),
     },
     {
@@ -502,7 +513,12 @@ export default function ReceivablesNew() {
       label: "Còn nợ",
       sortable: true,
       align: "right" as const,
-      render: (row: Row) => <span className="font-bold text-rose-600">{fmt(row.debt)}</span>,
+      width: "120px",
+      render: (row: Row) => (
+        <div className="text-right">
+          <span className="font-bold text-rose-600">{fmt(row.debt)}</span>
+        </div>
+      ),
     },
   ];
 
@@ -553,8 +569,11 @@ export default function ReceivablesNew() {
       label: "Tổng tiền",
       sortable: true,
       align: "right" as const,
+      width: "120px",
       render: (row: SupplierRow) => (
-        <span className="font-medium text-slate-800 dark:text-slate-100">{fmt(row.amount)}</span>
+        <div className="text-right">
+          <span className="font-medium text-slate-800 dark:text-slate-100">{fmt(row.amount)}</span>
+        </div>
       ),
     },
     {
@@ -562,8 +581,11 @@ export default function ReceivablesNew() {
       label: "Đã trả",
       sortable: true,
       align: "right" as const,
+      width: "120px",
       render: (row: SupplierRow) => (
-        <span className="text-slate-600 dark:text-slate-400">{fmt(row.paid)}</span>
+        <div className="text-right">
+          <span className="text-slate-600 dark:text-slate-400">{fmt(row.paid)}</span>
+        </div>
       ),
     },
     {
@@ -571,8 +593,11 @@ export default function ReceivablesNew() {
       label: "Còn nợ",
       sortable: true,
       align: "right" as const,
+      width: "120px",
       render: (row: SupplierRow) => (
-        <span className="font-bold text-rose-600">{fmt(row.debt)}</span>
+        <div className="text-right">
+          <span className="font-bold text-rose-600">{fmt(row.debt)}</span>
+        </div>
       ),
     },
   ];

@@ -1323,7 +1323,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   {s.customer?.name || "Khách lẻ"}
                 </div>
                 <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">
-                  {(s.items || []).map((it: PinCartItem) => `${it.sku} x${it.quantity}`).join(", ")}
+                  {(s.items || []).map((it: PinCartItem) => `${it.name} x${it.quantity}`).join(", ")}
                 </div>
                 <div className="flex justify-end gap-2">
                   <button

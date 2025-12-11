@@ -19,10 +19,7 @@ export interface TableHeaderProps {
   className?: string;
 }
 
-export const TableHeader: React.FC<TableHeaderProps> = ({
-  children,
-  className,
-}) => {
+export const TableHeader: React.FC<TableHeaderProps> = ({ children, className }) => {
   return (
     <thead
       className={cn(
@@ -41,10 +38,7 @@ export interface TableBodyProps {
   className?: string;
 }
 
-export const TableBody: React.FC<TableBodyProps> = ({
-  children,
-  className,
-}) => {
+export const TableBody: React.FC<TableBodyProps> = ({ children, className }) => {
   return <tbody className={className}>{children}</tbody>;
 };
 
@@ -102,6 +96,12 @@ export const TableHead: React.FC<TableHeadProps> = ({
     right: "text-right",
   };
 
+  const justifyClasses = {
+    left: "justify-start",
+    center: "justify-center",
+    right: "justify-end",
+  };
+
   return (
     <th
       className={cn(
@@ -110,22 +110,19 @@ export const TableHead: React.FC<TableHeadProps> = ({
         "text-xs font-semibold",
         "text-pin-gray-600 dark:text-pin-dark-600",
         "uppercase tracking-wider",
-        sortable &&
-          "cursor-pointer select-none hover:bg-pin-gray-100 dark:hover:bg-pin-dark-200",
+        sortable && "cursor-pointer select-none hover:bg-pin-gray-100 dark:hover:bg-pin-dark-200",
         className
       )}
       onClick={sortable ? onSort : undefined}
     >
-      <div className="flex items-center gap-2">
+      <div className={cn("flex items-center gap-2", justifyClasses[align])}>
         <span>{children}</span>
         {sortable && (
           <span className="flex flex-col">
             <svg
               className={cn(
                 "w-3 h-3 -mb-1",
-                sorted === "asc"
-                  ? "text-pin-blue-500"
-                  : "text-pin-gray-400 dark:text-pin-dark-500"
+                sorted === "asc" ? "text-pin-blue-500" : "text-pin-gray-400 dark:text-pin-dark-500"
               )}
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -135,9 +132,7 @@ export const TableHead: React.FC<TableHeadProps> = ({
             <svg
               className={cn(
                 "w-3 h-3",
-                sorted === "desc"
-                  ? "text-pin-blue-500"
-                  : "text-pin-gray-400 dark:text-pin-dark-500"
+                sorted === "desc" ? "text-pin-blue-500" : "text-pin-gray-400 dark:text-pin-dark-500"
               )}
               fill="currentColor"
               viewBox="0 0 20 20"
@@ -157,11 +152,7 @@ export interface TableCellProps {
   align?: "left" | "center" | "right";
 }
 
-export const TableCell: React.FC<TableCellProps> = ({
-  children,
-  className,
-  align = "left",
-}) => {
+export const TableCell: React.FC<TableCellProps> = ({ children, className, align = "left" }) => {
   const alignClasses = {
     left: "text-left",
     center: "text-center",
@@ -270,9 +261,7 @@ export function DataTable<T>({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <p className="text-sm text-pin-gray-500 dark:text-pin-dark-500">
-            Đang tải dữ liệu...
-          </p>
+          <p className="text-sm text-pin-gray-500 dark:text-pin-dark-500">Đang tải dữ liệu...</p>
         </div>
       </div>
     );
@@ -295,9 +284,7 @@ export function DataTable<T>({
               d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
             />
           </svg>
-          <p className="text-pin-gray-500 dark:text-pin-dark-500">
-            {emptyMessage}
-          </p>
+          <p className="text-pin-gray-500 dark:text-pin-dark-500">{emptyMessage}</p>
         </div>
       </div>
     );
@@ -312,12 +299,8 @@ export function DataTable<T>({
               key={column.key}
               align={column.align}
               sortable={column.sortable}
-              sorted={
-                sortConfig?.key === column.key ? sortConfig.direction : null
-              }
-              onSort={
-                column.sortable ? () => handleSort(column.key) : undefined
-              }
+              sorted={sortConfig?.key === column.key ? sortConfig.direction : null}
+              onSort={column.sortable ? () => handleSort(column.key) : undefined}
               style={column.width ? { width: column.width } : undefined}
             >
               {column.label}
@@ -331,11 +314,7 @@ export function DataTable<T>({
           const isSelected = selectedRows?.has(key);
 
           return (
-            <TableRow
-              key={key}
-              onClick={() => onRowClick?.(item, index)}
-              selected={isSelected}
-            >
+            <TableRow key={key} onClick={() => onRowClick?.(item, index)} selected={isSelected}>
               {columns.map((column) => (
                 <TableCell key={column.key} align={column.align}>
                   {column.render
