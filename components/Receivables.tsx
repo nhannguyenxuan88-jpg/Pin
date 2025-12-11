@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
-import type { CashTransaction } from "../types";
+import type { CashTransaction, InstallmentPlan, InstallmentPayment } from "../types";
 import DebtCollectionModal from "./DebtCollectionModal";
 import SupplierPaymentModal from "./SupplierPaymentModal";
 import { Card, StatsCard, CardGrid, type StatsCardProps } from "./ui/Card";
@@ -8,6 +8,7 @@ import { DataTable } from "./ui/Table";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Icon, type IconName } from "./common/Icon";
+import { InstallmentService } from "../lib/services/InstallmentService";
 
 interface Row {
   id: string;
@@ -36,6 +37,26 @@ interface SupplierRow {
   ordersCount?: number;
 }
 
+interface InstallmentRow {
+  id: string;
+  saleId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone?: string;
+  totalAmount: number;
+  downPayment: number;
+  terms: number;
+  monthlyAmount: number;
+  interestRate: number;
+  startDate: string;
+  status: "active" | "completed" | "overdue" | "cancelled";
+  remainingBalance: number;
+  paidTerms: number;
+  nextDueDate?: string;
+  overdueAmount: number;
+  payments: InstallmentPayment[];
+}
+
 const fmt = (val: number) => val.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
 
 export default function ReceivablesNew() {
@@ -48,12 +69,28 @@ export default function ReceivablesNew() {
   const goodsReceipts = (ctx as any).goodsReceipts || [];
   const currentBranchId = (ctx as any).currentBranchId;
 
-  const [activeTab, setActiveTab] = useState<"customers" | "suppliers">("customers");
+  const [activeTab, setActiveTab] = useState<"customers" | "suppliers" | "installments">(
+    "customers"
+  );
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [showSupplierPayModal, setShowSupplierPayModal] = useState(false);
   const [preSelectedDebtId, setPreSelectedDebtId] = useState<string | undefined>(undefined);
+  const [installmentPlans, setInstallmentPlans] = useState<InstallmentPlan[]>([]);
+  const [showInstallmentPayModal, setShowInstallmentPayModal] = useState(false);
+  const [selectedInstallment, setSelectedInstallment] = useState<InstallmentRow | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [showEarlySettleModal, setShowEarlySettleModal] = useState(false);
+
+  // Load installment plans
+  useEffect(() => {
+    const loadInstallments = async () => {
+      const plans = await InstallmentService.getAllInstallmentPlans();
+      setInstallmentPlans(plans);
+    };
+    loadInstallments();
+  }, []);
 
   // Calculate customer receivables (from workorders and sales)
   const customerRows = useMemo(() => {
@@ -256,6 +293,62 @@ export default function ReceivablesNew() {
     return arr.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [goodsReceipts, cashTransactions, suppliers, currentBranchId]);
 
+  // Calculate installment rows
+  const installmentRows = useMemo(() => {
+    const customers = (ctx as any).pinCustomers || [];
+    return installmentPlans
+      .filter((plan) => plan.status !== "completed" && plan.status !== "cancelled")
+      .map((plan) => {
+        const customer = customers.find((c: any) => c.id === plan.customerId);
+        const paidTerms = plan.payments?.filter((p) => p.status === "paid").length || 0;
+        const today = new Date();
+
+        // Calculate overdue amount
+        let overdueAmount = 0;
+        let nextDueDate: string | undefined;
+
+        if (plan.payments) {
+          for (const payment of plan.payments) {
+            if (payment.status === "pending" || payment.status === "overdue") {
+              const dueDate = new Date(payment.dueDate);
+              if (dueDate < today && payment.status !== "paid") {
+                overdueAmount += payment.amount - (payment.paidAmount || 0);
+              }
+              if (!nextDueDate && dueDate >= today) {
+                nextDueDate = payment.dueDate;
+              }
+            }
+          }
+        }
+
+        return {
+          id: plan.id || plan.saleId,
+          saleId: plan.saleId,
+          customerId: plan.customerId,
+          customerName: customer?.name || "Khách hàng",
+          customerPhone: customer?.phone,
+          totalAmount: plan.totalAmount,
+          downPayment: plan.downPayment,
+          terms: plan.terms,
+          monthlyAmount: plan.monthlyAmount,
+          interestRate: plan.interestRate || 0,
+          startDate: plan.startDate,
+          status: plan.status,
+          remainingBalance: plan.remainingBalance,
+          paidTerms,
+          nextDueDate,
+          overdueAmount,
+          payments: plan.payments || [],
+        } as InstallmentRow;
+      })
+      .sort((a, b) => {
+        // Sort by overdue first, then by next due date
+        if (a.overdueAmount > 0 && b.overdueAmount === 0) return -1;
+        if (a.overdueAmount === 0 && b.overdueAmount > 0) return 1;
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      });
+  }, [installmentPlans, ctx]);
+
   // Filter by search query
   const customerFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -276,13 +369,32 @@ export default function ReceivablesNew() {
     );
   }, [supplierRows, query]);
 
-  const activeList: Array<Row | SupplierRow> =
-    activeTab === "customers" ? customerFiltered : supplierFiltered;
+  const installmentFiltered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return installmentRows;
+    return installmentRows.filter(
+      (r) =>
+        r.customerName.toLowerCase().includes(q) ||
+        r.customerPhone?.toLowerCase().includes(q) ||
+        r.saleId.toLowerCase().includes(q)
+    );
+  }, [installmentRows, query]);
+
+  const activeList: Array<Row | SupplierRow | InstallmentRow> =
+    activeTab === "customers"
+      ? customerFiltered
+      : activeTab === "suppliers"
+        ? supplierFiltered
+        : installmentFiltered;
 
   // Calculate stats
   const totalCustomerDebt = customerRows.reduce((s, r) => s + r.debt, 0);
   const totalSupplierDebt = supplierRows.reduce((s, r) => s + r.debt, 0);
-  const totalDebt = activeList.reduce((s, r: any) => s + r.debt, 0);
+  const totalInstallmentDebt = installmentRows.reduce((s, r) => s + r.remainingBalance, 0);
+  const totalDebt =
+    activeTab === "installments"
+      ? installmentFiltered.reduce((s, r) => s + r.remainingBalance, 0)
+      : (activeList as Array<Row | SupplierRow>).reduce((s, r) => s + r.debt, 0);
 
   const selectedIds = Object.keys(selected).filter((k) => selected[k]);
   const selectedDebt = activeList
@@ -422,6 +534,104 @@ export default function ReceivablesNew() {
       }
       setSelected({});
       alert("Đã ghi nhận thanh toán cho các nhà cung cấp đã chọn.");
+    }
+  };
+
+  // Handle installment payment
+  const handleInstallmentPayment = async () => {
+    if (!selectedInstallment || paymentAmount <= 0) return;
+
+    // Find the next unpaid payment
+    const nextPayment = selectedInstallment.payments.find(
+      (p) => p.status === "pending" || p.status === "overdue"
+    );
+
+    if (!nextPayment) {
+      alert("Không tìm thấy kỳ thanh toán cần trả");
+      return;
+    }
+
+    const result = await InstallmentService.recordPayment(
+      selectedInstallment.saleId,
+      nextPayment.paymentNumber,
+      paymentAmount
+    );
+
+    if (result) {
+      // Record cash transaction
+      const tx: CashTransaction = {
+        id: `CT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: "income",
+        date: new Date().toISOString(),
+        amount: paymentAmount,
+        contact: {
+          id: selectedInstallment.customerId,
+          name: selectedInstallment.customerName,
+        },
+        notes: `Thu tiền trả góp kỳ ${nextPayment.paymentNumber}/${selectedInstallment.terms} - Đơn hàng ${selectedInstallment.saleId}`,
+        paymentSourceId: "cash",
+        branchId: currentBranchId,
+        category: "sale_income",
+        saleId: selectedInstallment.saleId,
+      };
+      await addCashTransaction(tx);
+
+      // Reload installments
+      const plans = await InstallmentService.getAllInstallmentPlans();
+      setInstallmentPlans(plans);
+
+      setShowInstallmentPayModal(false);
+      setSelectedInstallment(null);
+      setPaymentAmount(0);
+      alert(`Đã ghi nhận thanh toán ${fmt(paymentAmount)}đ cho kỳ ${nextPayment.paymentNumber}`);
+    }
+  };
+
+  // Handle early settlement
+  const handleEarlySettlement = async () => {
+    if (!selectedInstallment) return;
+
+    const { discountedAmount } = InstallmentService.calculateEarlySettlement(
+      selectedInstallment.remainingBalance,
+      selectedInstallment.terms - selectedInstallment.paidTerms
+    );
+
+    if (
+      !window.confirm(
+        `Xác nhận tất toán sớm?\n\nSố tiền còn lại: ${fmt(selectedInstallment.remainingBalance)}đ\nGiảm giá tất toán sớm: ${fmt(selectedInstallment.remainingBalance - discountedAmount)}đ\nSố tiền cần thanh toán: ${fmt(discountedAmount)}đ`
+      )
+    ) {
+      return;
+    }
+
+    const result = await InstallmentService.settleEarly(selectedInstallment.saleId);
+
+    if (result) {
+      // Record cash transaction
+      const tx: CashTransaction = {
+        id: `CT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: "income",
+        date: new Date().toISOString(),
+        amount: discountedAmount,
+        contact: {
+          id: selectedInstallment.customerId,
+          name: selectedInstallment.customerName,
+        },
+        notes: `Tất toán sớm trả góp - Đơn hàng ${selectedInstallment.saleId}`,
+        paymentSourceId: "cash",
+        branchId: currentBranchId,
+        category: "sale_income",
+        saleId: selectedInstallment.saleId,
+      };
+      await addCashTransaction(tx);
+
+      // Reload installments
+      const plans = await InstallmentService.getAllInstallmentPlans();
+      setInstallmentPlans(plans);
+
+      setShowEarlySettleModal(false);
+      setSelectedInstallment(null);
+      alert("Đã tất toán sớm thành công!");
     }
   };
 
@@ -602,6 +812,141 @@ export default function ReceivablesNew() {
     },
   ];
 
+  // DataTable columns for installments
+  const installmentColumns = [
+    {
+      key: "customerName" as const,
+      label: "Khách hàng",
+      sortable: true,
+      render: (row: InstallmentRow) => (
+        <div className="space-y-1">
+          <div className="font-semibold text-slate-800 dark:text-slate-100">{row.customerName}</div>
+          {row.customerPhone && <div className="text-sm text-slate-500">{row.customerPhone}</div>}
+          <div className="text-xs text-blue-600">Đơn: {row.saleId}</div>
+          <div className="text-xs text-slate-500">
+            Bắt đầu: {new Date(row.startDate).toLocaleDateString("vi-VN")}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "terms" as const,
+      label: "Kỳ hạn",
+      render: (row: InstallmentRow) => (
+        <div className="space-y-1">
+          <div className="text-sm">
+            <span className="font-semibold text-blue-600">{row.paidTerms}</span>
+            <span className="text-slate-500">/{row.terms} kỳ</span>
+          </div>
+          <div className="text-xs text-slate-500">Mỗi kỳ: {fmt(row.monthlyAmount)}đ</div>
+          {row.interestRate > 0 && (
+            <div className="text-xs text-orange-500">Lãi suất: {row.interestRate}%</div>
+          )}
+          {row.nextDueDate && (
+            <div className="text-xs text-slate-600">
+              Kỳ tiếp: {new Date(row.nextDueDate).toLocaleDateString("vi-VN")}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "status" as const,
+      label: "Trạng thái",
+      render: (row: InstallmentRow) => (
+        <div className="space-y-1">
+          <Badge
+            variant={
+              row.overdueAmount > 0
+                ? "danger"
+                : row.status === "active"
+                  ? "success"
+                  : row.status === "completed"
+                    ? "primary"
+                    : "secondary"
+            }
+          >
+            {row.overdueAmount > 0
+              ? "Quá hạn"
+              : row.status === "active"
+                ? "Đang trả góp"
+                : row.status === "completed"
+                  ? "Hoàn tất"
+                  : row.status}
+          </Badge>
+          {row.overdueAmount > 0 && (
+            <div className="text-xs text-rose-600 font-semibold">
+              Quá hạn: {fmt(row.overdueAmount)}đ
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "totalAmount" as const,
+      label: "Tổng tiền",
+      sortable: true,
+      align: "right" as const,
+      width: "120px",
+      render: (row: InstallmentRow) => (
+        <div className="text-right space-y-1">
+          <div className="font-medium text-slate-800 dark:text-slate-100">
+            {fmt(row.totalAmount)}đ
+          </div>
+          {row.downPayment > 0 && (
+            <div className="text-xs text-slate-500">Trả trước: {fmt(row.downPayment)}đ</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "remainingBalance" as const,
+      label: "Còn lại",
+      sortable: true,
+      align: "right" as const,
+      width: "120px",
+      render: (row: InstallmentRow) => (
+        <div className="text-right">
+          <span className="font-bold text-rose-600">{fmt(row.remainingBalance)}đ</span>
+        </div>
+      ),
+    },
+    {
+      key: "actions" as const,
+      label: "",
+      width: "150px",
+      render: (row: InstallmentRow) => (
+        <div className="flex gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setSelectedInstallment(row);
+              setPaymentAmount(row.monthlyAmount);
+              setShowInstallmentPayModal(true);
+            }}
+            className="text-xs px-2 py-1"
+          >
+            <Icon name="money" size="sm" tone="contrast" className="mr-1" />
+            Thu tiền
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setSelectedInstallment(row);
+              setShowEarlySettleModal(true);
+            }}
+            className="text-xs px-2 py-1"
+            title="Tất toán sớm"
+          >
+            <Icon name="success" size="sm" tone="muted" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="p-2 md:p-4 lg:p-6 space-y-3 animate-fade-in pb-20 md:pb-6">
       {/* Header with inline Stats */}
@@ -616,25 +961,30 @@ export default function ReceivablesNew() {
         </div>
 
         {/* Compact Stats - inline with header */}
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2.5 rounded-xl min-w-[120px]">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 rounded-xl min-w-[100px]">
             <div className="text-xs opacity-80">Tổng công nợ</div>
-            <div className="text-base font-bold">
-              {fmt(totalCustomerDebt + totalSupplierDebt)} đ
+            <div className="text-sm font-bold">
+              {fmt(totalCustomerDebt + totalSupplierDebt + totalInstallmentDebt)} đ
             </div>
             <div className="text-[10px] opacity-70">
-              ↗{customerRows.length + supplierRows.length} khoản
+              ↗{customerRows.length + supplierRows.length + installmentRows.length} khoản
             </div>
           </div>
-          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2.5 rounded-xl min-w-[120px]">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-2 rounded-xl min-w-[100px]">
             <div className="text-xs opacity-80">Công nợ KH</div>
-            <div className="text-base font-bold">{fmt(totalCustomerDebt)} đ</div>
+            <div className="text-sm font-bold">{fmt(totalCustomerDebt)} đ</div>
             <div className="text-[10px] opacity-70">↗{customerRows.length} khoản</div>
           </div>
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2.5 rounded-xl min-w-[120px]">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-2 rounded-xl min-w-[100px]">
             <div className="text-xs opacity-80">Công nợ NCC</div>
-            <div className="text-base font-bold">{fmt(totalSupplierDebt)} đ</div>
+            <div className="text-sm font-bold">{fmt(totalSupplierDebt)} đ</div>
             <div className="text-[10px] opacity-70">↗{supplierRows.length} khoản</div>
+          </div>
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-2 rounded-xl min-w-[100px]">
+            <div className="text-xs opacity-80">Trả góp</div>
+            <div className="text-sm font-bold">{fmt(totalInstallmentDebt)} đ</div>
+            <div className="text-[10px] opacity-70">↗{installmentRows.length} khoản</div>
           </div>
         </div>
       </div>
@@ -683,6 +1033,25 @@ export default function ReceivablesNew() {
               />
               Công nợNCC ({supplierRows.length})
             </button>
+            <button
+              onClick={() => {
+                setActiveTab("installments");
+                setSelected({});
+              }}
+              className={`flex-shrink-0 flex items-center px-2 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap ${
+                activeTab === "installments"
+                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              }`}
+            >
+              <Icon
+                name="calendar"
+                size="sm"
+                tone={activeTab === "installments" ? "primary" : "muted"}
+                className="mr-1"
+              />
+              Trả góp ({installmentRows.length})
+            </button>
           </div>
 
           {/* Search - compact */}
@@ -696,7 +1065,11 @@ export default function ReceivablesNew() {
             <input
               type="text"
               placeholder={
-                activeTab === "customers" ? "Tìm theo tên, SĐT..." : "Tìm theo tên nhà cung cấp..."
+                activeTab === "customers"
+                  ? "Tìm theo tên, SĐT..."
+                  : activeTab === "suppliers"
+                    ? "Tìm theo tên nhà cung cấp..."
+                    : "Tìm theo tên khách hàng, mã đơn..."
               }
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -764,10 +1137,16 @@ export default function ReceivablesNew() {
           <DataTable
             data={activeList}
             columns={
-              activeTab === "customers" ? (customerColumns as any) : (supplierColumns as any)
+              activeTab === "customers"
+                ? (customerColumns as any)
+                : activeTab === "suppliers"
+                  ? (supplierColumns as any)
+                  : (installmentColumns as any)
             }
             keyExtractor={(row: any) => row.id}
-            emptyMessage="Không có công nợ"
+            emptyMessage={
+              activeTab === "installments" ? "Không có khoản trả góp" : "Không có công nợ"
+            }
           />
         </div>
       </Card>
@@ -785,6 +1164,149 @@ export default function ReceivablesNew() {
         open={showSupplierPayModal}
         onClose={() => setShowSupplierPayModal(false)}
       />
+
+      {/* Installment Payment Modal */}
+      {showInstallmentPayModal && selectedInstallment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
+              Thu tiền trả góp
+            </h3>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg">
+                <div className="text-sm text-slate-600 dark:text-slate-400">Khách hàng</div>
+                <div className="font-semibold text-slate-800 dark:text-slate-100">
+                  {selectedInstallment.customerName}
+                </div>
+                <div className="text-sm text-slate-500 mt-1">
+                  Đơn hàng: {selectedInstallment.saleId}
+                </div>
+                <div className="text-sm text-slate-500">
+                  Kỳ: {selectedInstallment.paidTerms + 1}/{selectedInstallment.terms}
+                </div>
+                <div className="text-sm text-slate-500">
+                  Số tiền mỗi kỳ: {fmt(selectedInstallment.monthlyAmount)}đ
+                </div>
+                <div className="text-sm font-semibold text-rose-600 mt-2">
+                  Còn lại: {fmt(selectedInstallment.remainingBalance)}đ
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Số tiền thanh toán
+                </label>
+                <input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  onClick={handleInstallmentPayment}
+                  disabled={paymentAmount <= 0}
+                >
+                  <Icon name="success" size="sm" tone="contrast" className="mr-1" />
+                  Xác nhận
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowInstallmentPayModal(false);
+                    setSelectedInstallment(null);
+                    setPaymentAmount(0);
+                  }}
+                >
+                  Hủy
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Early Settlement Modal */}
+      {showEarlySettleModal && selectedInstallment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
+              🎉 Tất toán sớm
+            </h3>
+
+            <div className="space-y-4">
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="text-sm text-slate-600 dark:text-slate-400">Khách hàng</div>
+                <div className="font-semibold text-slate-800 dark:text-slate-100">
+                  {selectedInstallment.customerName}
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Số tiền còn lại:</span>
+                    <span className="font-medium">
+                      {fmt(selectedInstallment.remainingBalance)}đ
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Số kỳ còn lại:</span>
+                    <span className="font-medium">
+                      {selectedInstallment.terms - selectedInstallment.paidTerms} kỳ
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const { discountedAmount, discount } =
+                      InstallmentService.calculateEarlySettlement(
+                        selectedInstallment.remainingBalance,
+                        selectedInstallment.terms - selectedInstallment.paidTerms
+                      );
+                    return (
+                      <>
+                        <div className="flex justify-between text-green-600">
+                          <span>Giảm giá tất toán sớm:</span>
+                          <span className="font-medium">-{fmt(discount)}đ</span>
+                        </div>
+                        <div className="border-t border-green-300 dark:border-green-700 pt-2 mt-2">
+                          <div className="flex justify-between text-lg font-bold text-green-700 dark:text-green-400">
+                            <span>Cần thanh toán:</span>
+                            <span>{fmt(discountedAmount)}đ</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleEarlySettlement}
+                >
+                  <Icon name="success" size="sm" tone="contrast" className="mr-1" />
+                  Xác nhận tất toán
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowEarlySettleModal(false);
+                    setSelectedInstallment(null);
+                  }}
+                >
+                  Hủy
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

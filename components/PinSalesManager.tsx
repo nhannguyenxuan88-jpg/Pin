@@ -1,6 +1,13 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
-import type { PinProduct, PinCartItem, PinSale, PinCustomer, PinMaterial } from "../types";
+import type {
+  PinProduct,
+  PinCartItem,
+  PinSale,
+  PinCustomer,
+  PinMaterial,
+  InstallmentPlan,
+} from "../types";
 import {
   ShoppingCartIcon,
   PlusIcon,
@@ -19,6 +26,8 @@ import {
 } from "./common/Icons";
 import { InvoicePreviewModal } from "./invoices/InvoicePreviewModal";
 import SalesInvoiceTemplate from "./invoices/SalesInvoiceTemplate";
+import InstallmentModal from "./InstallmentModal";
+import { InstallmentService } from "../lib/services/InstallmentService";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
@@ -186,7 +195,9 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const [discountType, setDiscountType] = useState<"VND" | "%">("VND");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   // New: payment modes
-  const [paymentMode, setPaymentMode] = useState<"full" | "partial" | "debt">("full");
+  const [paymentMode, setPaymentMode] = useState<"full" | "partial" | "debt" | "installment">(
+    "full"
+  );
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [dueDate, setDueDate] = useState<string>("");
   const [mobileView, setMobileView] = useState<"products" | "cart">("products");
@@ -196,6 +207,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const [activeTab, setActiveTab] = useState<"pos" | "history">("pos");
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoiceSaleData, setInvoiceSaleData] = useState<PinSale | null>(null);
+
+  // Installment (trả góp) state
+  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+  const [installmentPlan, setInstallmentPlan] = useState<InstallmentPlan | null>(null);
 
   // Customer state
   const [customerSearch, setCustomerSearch] = useState("");
@@ -405,6 +420,17 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         }
       }
     }
+    if (paymentMode === "installment") {
+      if (!selectedCustomer) {
+        alert("Vui lòng chọn khách hàng để trả góp!");
+        return;
+      }
+      if (!installmentPlan) {
+        alert("Vui lòng thiết lập kế hoạch trả góp!");
+        setShowInstallmentModal(true);
+        return;
+      }
+    }
 
     const customerDetails = selectedCustomer
       ? {
@@ -415,6 +441,24 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         }
       : { name: customerSearch || "Khách lẻ" };
 
+    // Determine payment status and paid amount based on mode
+    let paymentStatus: "paid" | "partial" | "debt" | "installment" = "paid";
+    let finalPaidAmount = total;
+
+    if (paymentMode === "full") {
+      paymentStatus = "paid";
+      finalPaidAmount = total;
+    } else if (paymentMode === "partial") {
+      paymentStatus = "partial";
+      finalPaidAmount = Math.min(Math.max(1, paidAmount || 0), total);
+    } else if (paymentMode === "debt") {
+      paymentStatus = "debt";
+      finalPaidAmount = 0;
+    } else if (paymentMode === "installment") {
+      paymentStatus = "installment";
+      finalPaidAmount = installmentPlan?.downPayment || 0;
+    }
+
     const saleData: Omit<PinSale, "id" | "date" | "userId" | "userName"> = {
       items: cartItems,
       subtotal,
@@ -422,15 +466,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       total,
       customer: customerDetails,
       paymentMethod,
-      paymentStatus:
-        paymentMode === "full" ? "paid" : paymentMode === "partial" ? "partial" : "debt",
-      paidAmount:
-        paymentMode === "full"
-          ? total
-          : paymentMode === "partial"
-            ? Math.min(Math.max(1, paidAmount || 0), total)
-            : 0,
+      paymentStatus,
+      paidAmount: finalPaidAmount,
       dueDate: paymentMode === "debt" ? dueDate || undefined : undefined,
+      isInstallment: paymentMode === "installment",
+      installmentPlan: paymentMode === "installment" ? installmentPlan || undefined : undefined,
     };
     handleSale(saleData);
 
@@ -442,6 +482,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       userName: currentUser?.name || "",
       code: `HD${Date.now().toString().slice(-8)}`,
     };
+
+    // Save installment plan if applicable
+    if (paymentMode === "installment" && installmentPlan) {
+      const planToSave: InstallmentPlan = {
+        ...installmentPlan,
+        saleId: completedSale.id,
+        customerId: selectedCustomer?.id || "",
+      };
+      InstallmentService.saveInstallmentPlan(planToSave);
+    }
 
     // Show invoice preview
     setInvoiceSaleData(completedSale);
@@ -462,6 +512,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     setPaymentMode("full");
     setPaidAmount(0);
     setDueDate("");
+    setInstallmentPlan(null);
     setMobileView("products");
   };
 
@@ -1174,7 +1225,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       📌 Hình thức
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                       <button
                         onClick={() => setPaymentMode("full")}
                         className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${
@@ -1211,6 +1262,23 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       >
                         Ghi nợ
                       </button>
+                      <button
+                        onClick={() => {
+                          if (!selectedCustomer) {
+                            alert("Vui lòng chọn khách hàng trước khi trả góp!");
+                            return;
+                          }
+                          setPaymentMode("installment");
+                          setShowInstallmentModal(true);
+                        }}
+                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${
+                          paymentMode === "installment"
+                            ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                            : "border-slate-300 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600"
+                        }`}
+                      >
+                        Trả góp
+                      </button>
                     </div>
 
                     {paymentMode === "partial" && (
@@ -1244,6 +1312,49 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           onChange={(e) => setDueDate(e.target.value)}
                           className="p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm [color-scheme:light] dark:[color-scheme:dark]"
                         />
+                      </div>
+                    )}
+                    {paymentMode === "installment" && installmentPlan && (
+                      <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                            📅 Kế hoạch trả góp
+                          </span>
+                          <button
+                            onClick={() => setShowInstallmentModal(true)}
+                            className="text-xs text-purple-600 hover:text-purple-800 underline"
+                          >
+                            Sửa
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-500">Đặt cọc:</span>{" "}
+                            <span className="font-medium text-green-600">
+                              {formatCurrency(installmentPlan.downPayment)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Số kỳ:</span>{" "}
+                            <span className="font-medium">
+                              {installmentPlan.numberOfInstallments} tháng
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Mỗi tháng:</span>{" "}
+                            <span className="font-medium text-red-600">
+                              {formatCurrency(installmentPlan.monthlyPayment)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Tổng trả:</span>{" "}
+                            <span className="font-medium">
+                              {formatCurrency(
+                                installmentPlan.remainingAmount + installmentPlan.downPayment
+                              )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1570,6 +1681,38 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           />
         </InvoicePreviewModal>
       )}
+
+      {/* Installment Modal */}
+      <InstallmentModal
+        isOpen={showInstallmentModal}
+        onClose={() => {
+          setShowInstallmentModal(false);
+          if (!installmentPlan) {
+            setPaymentMode("full");
+          }
+        }}
+        sale={{
+          items: cartItems,
+          subtotal,
+          discount: discountAmount,
+          total,
+          customer: selectedCustomer
+            ? {
+                id: selectedCustomer.id,
+                name: selectedCustomer.name,
+                phone: selectedCustomer.phone,
+                address: selectedCustomer.address,
+              }
+            : { name: customerSearch || "Khách lẻ" },
+          paymentMethod: paymentMethod || "cash",
+        }}
+        total={total}
+        onConfirm={(plan, downPayment) => {
+          setInstallmentPlan(plan);
+          setPaidAmount(downPayment);
+          setShowInstallmentModal(false);
+        }}
+      />
     </>
   );
 };

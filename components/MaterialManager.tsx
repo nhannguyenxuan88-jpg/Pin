@@ -1663,6 +1663,7 @@ const MaterialEditModal: React.FC<{
     supplier: "",
     supplierPhone: "",
     description: "",
+    category: "" as "" | "material" | "product" | "finished_goods",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1678,6 +1679,7 @@ const MaterialEditModal: React.FC<{
         supplier: material.supplier || "",
         supplierPhone: (material as any).supplierPhone || "",
         description: material.description || "",
+        category: (material as any).category || "",
       });
     }
   }, [isOpen, material]);
@@ -1713,6 +1715,7 @@ const MaterialEditModal: React.FC<{
         wholesalePrice: formData.wholesalePrice,
         supplier: formData.supplier.trim(),
         description: formData.description.trim(),
+        category: formData.category || undefined,
       };
       await onSave(updatedMaterial);
       onClose();
@@ -1784,7 +1787,7 @@ const MaterialEditModal: React.FC<{
               </div>
             </div>
 
-            {/* Đơn vị và Giá nhập */}
+            {/* Đơn vị và Loại */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1803,6 +1806,26 @@ const MaterialEditModal: React.FC<{
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Loại
+                </label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">-- Chọn loại --</option>
+                  <option value="material">Vật tư</option>
+                  <option value="product">Sản phẩm</option>
+                  <option value="finished_goods">Thành phẩm</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Giá nhập */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Giá nhập (VNĐ)
@@ -2895,6 +2918,9 @@ const MaterialManager: React.FC<{
   const [supplierFilter, setSupplierFilter] = useState("");
   const [stockFilter, setStockFilter] = useState(""); // "low", "empty", "normal", ""
   const [unitFilter, setUnitFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "" | "material" | "product" | "finished_goods"
+  >("");
   const [sortBy, setSortBy] = useState<"name" | "purchasePrice" | "stock">("name");
 
   // Reload function is provided by AppContext
@@ -3916,7 +3942,9 @@ const MaterialManager: React.FC<{
 
       const matchesUnit = !unitFilter || material.unit === unitFilter;
 
-      return matchesSearch && matchesSupplier && matchesStock && matchesUnit;
+      const matchesCategory = !categoryFilter || (material as any).category === categoryFilter;
+
+      return matchesSearch && matchesSupplier && matchesStock && matchesUnit && matchesCategory;
     })
     .map((material) => ({
       ...material,
@@ -3957,7 +3985,7 @@ const MaterialManager: React.FC<{
                   : "bg-slate-700 text-slate-300"
               }`}
             >
-              📦 Vật liệu
+              📦 Kho hàng
             </button>
             <button
               onClick={() => setActiveView("history")}
@@ -4020,6 +4048,16 @@ const MaterialManager: React.FC<{
                 {unit}
               </option>
             ))}
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as any)}
+            className="px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+          >
+            <option value="">Loại</option>
+            <option value="material">Vật tư</option>
+            <option value="product">Sản phẩm</option>
+            <option value="finished_goods">Thành phẩm</option>
           </select>
         </div>
 
@@ -4094,7 +4132,7 @@ const MaterialManager: React.FC<{
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
             }`}
           >
-            📦 Danh sách Vật liệu
+            📦 Danh sách Kho hàng
           </button>
           <button
             onClick={() => setActiveView("history")}
@@ -4267,6 +4305,18 @@ const MaterialManager: React.FC<{
                       {unit}
                     </option>
                   ))}
+                </select>
+
+                {/* Category Filter */}
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value as any)}
+                  className="px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                >
+                  <option value="">Loại</option>
+                  <option value="material">Vật tư</option>
+                  <option value="product">Sản phẩm</option>
+                  <option value="finished_goods">Thành phẩm</option>
                 </select>
 
                 {/* Stats */}
@@ -4816,6 +4866,7 @@ const MaterialManager: React.FC<{
                       wholesale_price: updatedMaterial.wholesalePrice,
                       supplier: updatedMaterial.supplier || null,
                       description: updatedMaterial.description || null,
+                      category: (updatedMaterial as any).category || null,
                       updated_at: new Date().toISOString(),
                     })
                     .eq("id", updatedMaterial.id);

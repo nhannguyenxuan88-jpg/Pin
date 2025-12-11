@@ -470,6 +470,8 @@ export interface PinMaterial {
   sku: string;
   // FIX: Change unit to string to allow adding new units dynamically in the UI.
   unit: string;
+  // Danh mục: phân biệt vật tư, thành phẩm, sản phẩm
+  category?: "material" | "finished_product" | "product";
   purchasePrice: number;
   // Optional selling prices for materials
   retailPrice?: number; // Giá bán lẻ
@@ -640,9 +642,66 @@ export interface PinSale {
   userName: string;
   created_at?: string;
   // Optional payment tracking (front-end/UI only; not necessarily stored in DB)
-  paymentStatus?: "paid" | "partial" | "debt";
+  paymentStatus?: "paid" | "partial" | "debt" | "installment";
   paidAmount?: number; // amount received at sale time
   dueDate?: string; // optional due date when recording debt
+
+  // === Trả góp (Installment) ===
+  isInstallment?: boolean; // Có phải trả góp không?
+  installmentPlan?: InstallmentPlan; // Chi tiết kế hoạch trả góp
+}
+
+// === Installment Types (Trả góp) ===
+export interface InstallmentPlan {
+  id: string;
+  saleId: string; // Liên kết với đơn bán hàng
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+
+  // Thông tin trả góp
+  totalAmount: number; // Tổng tiền đơn hàng
+  downPayment: number; // Tiền đặt cọc/trả trước
+  remainingAmount: number; // Số tiền còn phải trả = totalAmount - downPayment
+  numberOfInstallments: number; // Số kỳ trả góp (tháng)
+  monthlyPayment: number; // Số tiền trả mỗi tháng
+  interestRate?: number; // Lãi suất (% / tháng), mặc định 0
+
+  // Trạng thái
+  status: "active" | "completed" | "overdue" | "settled"; // settled = tất toán trước hạn
+  startDate: string; // Ngày bắt đầu trả góp
+  endDate: string; // Ngày kết thúc dự kiến
+
+  // Danh sách các kỳ thanh toán
+  payments: InstallmentPayment[];
+
+  // Tất toán sớm
+  settledAt?: string; // Ngày tất toán
+  settledAmount?: number; // Số tiền tất toán (có thể giảm nếu trả sớm)
+  settledDiscount?: number; // Số tiền giảm khi tất toán sớm
+
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InstallmentPayment {
+  id: string;
+  installmentPlanId: string;
+  periodNumber: number; // Kỳ thứ mấy (1, 2, 3...)
+  dueDate: string; // Ngày đến hạn
+  amount: number; // Số tiền phải trả kỳ này
+
+  // Thanh toán thực tế
+  paidAmount?: number; // Số tiền đã trả
+  paidDate?: string; // Ngày thanh toán thực tế
+  paymentMethod?: "cash" | "bank" | "transfer";
+
+  // Trạng thái
+  status: "pending" | "paid" | "overdue" | "partial";
+
+  notes?: string;
+  cashTransactionId?: string; // Liên kết với giao dịch tiền mặt
+  created_at?: string;
 }
 
 export interface PinRepairMaterial {

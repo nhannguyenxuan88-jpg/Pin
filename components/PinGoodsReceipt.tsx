@@ -232,6 +232,7 @@ const ProductModal: React.FC<{
     purchasePrice: 0,
     retailPrice: 0,
     wholesalePrice: 0,
+    category: "" as "" | "material" | "product" | "finished_goods",
   });
   const [customUnit, setCustomUnit] = useState("");
   const [savedCustomUnits, setSavedCustomUnits] = useState<string[]>([]);
@@ -302,6 +303,7 @@ const ProductModal: React.FC<{
       retailPrice: formData.retailPrice || Math.round(formData.purchasePrice * 1.4),
       wholesalePrice: formData.wholesalePrice || Math.round(formData.purchasePrice * 1.2),
       stock: 0,
+      category: formData.category || undefined,
     };
 
     onSave(newProduct);
@@ -312,6 +314,7 @@ const ProductModal: React.FC<{
       purchasePrice: 0,
       retailPrice: 0,
       wholesalePrice: 0,
+      category: "",
     });
     setCustomUnit("");
     onClose();
@@ -407,6 +410,24 @@ const ProductModal: React.FC<{
                 </select>
               )}
             </div>
+          </div>
+
+          {/* Danh mục */}
+          <div>
+            <label className="block text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 md:mb-2">
+              Danh mục
+            </label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm md:text-base"
+            >
+              <option value="">-- Chọn danh mục --</option>
+              <option value="material">📦 Vật tư</option>
+              <option value="product">🏷️ Sản phẩm</option>
+              <option value="finished_goods">✅ Thành phẩm</option>
+            </select>
           </div>
 
           <div>

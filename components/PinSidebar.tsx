@@ -99,7 +99,7 @@ export const PinTopNav: React.FC<{
     {
       to: "/materials",
       icon: <CubeIcon />,
-      label: "Vật liệu",
+      label: "Quản lý Kho",
       color: "text-teal-400",
     },
     {
