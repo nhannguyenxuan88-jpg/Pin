@@ -325,16 +325,16 @@ export default function ReceivablesNew() {
           id: plan.id || plan.saleId,
           saleId: plan.saleId,
           customerId: plan.customerId,
-          customerName: customer?.name || "Khách hàng",
-          customerPhone: customer?.phone,
+          customerName: customer?.name || plan.customerName || "Khách hàng",
+          customerPhone: customer?.phone || plan.customerPhone,
           totalAmount: plan.totalAmount,
           downPayment: plan.downPayment,
-          terms: plan.terms,
-          monthlyAmount: plan.monthlyAmount,
+          terms: plan.numberOfInstallments,
+          monthlyAmount: plan.monthlyPayment,
           interestRate: plan.interestRate || 0,
           startDate: plan.startDate,
           status: plan.status,
-          remainingBalance: plan.remainingBalance,
+          remainingBalance: plan.remainingAmount,
           paidTerms,
           nextDueDate,
           overdueAmount,
@@ -553,7 +553,7 @@ export default function ReceivablesNew() {
 
     const result = await InstallmentService.recordPayment(
       selectedInstallment.saleId,
-      nextPayment.paymentNumber,
+      nextPayment.periodNumber,
       paymentAmount
     );
 
@@ -568,7 +568,7 @@ export default function ReceivablesNew() {
           id: selectedInstallment.customerId,
           name: selectedInstallment.customerName,
         },
-        notes: `Thu tiền trả góp kỳ ${nextPayment.paymentNumber}/${selectedInstallment.terms} - Đơn hàng ${selectedInstallment.saleId}`,
+        notes: `Thu tiền trả góp kỳ ${nextPayment.periodNumber}/${selectedInstallment.terms} - Đơn hàng ${selectedInstallment.saleId}`,
         paymentSourceId: "cash",
         branchId: currentBranchId,
         category: "sale_income",
@@ -583,7 +583,7 @@ export default function ReceivablesNew() {
       setShowInstallmentPayModal(false);
       setSelectedInstallment(null);
       setPaymentAmount(0);
-      alert(`Đã ghi nhận thanh toán ${fmt(paymentAmount)}đ cho kỳ ${nextPayment.paymentNumber}`);
+      alert(`Đã ghi nhận thanh toán ${fmt(paymentAmount)}đ cho kỳ ${nextPayment.periodNumber}`);
     }
   };
 
@@ -820,10 +820,10 @@ export default function ReceivablesNew() {
       sortable: true,
       render: (row: InstallmentRow) => (
         <div className="space-y-1">
-          <div className="font-semibold text-slate-800 dark:text-slate-100">{row.customerName}</div>
-          {row.customerPhone && <div className="text-sm text-slate-500">{row.customerPhone}</div>}
-          <div className="text-xs text-blue-600">Đơn: {row.saleId}</div>
-          <div className="text-xs text-slate-500">
+          <div className="font-semibold text-slate-100">{row.customerName}</div>
+          {row.customerPhone && <div className="text-sm text-slate-400">{row.customerPhone}</div>}
+          <div className="text-xs text-sky-400">Đơn: {row.saleId}</div>
+          <div className="text-xs text-slate-400">
             Bắt đầu: {new Date(row.startDate).toLocaleDateString("vi-VN")}
           </div>
         </div>
@@ -835,15 +835,15 @@ export default function ReceivablesNew() {
       render: (row: InstallmentRow) => (
         <div className="space-y-1">
           <div className="text-sm">
-            <span className="font-semibold text-blue-600">{row.paidTerms}</span>
-            <span className="text-slate-500">/{row.terms} kỳ</span>
+            <span className="font-semibold text-emerald-500">{row.paidTerms}</span>
+            <span className="text-slate-400 dark:text-slate-300">/{row.terms} kỳ</span>
           </div>
-          <div className="text-xs text-slate-500">Mỗi kỳ: {fmt(row.monthlyAmount)}đ</div>
+          <div className="text-xs text-sky-400">Mỗi kỳ: {fmt(row.monthlyAmount)}đ</div>
           {row.interestRate > 0 && (
-            <div className="text-xs text-orange-500">Lãi suất: {row.interestRate}%</div>
+            <div className="text-xs text-amber-400">Lãi suất: {row.interestRate}%</div>
           )}
           {row.nextDueDate && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-slate-300">
               Kỳ tiếp: {new Date(row.nextDueDate).toLocaleDateString("vi-VN")}
             </div>
           )}
@@ -890,11 +890,9 @@ export default function ReceivablesNew() {
       width: "120px",
       render: (row: InstallmentRow) => (
         <div className="text-right space-y-1">
-          <div className="font-medium text-slate-800 dark:text-slate-100">
-            {fmt(row.totalAmount)}đ
-          </div>
+          <div className="font-medium text-slate-100">{fmt(row.totalAmount)}đ</div>
           {row.downPayment > 0 && (
-            <div className="text-xs text-slate-500">Trả trước: {fmt(row.downPayment)}đ</div>
+            <div className="text-xs text-emerald-400">Trả trước: {fmt(row.downPayment)}đ</div>
           )}
         </div>
       ),
@@ -907,7 +905,7 @@ export default function ReceivablesNew() {
       width: "120px",
       render: (row: InstallmentRow) => (
         <div className="text-right">
-          <span className="font-bold text-rose-600">{fmt(row.remainingBalance)}đ</span>
+          <span className="font-bold text-orange-400">{fmt(row.remainingBalance)}đ</span>
         </div>
       ),
     },

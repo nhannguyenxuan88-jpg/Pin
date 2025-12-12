@@ -8,6 +8,10 @@ interface InstallmentModalProps {
   sale: Omit<PinSale, "id" | "date" | "userId" | "userName">;
   total: number;
   onConfirm: (plan: InstallmentPlan, downPayment: number) => void;
+  // Giá trị ban đầu khi chỉnh sửa
+  initialDownPayment?: number;
+  initialTerms?: number;
+  initialInterestRate?: number;
 }
 
 const formatCurrency = (amount: number) =>
@@ -19,6 +23,9 @@ export default function InstallmentModal({
   sale,
   total,
   onConfirm,
+  initialDownPayment,
+  initialTerms,
+  initialInterestRate,
 }: InstallmentModalProps) {
   const [downPayment, setDownPayment] = useState(0);
   const [numberOfInstallments, setNumberOfInstallments] = useState(3);
@@ -33,12 +40,12 @@ export default function InstallmentModal({
 
   useEffect(() => {
     if (isOpen) {
-      // Default down payment = 30% of total
-      setDownPayment(Math.round(total * 0.3));
-      setNumberOfInstallments(3);
-      setInterestRate(0);
+      // Sử dụng giá trị ban đầu nếu có (khi chỉnh sửa), nếu không thì dùng giá trị mặc định
+      setDownPayment(initialDownPayment ?? Math.round(total * 0.3));
+      setNumberOfInstallments(initialTerms ?? 3);
+      setInterestRate(initialInterestRate ?? 0);
     }
-  }, [isOpen, total]);
+  }, [isOpen, total, initialDownPayment, initialTerms, initialInterestRate]);
 
   const handleConfirm = () => {
     if (downPayment < 0 || downPayment >= total) {

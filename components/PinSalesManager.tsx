@@ -1334,7 +1334,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <span className="text-slate-500">Đặt cọc:</span>{" "}
+                            <span className="text-slate-500">Trả trước:</span>{" "}
                             <span className="font-medium text-green-600">
                               {formatCurrency(installmentPlan.downPayment)}
                             </span>
@@ -1722,6 +1722,9 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           paymentMethod: paymentMethod || "cash",
         }}
         total={total}
+        initialDownPayment={installmentPlan?.downPayment}
+        initialTerms={installmentPlan?.numberOfInstallments}
+        initialInterestRate={installmentPlan?.interestRate}
         onConfirm={(plan, downPayment) => {
           setInstallmentPlan(plan);
           setPaidAmount(downPayment);

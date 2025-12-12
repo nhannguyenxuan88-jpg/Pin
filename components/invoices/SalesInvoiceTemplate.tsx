@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { PinSale } from "../../types";
+import type { PinSale, InstallmentPlan } from "../../types";
 import type { BusinessSettings } from "../../types/business";
 
 interface SalesInvoiceTemplateProps {
@@ -21,6 +21,9 @@ const formatDateTime = (date: string | Date) => {
 
 export default function SalesInvoiceTemplate({ sale, onClose }: SalesInvoiceTemplateProps) {
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
+  const [installmentPlan, setInstallmentPlan] = useState<InstallmentPlan | null>(
+    sale.installmentPlan || null
+  );
 
   useEffect(() => {
     // Load business settings
@@ -28,7 +31,22 @@ export default function SalesInvoiceTemplate({ sale, onClose }: SalesInvoiceTemp
     if (saved) {
       setBusinessSettings(JSON.parse(saved));
     }
-  }, []);
+
+    // Load installment plan if sale is installment but plan not in props
+    if ((sale.isInstallment || sale.paymentStatus === "installment") && !sale.installmentPlan) {
+      const savedPlans = localStorage.getItem("installment_plans");
+      if (savedPlans) {
+        const plans: InstallmentPlan[] = JSON.parse(savedPlans);
+        const plan = plans.find((p) => p.saleId === sale.id);
+        if (plan) {
+          setInstallmentPlan(plan);
+        }
+      }
+    }
+  }, [sale]);
+
+  // Check if this is an installment sale
+  const isInstallmentSale = sale.isInstallment || sale.paymentStatus === "installment";
 
   if (!businessSettings) {
     return (
@@ -182,6 +200,55 @@ export default function SalesInvoiceTemplate({ sale, onClose }: SalesInvoiceTemp
           <span className="text-lg font-bold text-red-600">{formatCurrency(sale.total)}</span>
         </div>
       </div>
+
+      {/* Installment Info */}
+      {isInstallmentSale && installmentPlan && (
+        <div className="border-2 border-purple-400 rounded p-3 mb-3 bg-purple-50">
+          <div className="text-center font-bold text-purple-700 mb-2 text-sm">
+            📅 THÔNG TIN TRẢ GÓP
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="flex justify-between">
+              <span className="text-gray-700">Trả trước:</span>
+              <span className="font-semibold text-green-700">
+                {formatCurrency(installmentPlan.downPayment)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-700">Số kỳ:</span>
+              <span className="font-semibold text-gray-900">
+                {installmentPlan.numberOfInstallments} tháng
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-700">Còn phải trả:</span>
+              <span className="font-semibold text-red-600">
+                {formatCurrency(installmentPlan.remainingAmount)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-700">Mỗi tháng:</span>
+              <span className="font-semibold text-blue-700">
+                {formatCurrency(installmentPlan.monthlyPayment)}
+              </span>
+            </div>
+            {(installmentPlan.interestRate ?? 0) > 0 && (
+              <div className="col-span-2 flex justify-between border-t border-purple-300 pt-1 mt-1">
+                <span className="text-gray-700">Lãi suất:</span>
+                <span className="font-semibold text-orange-600">
+                  {installmentPlan.interestRate}% / tháng
+                </span>
+              </div>
+            )}
+          </div>
+          {installmentPlan.startDate && installmentPlan.endDate && (
+            <div className="mt-2 pt-2 border-t border-purple-300 text-center text-[10px] text-purple-700">
+              Ngày bắt đầu: {new Date(installmentPlan.startDate).toLocaleDateString("vi-VN")} • Dự
+              kiến hoàn tất: {new Date(installmentPlan.endDate).toLocaleDateString("vi-VN")}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Footer note */}
       {businessSettings.invoiceFooterNote && (

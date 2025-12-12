@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS pin_sales (
   total DECIMAL(15,2) NOT NULL,
   customer JSONB NOT NULL,
   payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'bank')),
-  payment_status TEXT DEFAULT 'paid' CHECK (payment_status IN ('paid', 'partial', 'debt')),
+  payment_status TEXT DEFAULT 'paid' CHECK (payment_status IN ('paid', 'partial', 'debt', 'installment')),
   paid_amount DECIMAL(15,2),
   due_date TIMESTAMPTZ,
   user_id UUID REFERENCES profiles(id),

@@ -33,18 +33,21 @@ export class InstallmentService {
                 id: plan.id,
                 saleId: plan.sale_id,
                 customerId: plan.customer_id,
+                customerName: plan.customer_name || "",
+                customerPhone: plan.customer_phone || "",
                 totalAmount: Number(plan.total_amount),
                 downPayment: Number(plan.down_payment),
-                terms: plan.terms,
-                monthlyAmount: Number(plan.monthly_amount),
+                remainingAmount: Number(plan.remaining_balance),
+                numberOfInstallments: plan.terms,
+                monthlyPayment: Number(plan.monthly_amount),
                 interestRate: Number(plan.interest_rate) || 0,
                 startDate: plan.start_date,
+                endDate: plan.end_date || "",
                 status: plan.status,
-                remainingBalance: Number(plan.remaining_balance),
                 payments: (payments || []).map((p) => ({
                   id: p.id,
-                  installmentId: p.installment_plan_id,
-                  paymentNumber: p.payment_number,
+                  installmentPlanId: p.installment_plan_id,
+                  periodNumber: p.payment_number,
                   dueDate: p.due_date,
                   amount: Number(p.amount),
                   status: p.status,
@@ -94,12 +97,12 @@ export class InstallmentService {
           customer_id: plan.customerId,
           total_amount: plan.totalAmount,
           down_payment: plan.downPayment,
-          terms: plan.terms,
-          monthly_amount: plan.monthlyAmount,
+          terms: plan.numberOfInstallments,
+          monthly_amount: plan.monthlyPayment,
           interest_rate: plan.interestRate || 0,
           start_date: plan.startDate,
           status: plan.status,
-          remaining_balance: plan.remainingBalance,
+          remaining_balance: plan.remainingAmount,
           updated_at: new Date().toISOString(),
         };
 
@@ -114,7 +117,7 @@ export class InstallmentService {
           const paymentsData = plan.payments.map((p) => ({
             id: p.id,
             installment_plan_id: plan.id || `INST-${plan.saleId}`,
-            payment_number: p.paymentNumber,
+            payment_number: p.periodNumber,
             due_date: p.dueDate,
             amount: p.amount,
             status: p.status,
@@ -193,10 +196,13 @@ export class InstallmentService {
     interestRate: number = 0
   ): InstallmentPlan {
     const remainingAmount = sale.total - downPayment;
-    const totalWithInterest = remainingAmount * (1 + (interestRate * terms) / 100 / 12);
+    // Lãi suất tính theo công thức: còn lại * (1 + lãi suất % * số tháng / 100)
+    const totalWithInterest = remainingAmount * (1 + (interestRate * terms) / 100);
     const monthlyPayment = Math.ceil(totalWithInterest / terms);
 
     const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + terms);
     const planId = `INST-${sale.id}`;
 
     // Tạo các kỳ thanh toán
@@ -207,8 +213,8 @@ export class InstallmentService {
 
       payments.push({
         id: `IP-${sale.id}-${i}`,
-        installmentId: planId,
-        paymentNumber: i,
+        installmentPlanId: planId,
+        periodNumber: i,
         dueDate: dueDate.toISOString(),
         amount:
           i === terms
@@ -223,14 +229,17 @@ export class InstallmentService {
       id: planId,
       saleId: sale.id,
       customerId: sale.customer?.id || "",
+      customerName: sale.customer?.name || "",
+      customerPhone: sale.customer?.phone || "",
       totalAmount: sale.total,
       downPayment,
-      terms,
-      monthlyAmount: monthlyPayment,
+      remainingAmount: remainingAmount,
+      numberOfInstallments: terms,
+      monthlyPayment: monthlyPayment,
       interestRate,
       startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
       status: "active",
-      remainingBalance: totalWithInterest,
       payments,
     };
   }
@@ -259,14 +268,14 @@ export class InstallmentService {
    */
   static async recordPayment(
     saleId: string,
-    paymentNumber: number,
+    periodNumber: number,
     paidAmount: number
   ): Promise<InstallmentPlan | null> {
     const plan = await this.getInstallmentBySaleId(saleId);
     if (!plan) return null;
 
     const updatedPayments = plan.payments.map((payment) => {
-      if (payment.paymentNumber === paymentNumber) {
+      if (payment.periodNumber === periodNumber) {
         return {
           ...payment,
           paidAmount,
@@ -281,7 +290,7 @@ export class InstallmentService {
     const totalPaid = updatedPayments
       .filter((p) => p.status === "paid")
       .reduce((sum, p) => sum + p.amount, 0);
-    const remainingBalance = plan.totalAmount - plan.downPayment - totalPaid;
+    const remainingAmount = plan.totalAmount - plan.downPayment - totalPaid;
 
     // Kiểm tra đã thanh toán hết chưa
     const allPaid = updatedPayments.every((p) => p.status === "paid");
@@ -289,7 +298,7 @@ export class InstallmentService {
     const updatedPlan: InstallmentPlan = {
       ...plan,
       payments: updatedPayments,
-      remainingBalance: Math.max(0, remainingBalance),
+      remainingAmount: Math.max(0, remainingAmount),
       status: allPaid ? "completed" : plan.status,
     };
 
