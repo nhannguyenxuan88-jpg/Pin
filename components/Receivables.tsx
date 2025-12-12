@@ -81,6 +81,7 @@ export default function ReceivablesNew() {
   const [showInstallmentPayModal, setShowInstallmentPayModal] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState<InstallmentRow | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   const [showEarlySettleModal, setShowEarlySettleModal] = useState(false);
 
   // Load installment plans
@@ -321,6 +322,16 @@ export default function ReceivablesNew() {
           }
         }
 
+        // Tính số tiền còn lại CHÍNH XÁC từ các kỳ thanh toán
+        const totalInstallmentAmount = (plan.payments || []).reduce(
+          (sum, p) => sum + p.amount,
+          0
+        );
+        const totalPaid = (plan.payments || [])
+          .filter((p) => p.status === "paid")
+          .reduce((sum, p) => sum + p.amount, 0);
+        const actualRemainingBalance = totalInstallmentAmount - totalPaid;
+
         return {
           id: plan.id || plan.saleId,
           saleId: plan.saleId,
@@ -334,7 +345,7 @@ export default function ReceivablesNew() {
           interestRate: plan.interestRate || 0,
           startDate: plan.startDate,
           status: plan.status,
-          remainingBalance: plan.remainingAmount,
+          remainingBalance: actualRemainingBalance, // Dùng số tiền tính từ payments thay vì field cũ
           paidTerms,
           nextDueDate,
           overdueAmount,
@@ -1165,65 +1176,158 @@ export default function ReceivablesNew() {
 
       {/* Installment Payment Modal */}
       {showInstallmentPayModal && selectedInstallment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
-              Thu tiền trả góp
-            </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                💰 Thu tiền trả góp
+              </h3>
+              <p className="text-purple-100 text-sm mt-1">
+                Ghi nhận thanh toán kỳ {selectedInstallment.paidTerms + 1}
+              </p>
+            </div>
 
-            <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg">
-                <div className="text-sm text-slate-600 dark:text-slate-400">Khách hàng</div>
-                <div className="font-semibold text-slate-800 dark:text-slate-100">
-                  {selectedInstallment.customerName}
+            <div className="p-6 space-y-5">
+              {/* Customer Info Card */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                      Khách hàng
+                    </div>
+                    <div className="font-bold text-lg text-slate-800 dark:text-slate-100">
+                      {selectedInstallment.customerName}
+                    </div>
+                    {selectedInstallment.customerPhone && (
+                      <div className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-1 mt-1">
+                        📞 {selectedInstallment.customerPhone}
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full">
+                    <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+                      Kỳ {selectedInstallment.paidTerms + 1}/{selectedInstallment.terms}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-sm text-slate-500 mt-1">
-                  Đơn hàng: {selectedInstallment.saleId}
-                </div>
-                <div className="text-sm text-slate-500">
-                  Kỳ: {selectedInstallment.paidTerms + 1}/{selectedInstallment.terms}
-                </div>
-                <div className="text-sm text-slate-500">
-                  Số tiền mỗi kỳ: {fmt(selectedInstallment.monthlyAmount)}đ
-                </div>
-                <div className="text-sm font-semibold text-rose-600 mt-2">
-                  Còn lại: {fmt(selectedInstallment.remainingBalance)}đ
+
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-300 dark:border-slate-600">
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Đơn hàng</div>
+                    <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {selectedInstallment.saleId}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Mỗi kỳ</div>
+                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      {fmt(selectedInstallment.monthlyAmount)}đ
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Còn phải trả</div>
+                    <div className="text-xl font-bold text-rose-600 dark:text-rose-400">
+                      {fmt(selectedInstallment.remainingBalance)}đ
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              {/* Payment Amount */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Số tiền thanh toán
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  💵 Số tiền thanh toán
                 </label>
-                <input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                    placeholder="Nhập số tiền..."
+                    className="w-full px-4 py-3 pr-12 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-lg font-semibold focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900/30 transition-all"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                    đ
+                  </span>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => setPaymentAmount(selectedInstallment.monthlyAmount)}
+                    className="flex-1 px-3 py-1.5 text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
+                  >
+                    Đúng kỳ ({fmt(selectedInstallment.monthlyAmount)}đ)
+                  </button>
+                  <button
+                    onClick={() => setPaymentAmount(selectedInstallment.remainingBalance)}
+                    className="flex-1 px-3 py-1.5 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                  >
+                    Tất toán ({fmt(selectedInstallment.remainingBalance)}đ)
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  onClick={handleInstallmentPayment}
-                  disabled={paymentAmount <= 0}
-                >
-                  <Icon name="success" size="sm" tone="contrast" className="mr-1" />
-                  Xác nhận
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowInstallmentPayModal(false);
-                    setSelectedInstallment(null);
-                    setPaymentAmount(0);
-                  }}
-                >
-                  Hủy
-                </Button>
+              {/* Payment Method */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  💳 Phương thức thanh toán
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
+                      paymentMethod === "cash"
+                        ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300"
+                        : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:border-green-400"
+                    }`}
+                  >
+                    <span className="text-2xl">💵</span>
+                    <div className="text-left">
+                      <div className="text-sm font-semibold">Tiền mặt</div>
+                      <div className="text-xs opacity-75">Cash</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod("bank")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
+                      paymentMethod === "bank"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400"
+                    }`}
+                  >
+                    <span className="text-2xl">🏦</span>
+                    <div className="text-left">
+                      <div className="text-sm font-semibold">Chuyển khoản</div>
+                      <div className="text-xs opacity-75">Bank Transfer</div>
+                    </div>
+                  </button>
+                </div>
               </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-4 flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  setShowInstallmentPayModal(false);
+                  setSelectedInstallment(null);
+                  setPaymentAmount(0);
+                  setPaymentMethod("cash");
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={handleInstallmentPayment}
+                disabled={paymentAmount <= 0}
+              >
+                <Icon name="success" size="sm" tone="contrast" className="mr-1" />
+                Xác nhận thanh toán
+              </Button>
             </div>
           </div>
         </div>

@@ -286,11 +286,27 @@ export class InstallmentService {
       return payment;
     });
 
-    // Tính số tiền còn lại
+    // Tính tổng tiền phải trả góp (có lãi) = tổng các kỳ
+    const totalInstallmentAmount = plan.payments.reduce((sum, p) => sum + p.amount, 0);
+
+    // Tính tổng đã trả = tổng các kỳ đã paid
     const totalPaid = updatedPayments
       .filter((p) => p.status === "paid")
       .reduce((sum, p) => sum + p.amount, 0);
-    const remainingAmount = plan.totalAmount - plan.downPayment - totalPaid;
+
+    // Số tiền còn lại = tổng phải trả - đã trả
+    const remainingAmount = totalInstallmentAmount - totalPaid;
+
+    console.log("📊 Tính toán trả góp:", {
+      saleId,
+      periodNumber,
+      paidAmount,
+      totalInstallmentAmount,
+      totalPaid,
+      remainingAmount,
+      numberOfPayments: plan.payments.length,
+      paidPayments: updatedPayments.filter((p) => p.status === "paid").length,
+    });
 
     // Kiểm tra đã thanh toán hết chưa
     const allPaid = updatedPayments.every((p) => p.status === "paid");
