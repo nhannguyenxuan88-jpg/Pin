@@ -32,6 +32,14 @@ export default function DebtCollectionModal({
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    debtInfo: any;
+    paidAmount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    remaining: number;
+  } | null>(null);
 
   // Tự động chọn công nợ khi mở modal với preSelectedDebtId
   useEffect(() => {
@@ -211,11 +219,20 @@ export default function DebtCollectionModal({
             )}`
       );
 
+      // Save receipt data for printing
+      setReceiptData({
+        debtInfo: selectedDebt,
+        paidAmount: payAmount,
+        paymentDate: new Date().toISOString(),
+        paymentMethod: paymentMethod,
+        remaining: selectedDebt.total - newPaidAmount,
+      });
+      setShowReceipt(true);
+
       // Reset form
       setSelectedDebtId("");
       setAmount("");
       setNotes("");
-      onClose();
     } catch (error) {
       alert("Lỗi khi ghi nhận thu nợ: " + (error as Error).message);
     }
@@ -226,6 +243,136 @@ export default function DebtCollectionModal({
       setAmount(String(selectedDebt.remaining));
     }
   };
+
+  const handlePrintReceipt = () => {
+    window.print();
+  };
+
+  const handleCloseReceipt = () => {
+    setShowReceipt(false);
+    setReceiptData(null);
+    onClose();
+  };
+
+  // If showing receipt, render print modal instead
+  if (showReceipt && receiptData) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-2xl">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center print:border-black">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 print:text-black">
+              🧾 Phiếu thu tiền
+            </h3>
+            <button
+              onClick={handleCloseReceipt}
+              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors print:hidden"
+            >
+              <XMarkIcon className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+
+          {/* Receipt Content */}
+          <div className="p-6 space-y-4 print:text-black">
+            <div className="text-center print:text-black">
+              <h4 className="text-xl font-bold">PIN Corp</h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400 print:text-black">
+                Phiếu thu tiền nợ
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 print:text-black">
+                {new Date(receiptData.paymentDate).toLocaleString("vi-VN")}
+              </p>
+            </div>
+
+            <div className="border-t border-b border-slate-200 dark:border-slate-700 py-4 space-y-2 print:border-black">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                  Khách hàng:
+                </span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                  {receiptData.debtInfo.customerName}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                  Loại:
+                </span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                  {receiptData.debtInfo.type === "sale" ? "Đơn hàng" : "Sửa chữa"}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                  Tổng nợ:
+                </span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                  {formatCurrency(receiptData.debtInfo.total)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                  Đã trả trước:
+                </span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                  {formatCurrency(receiptData.debtInfo.paidAmount)}
+                </span>
+              </div>
+              <div className="flex justify-between text-base font-bold border-t border-slate-200 dark:border-slate-700 pt-2 print:border-black">
+                <span className="text-green-600 dark:text-green-400 print:text-black">
+                  Số tiền thu:
+                </span>
+                <span className="text-green-600 dark:text-green-400 print:text-black">
+                  {formatCurrency(receiptData.paidAmount)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                  Còn lại:
+                </span>
+                <span
+                  className={`font-medium ${
+                    receiptData.remaining > 0
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-green-600 dark:text-green-400"
+                  } print:text-black`}
+                >
+                  {formatCurrency(receiptData.remaining)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                  Phương thức:
+                </span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                  {receiptData.paymentMethod === "cash" ? "💵 Tiền mặt" : "🏦 Chuyển khoản"}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-slate-500 dark:text-slate-400 print:text-black">
+              Cảm ơn quý khách!
+            </div>
+          </div>
+
+          {/* Footer with print button */}
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-2 justify-end print:hidden">
+            <button
+              onClick={handleCloseReceipt}
+              className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+            >
+              Đóng
+            </button>
+            <button
+              onClick={handlePrintReceipt}
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              🖨️ In phiếu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

@@ -1125,9 +1125,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             >
                               <MinusIcon className="w-4 h-4" />
                             </button>
-                            <span className="w-8 text-center text-sm font-bold">
-                              {item.quantity}
-                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newQty = parseInt(e.target.value) || 1;
+                                updateQuantity(item.productId, newQty, item.priceType);
+                              }}
+                              className="w-12 text-center text-sm font-bold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-1 py-0.5"
+                            />
                             <button
                               onClick={() =>
                                 updateQuantity(item.productId, item.quantity + 1, item.priceType)

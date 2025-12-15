@@ -1108,14 +1108,22 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             supplier_id: selectedSupplierId,
             supplier_name: selectedSupplier?.name || "Unknown",
             amount: remaining,
-            description: `Công nợ phiếu nhập ${receiptDate}`,
+            description: `Công nợ phiếu nhập ${receiptDate} - ${notes || "Nhập hàng"}`,
             due_date: null,
             status: "pending",
+            created_at: new Date().toISOString(),
           };
 
-          await supabase.from("pin_supplier_debts").insert(debtRecord);
+          const { error: debtError } = await supabase.from("pin_supplier_debts").insert(debtRecord);
+          if (debtError) {
+            console.error("Error saving supplier debt:", debtError);
+            alert(`Lưu công nợ NCC thất bại: ${debtError.message}`);
+          } else {
+            console.log("✅ Đã lưu công nợ NCC:", debtRecord);
+          }
         } catch (err) {
           console.error("Error saving supplier debt:", err);
+          alert("Lỗi khi lưu công nợ NCC: " + (err as Error).message);
         }
       }
 
@@ -1143,6 +1151,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             created_at: row.created_at || row.createdat || undefined,
           }));
           setMaterials(mappedMaterials);
+          console.log("✅ Đã đồng bộ kho tự động:", mappedMaterials.length, "vật liệu");
         }
       } catch (refreshErr) {
         console.error("Error refreshing materials:", refreshErr);
@@ -1158,6 +1167,11 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       setTax(0);
       setNotes("");
       setPaymentMethod("cash");
+
+      // Navigate back to materials page after successful import
+      setTimeout(() => {
+        navigate("/materials");
+      }, 1000);
     } catch (error) {
       alert("Lỗi khi nhập hàng: " + (error as Error).message);
     }

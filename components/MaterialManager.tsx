@@ -1717,6 +1717,11 @@ const MaterialEditModal: React.FC<{
         description: formData.description.trim(),
         category: formData.category || undefined,
       };
+      
+      // Also update in Supabase to ensure category is saved
+      if (formData.category) {
+        (updatedMaterial as any).category = formData.category;
+      }
       await onSave(updatedMaterial);
       onClose();
     } catch (error) {
@@ -4470,6 +4475,9 @@ const MaterialManager: React.FC<{
                       <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-800 dark:text-gray-200">
                         Đơn vị
                       </th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-800 dark:text-gray-200">
+                        Loại
+                      </th>
                       <th
                         className="px-3 py-2.5 text-left text-xs font-semibold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                         onClick={() => handleSort("purchasePrice")}
@@ -4510,7 +4518,7 @@ const MaterialManager: React.FC<{
                     {filteredMaterials.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={10}
                           className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                         >
                           {loading ? (
@@ -4556,6 +4564,27 @@ const MaterialManager: React.FC<{
                           </td>
                           <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
                             {material.unit}
+                          </td>
+                          <td className="px-3 py-2">
+                            {(material as any).category ? (
+                              <span
+                                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                                  (material as any).category === "material"
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                                    : (material as any).category === "product"
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                                      : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                                }`}
+                              >
+                                {(material as any).category === "material"
+                                  ? "Vật tư"
+                                  : (material as any).category === "product"
+                                    ? "Sản phẩm"
+                                    : "Thành phẩm"}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">-</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 font-medium">
                             {formatCurrency(material.purchasePrice)}
