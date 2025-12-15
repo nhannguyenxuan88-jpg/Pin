@@ -83,6 +83,15 @@ export default function ReceivablesNew() {
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   const [showEarlySettleModal, setShowEarlySettleModal] = useState(false);
+  const [showInstallmentReceipt, setShowInstallmentReceipt] = useState(false);
+  const [installmentReceiptData, setInstallmentReceiptData] = useState<{
+    installmentInfo: InstallmentRow;
+    paidAmount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    periodNumber: number;
+    remainingBalance: number;
+  } | null>(null);
 
   // Load installment plans
   useEffect(() => {
@@ -588,10 +597,20 @@ export default function ReceivablesNew() {
       const plans = await InstallmentService.getAllInstallmentPlans();
       setInstallmentPlans(plans);
 
+      // Save receipt data for printing
+      setInstallmentReceiptData({
+        installmentInfo: selectedInstallment,
+        paidAmount: paymentAmount,
+        paymentDate: new Date().toISOString(),
+        paymentMethod: paymentMethod,
+        periodNumber: nextPayment.periodNumber,
+        remainingBalance: selectedInstallment.remainingBalance - paymentAmount,
+      });
+      setShowInstallmentReceipt(true);
+
       setShowInstallmentPayModal(false);
       setSelectedInstallment(null);
       setPaymentAmount(0);
-      alert(`Đã ghi nhận thanh toán ${fmt(paymentAmount)}đ cho kỳ ${nextPayment.periodNumber}`);
     }
   };
 
@@ -1391,6 +1410,152 @@ export default function ReceivablesNew() {
                 >
                   <Icon name="success" size="sm" tone="contrast" className="mr-1" />
                   Xác nhận tất toán
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowEarlySettleModal(false);
+                    setSelectedInstallment(null);
+                  }}
+                >
+                  Hủy
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Installment Payment Receipt Modal */}
+      {showInstallmentReceipt && installmentReceiptData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-2xl">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center print:border-black">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 print:text-black">
+                🧾 Phiếu thu tiền trả góp
+              </h3>
+              <button
+                onClick={() => {
+                  setShowInstallmentReceipt(false);
+                  setInstallmentReceiptData(null);
+                }}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors print:hidden"
+              >
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Receipt Content */}
+            <div className="p-6 space-y-4 print:text-black">
+              <div className="text-center print:text-black">
+                <h4 className="text-xl font-bold">PIN Corp</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400 print:text-black">
+                  Phiếu thu tiền trả góp
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 print:text-black">
+                  {new Date(installmentReceiptData.paymentDate).toLocaleString("vi-VN")}
+                </p>
+              </div>
+
+              <div className="border-t border-b border-slate-200 dark:border-slate-700 py-4 space-y-2 print:border-black">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                    Khách hàng:
+                  </span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                    {installmentReceiptData.installmentInfo.customerName}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                    Mã đơn hàng:
+                  </span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                    {installmentReceiptData.installmentInfo.saleId}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                    Kỳ thanh toán:
+                  </span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                    Kỳ {installmentReceiptData.periodNumber}/{installmentReceiptData.installmentInfo.terms}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                    Số tiền mỗi kỳ:
+                  </span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                    {fmt(installmentReceiptData.installmentInfo.monthlyAmount)}đ
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-bold border-t border-slate-200 dark:border-slate-700 pt-2 print:border-black">
+                  <span className="text-green-600 dark:text-green-400 print:text-black">
+                    Số tiền thu:
+                  </span>
+                  <span className="text-green-600 dark:text-green-400 print:text-black">
+                    {fmt(installmentReceiptData.paidAmount)}đ
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                    Còn lại:
+                  </span>
+                  <span
+                    className={`font-medium ${
+                      installmentReceiptData.remainingBalance > 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-green-600 dark:text-green-400"
+                    } print:text-black`}
+                  >
+                    {fmt(installmentReceiptData.remainingBalance)}đ
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 print:text-black">
+                    Phương thức:
+                  </span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200 print:text-black">
+                    {installmentReceiptData.paymentMethod === "cash" ? "💵 Tiền mặt" : "🏦 Chuyển khoản"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-center text-xs text-slate-500 dark:text-slate-400 print:text-black">
+                Cảm ơn quý khách!
+              </div>
+            </div>
+
+            {/* Footer with print button */}
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-2 justify-end print:hidden">
+              <button
+                onClick={() => {
+                  setShowInstallmentReceipt(false);
+                  setInstallmentReceiptData(null);
+                }}
+                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              >
+                🖨️ In phiếu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Receivables;
                 </Button>
                 <Button
                   variant="secondary"
