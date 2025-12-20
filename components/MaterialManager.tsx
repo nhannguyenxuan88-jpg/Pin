@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { PinMaterial, EnhancedMaterial, Supplier, PinMaterialHistory } from "../types";
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
@@ -1417,21 +1417,19 @@ const MaterialDetailModal: React.FC<{
           <nav className="flex space-x-4">
             <button
               onClick={() => setActiveTab("info")}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === "info"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === "info"
+                ? "bg-blue-600 text-white"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
             >
               ℹ️ Thông tin cơ bản
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === "history"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === "history"
+                ? "bg-blue-600 text-white"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
             >
               📋 Lịch sử nhập/xuất
             </button>
@@ -1602,11 +1600,10 @@ const MaterialDetailModal: React.FC<{
                         </div>
                         <div className="text-right">
                           <div
-                            className={`text-lg font-bold ${
-                              record.quantity_change > 0
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400"
-                            }`}
+                            className={`text-lg font-bold ${record.quantity_change > 0
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                              }`}
                           >
                             {record.quantity_change > 0 ? "+" : ""}
                             {record.quantity_change}
@@ -2069,28 +2066,25 @@ const StockAdjustmentModal: React.FC<{
             {/* Difference Display */}
             {difference !== 0 && (
               <div
-                className={`p-4 rounded-lg border ${
-                  isIncrease
-                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
-                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
-                }`}
+                className={`p-4 rounded-lg border ${isIncrease
+                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                  : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span
-                    className={`font-semibold ${
-                      isIncrease
-                        ? "text-green-800 dark:text-green-200"
-                        : "text-red-800 dark:text-red-200"
-                    }`}
+                    className={`font-semibold ${isIncrease
+                      ? "text-green-800 dark:text-green-200"
+                      : "text-red-800 dark:text-red-200"
+                      }`}
                   >
                     {isIncrease ? "📈 Tăng kho:" : "📉 Giảm kho:"}
                   </span>
                   <span
-                    className={`text-xl font-bold ${
-                      isIncrease
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
-                    }`}
+                    className={`text-xl font-bold ${isIncrease
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
+                      }`}
                   >
                     {isIncrease ? "+" : ""}
                     {difference} {material.unit}
@@ -2381,13 +2375,12 @@ const StockForecastModal: React.FC<{
                       30 ngày tới
                     </h5>
                     <p
-                      className={`text-xl font-bold ${
-                        forecast.forecasted_stock_30_days <= 0
-                          ? "text-red-600 dark:text-red-400"
-                          : forecast.forecasted_stock_30_days <= 10
-                            ? "text-orange-600 dark:text-orange-400"
-                            : "text-green-600 dark:text-green-400"
-                      }`}
+                      className={`text-xl font-bold ${forecast.forecasted_stock_30_days <= 0
+                        ? "text-red-600 dark:text-red-400"
+                        : forecast.forecasted_stock_30_days <= 10
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-green-600 dark:text-green-400"
+                        }`}
                     >
                       {Math.round(forecast.forecasted_stock_30_days)} {material.unit}
                     </p>
@@ -2398,13 +2391,12 @@ const StockForecastModal: React.FC<{
                       60 ngày tới
                     </h5>
                     <p
-                      className={`text-xl font-bold ${
-                        forecast.forecasted_stock_60_days <= 0
-                          ? "text-red-600 dark:text-red-400"
-                          : forecast.forecasted_stock_60_days <= 10
-                            ? "text-orange-600 dark:text-orange-400"
-                            : "text-green-600 dark:text-green-400"
-                      }`}
+                      className={`text-xl font-bold ${forecast.forecasted_stock_60_days <= 0
+                        ? "text-red-600 dark:text-red-400"
+                        : forecast.forecasted_stock_60_days <= 10
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-green-600 dark:text-green-400"
+                        }`}
                     >
                       {Math.round(forecast.forecasted_stock_60_days)} {material.unit}
                     </p>
@@ -2415,13 +2407,12 @@ const StockForecastModal: React.FC<{
                       90 ngày tới
                     </h5>
                     <p
-                      className={`text-xl font-bold ${
-                        forecast.forecasted_stock_90_days <= 0
-                          ? "text-red-600 dark:text-red-400"
-                          : forecast.forecasted_stock_90_days <= 10
-                            ? "text-orange-600 dark:text-orange-400"
-                            : "text-green-600 dark:text-green-400"
-                      }`}
+                      className={`text-xl font-bold ${forecast.forecasted_stock_90_days <= 0
+                        ? "text-red-600 dark:text-red-400"
+                        : forecast.forecasted_stock_90_days <= 10
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-green-600 dark:text-green-400"
+                        }`}
                     >
                       {Math.round(forecast.forecasted_stock_90_days)} {material.unit}
                     </p>
@@ -2555,8 +2546,8 @@ const SupplierPriceAnalysisModal: React.FC<{
       const priceVariance =
         prices.length > 1
           ? Math.sqrt(
-              prices.reduce((sum, p) => sum + Math.pow(p - averagePrice, 2), 0) / prices.length
-            )
+            prices.reduce((sum, p) => sum + Math.pow(p - averagePrice, 2), 0) / prices.length
+          )
           : 0;
 
       // Xác định xu hướng giá
@@ -2698,22 +2689,20 @@ const SupplierPriceAnalysisModal: React.FC<{
                 </div>
 
                 <div
-                  className={`p-4 rounded-lg border ${
-                    analysis.price_trend === "rising"
-                      ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
-                      : analysis.price_trend === "falling"
-                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
-                        : "bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700"
-                  }`}
+                  className={`p-4 rounded-lg border ${analysis.price_trend === "rising"
+                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                    : analysis.price_trend === "falling"
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                      : "bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-700"
+                    }`}
                 >
                   <h5
-                    className={`font-medium mb-2 ${
-                      analysis.price_trend === "rising"
-                        ? "text-red-800 dark:text-red-200"
-                        : analysis.price_trend === "falling"
-                          ? "text-green-800 dark:text-green-200"
-                          : "text-gray-800 dark:text-gray-200"
-                    }`}
+                    className={`font-medium mb-2 ${analysis.price_trend === "rising"
+                      ? "text-red-800 dark:text-red-200"
+                      : analysis.price_trend === "falling"
+                        ? "text-green-800 dark:text-green-200"
+                        : "text-gray-800 dark:text-gray-200"
+                      }`}
                   >
                     Xu hướng giá
                   </h5>
@@ -2785,9 +2774,8 @@ const SupplierPriceAnalysisModal: React.FC<{
                           return (
                             <tr
                               key={index}
-                              className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                                isLowest ? "bg-green-50 dark:bg-green-900/20" : ""
-                              }`}
+                              className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${isLowest ? "bg-green-50 dark:bg-green-900/20" : ""
+                                }`}
                             >
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
@@ -2799,24 +2787,22 @@ const SupplierPriceAnalysisModal: React.FC<{
                               </td>
                               <td className="px-4 py-3">
                                 <span
-                                  className={`font-semibold ${
-                                    isLowest
-                                      ? "text-green-600 dark:text-green-400"
-                                      : "text-gray-900 dark:text-white"
-                                  }`}
+                                  className={`font-semibold ${isLowest
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-gray-900 dark:text-white"
+                                    }`}
                                 >
                                   {formatCurrency(supplier.current_price)}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
                                 <span
-                                  className={`text-sm font-medium ${
-                                    priceDiff < 0
-                                      ? "text-green-600 dark:text-green-400"
-                                      : priceDiff > 0
-                                        ? "text-red-600 dark:text-red-400"
-                                        : "text-gray-600 dark:text-gray-400"
-                                  }`}
+                                  className={`text-sm font-medium ${priceDiff < 0
+                                    ? "text-green-600 dark:text-green-400"
+                                    : priceDiff > 0
+                                      ? "text-red-600 dark:text-red-400"
+                                      : "text-gray-600 dark:text-gray-400"
+                                    }`}
                                 >
                                   {priceDiff > 0 ? "+" : ""}
                                   {formatCurrency(priceDiff)}
@@ -3593,8 +3579,8 @@ const MaterialManager: React.FC<{
         <body style="font-family: Arial; padding: 20px;">
           <h2>Mã vạch vật tư (${selectedItems.size} sản phẩm)</h2>
           ${barcodeData
-            .map(
-              (item) => `
+        .map(
+          (item) => `
             <div style="border: 1px solid #ccc; margin: 10px 0; padding: 15px; page-break-inside: avoid;">
               <div style="font-size: 18px; font-weight: bold;">${item.name}</div>
               <div style="font-size: 14px; color: #666;">SKU: ${item.sku}</div>
@@ -3602,8 +3588,8 @@ const MaterialManager: React.FC<{
               <div style="font-family: monospace; font-size: 24px; text-align: center; margin-top: 10px; border: 2px solid #000; padding: 5px;">||||| ${item.sku} |||||</div>
             </div>
           `
-            )
-            .join("")}
+        )
+        .join("")}
         </body>
       </html>
     `;
@@ -3773,8 +3759,8 @@ const MaterialManager: React.FC<{
     if (
       !window.confirm(
         "Đồng bộ dữ liệu từ lịch sử nhập kho?\n\n" +
-          "✅ Tạo mới các vật liệu bị thiếu\n" +
-          "✅ Cập nhật thông tin NCC cho vật liệu đã có"
+        "✅ Tạo mới các vật liệu bị thiếu\n" +
+        "✅ Cập nhật thông tin NCC cho vật liệu đã có"
       )
     )
       return;
@@ -3895,8 +3881,8 @@ const MaterialManager: React.FC<{
       await loadMaterials();
       alert(
         `✅ Đồng bộ hoàn tất!\n\n` +
-          `📦 Tạo mới: ${createdCount} vật liệu\n` +
-          `🏢 Cập nhật NCC: ${updatedCount} vật liệu`
+        `📦 Tạo mới: ${createdCount} vật liệu\n` +
+        `🏢 Cập nhật NCC: ${updatedCount} vật liệu`
       );
     } catch (err) {
       console.error("Sync error:", err);
@@ -3906,117 +3892,134 @@ const MaterialManager: React.FC<{
     }
   };
 
-  // Get unique suppliers and units for filter options
-  const uniqueSuppliers = [...new Set(materials.map((m) => m.supplier).filter(Boolean))];
-  const uniqueUnits = [...new Set(materials.map((m) => m.unit).filter(Boolean))];
 
-  // Helper function to get supplier phone from suppliers list
-  const getSupplierPhone = (supplierName: string | undefined): string | undefined => {
-    if (!supplierName) return undefined;
-    const supplier = suppliers.find((s) => s.name?.toLowerCase() === supplierName.toLowerCase());
-    return supplier?.phone;
-  };
+  // Get unique suppliers and units for filter options - Memoized
+  const uniqueSuppliers = useMemo(() => {
+    return [...new Set(materials.map((m) => m.supplier).filter(Boolean))];
+  }, [materials]);
 
-  // Advanced filtering and sorting
-  const filteredMaterials = enhancedMaterials
-    .filter((material) => {
-      // Get supplier phone for this material
-      const supplierPhone =
-        (material as any).supplierphone ||
-        (material as any).supplierPhone ||
-        getSupplierPhone(material.supplier) ||
-        "";
+  const uniqueUnits = useMemo(() => {
+    return [...new Set(materials.map((m) => m.unit).filter(Boolean))];
+  }, [materials]);
 
-      const matchesSearch =
-        material.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        supplierPhone.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesSupplier = !supplierFilter || material.supplier === supplierFilter;
-
-      const matchesStock =
-        !stockFilter ||
-        (stockFilter === "empty"
-          ? material.stock === 0
-          : stockFilter === "low"
-            ? material.stock > 0 && material.stock <= 10
-            : stockFilter === "normal"
-              ? material.stock > 10
-              : true);
-
-      const matchesUnit = !unitFilter || material.unit === unitFilter;
-
-      const matchesCategory = !categoryFilter || (material as any).category === categoryFilter;
-
-      return matchesSearch && matchesSupplier && matchesStock && matchesUnit && matchesCategory;
-    })
-    .map((material) => ({
-      ...material,
-      // Enrich material with supplier phone from suppliers list
-      supplierPhone:
-        (material as any).supplierphone ||
-        (material as any).supplierPhone ||
-        getSupplierPhone(material.supplier),
-    }))
-    .sort((a, b) => {
-      if (!sortBy) return 0;
-
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+  // Create a map for fast supplier phone lookup - Memoized
+  const supplierPhoneMap = useMemo(() => {
+    const map = new Map<string, string>();
+    suppliers.forEach((s) => {
+      if (s.name && s.phone) {
+        map.set(s.name.toLowerCase(), s.phone);
       }
-
-      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
-      return 0;
     });
+    return map;
+  }, [suppliers]);
+
+  // Helper function to get supplier phone from map
+  const getSupplierPhone = useCallback((supplierName: string | undefined): string | undefined => {
+    if (!supplierName) return undefined;
+    return supplierPhoneMap.get(supplierName.toLowerCase());
+  }, [supplierPhoneMap]);
+
+  // Debounce search term to prevent excessive re-renders
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Advanced filtering and sorting - Memoized
+  const filteredMaterials = useMemo(() => {
+    return enhancedMaterials
+      .filter((material) => {
+        // Get supplier phone for this material
+        const supplierPhone =
+          (material as any).supplierphone ||
+          (material as any).supplierPhone ||
+          getSupplierPhone(material.supplier) ||
+          "";
+
+        const matchesSearch =
+          material.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          material.sku?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          material.supplier?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          supplierPhone.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+
+        const matchesSupplier = !supplierFilter || material.supplier === supplierFilter;
+
+        const matchesStock =
+          !stockFilter ||
+          (stockFilter === "empty"
+            ? material.stock === 0
+            : stockFilter === "low"
+              ? material.stock > 0 && material.stock <= 10
+              : stockFilter === "normal"
+                ? material.stock > 10
+                : true);
+
+        const matchesUnit = !unitFilter || material.unit === unitFilter;
+
+        const matchesCategory = !categoryFilter || (material as any).category === categoryFilter;
+
+        return matchesSearch && matchesSupplier && matchesStock && matchesUnit && matchesCategory;
+      })
+      .map((material) => ({
+        ...material,
+        // Enrich material with supplier phone from suppliers list
+        supplierPhone:
+          (material as any).supplierphone ||
+          (material as any).supplierPhone ||
+          getSupplierPhone(material.supplier),
+      }))
+      .sort((a, b) => {
+        if (!sortBy) return 0;
+
+        let aValue = a[sortBy];
+        let bValue = b[sortBy];
+
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      });
+  }, [enhancedMaterials, debouncedSearchTerm, supplierFilter, stockFilter, unitFilter, categoryFilter, sortBy, sortOrder, getSupplierPhone]);
 
   return (
     <div className="flex flex-col h-full min-h-0 pb-20 md:pb-1">
       {/* Mobile Header - Clean & Simple */}
-      <div className="md:hidden bg-slate-800 px-3 py-2 sticky top-0 z-20">
-        {/* Row 1: Tabs + Actions */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-1">
+      <div className="p-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-gray-800 md:hidden sticky top-0 z-30 shadow-sm">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveView("materials")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
-                activeView === "materials"
-                  ? "bg-green-500 text-white"
-                  : "bg-slate-700 text-slate-300"
-              }`}
+              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${activeView === "materials" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
             >
-              📦 Kho hàng
+              Kho hàng
             </button>
             <button
               onClick={() => setActiveView("history")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
-                activeView === "history" ? "bg-green-500 text-white" : "bg-slate-700 text-slate-300"
-              }`}
+              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${activeView === "history" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
             >
-              📊 Lịch sử
+              Lịch sử
             </button>
           </div>
-          {activeView === "materials" && (
-            <div className="flex gap-1">
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="p-2 bg-purple-600 text-white rounded-lg"
-              >
-                📥
-              </button>
+
+          {/* Mobile Actions */}
+          <div className="flex gap-2">
+            {activeView === "materials" && (
               <button
                 onClick={() => navigate("/materials/goods-receipt/new")}
-                className="flex items-center gap-1 bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
+                className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
               >
-                + Nhập
+                <PlusIcon className="w-5 h-5" />
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Row 2: Search */}
@@ -4081,19 +4084,17 @@ const MaterialManager: React.FC<{
         <div className="flex gap-1 mt-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setStockFilter("")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${
-              stockFilter === "" ? "bg-slate-600 text-white" : "bg-slate-700 text-slate-300"
-            }`}
+            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "" ? "bg-slate-600 text-white" : "bg-slate-700 text-slate-300"
+              }`}
           >
             Tất cả <span className="ml-1 opacity-70">{materials.length}</span>
           </button>
           <button
             onClick={() => setStockFilter("normal")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${
-              stockFilter === "normal"
-                ? "bg-emerald-500 text-white"
-                : "bg-emerald-900/50 text-emerald-300"
-            }`}
+            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "normal"
+              ? "bg-emerald-500 text-white"
+              : "bg-emerald-900/50 text-emerald-300"
+              }`}
           >
             Còn hàng{" "}
             <span className="ml-1 opacity-70">
@@ -4102,9 +4103,8 @@ const MaterialManager: React.FC<{
           </button>
           <button
             onClick={() => setStockFilter("low")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${
-              stockFilter === "low" ? "bg-amber-500 text-white" : "bg-amber-900/50 text-amber-300"
-            }`}
+            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "low" ? "bg-amber-500 text-white" : "bg-amber-900/50 text-amber-300"
+              }`}
           >
             Sắp hết{" "}
             <span className="ml-1 opacity-70">
@@ -4113,9 +4113,8 @@ const MaterialManager: React.FC<{
           </button>
           <button
             onClick={() => setStockFilter("empty")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${
-              stockFilter === "empty" ? "bg-red-500 text-white" : "bg-red-900/50 text-red-300"
-            }`}
+            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "empty" ? "bg-red-500 text-white" : "bg-red-900/50 text-red-300"
+              }`}
           >
             Hết hàng{" "}
             <span className="ml-1 opacity-70">
@@ -4131,21 +4130,19 @@ const MaterialManager: React.FC<{
         <div className="flex gap-1 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveView("materials")}
-            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-              activeView === "materials"
-                ? "bg-blue-500 text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-            }`}
+            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${activeView === "materials"
+              ? "bg-blue-500 text-white shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
           >
             📦 Danh sách Kho hàng
           </button>
           <button
             onClick={() => setActiveView("history")}
-            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-              activeView === "history"
-                ? "bg-blue-500 text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-            }`}
+            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${activeView === "history"
+              ? "bg-blue-500 text-white shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
           >
             📊 Lịch sử
           </button>
@@ -4368,76 +4365,68 @@ const MaterialManager: React.FC<{
             <div className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
               <button
                 onClick={() => setStockFilter("")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  stockFilter === ""
-                    ? "bg-slate-700 dark:bg-slate-600 text-white shadow-sm"
-                    : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-                }`}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${stockFilter === ""
+                  ? "bg-slate-700 dark:bg-slate-600 text-white shadow-sm"
+                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                  }`}
               >
                 Tất cả
                 <span
-                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    stockFilter === ""
-                      ? "bg-slate-600 dark:bg-slate-500 text-white"
-                      : "bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300"
-                  }`}
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${stockFilter === ""
+                    ? "bg-slate-600 dark:bg-slate-500 text-white"
+                    : "bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300"
+                    }`}
                 >
                   {materials.length}
                 </span>
               </button>
               <button
                 onClick={() => setStockFilter("normal")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  stockFilter === "normal"
-                    ? "bg-emerald-500 text-white shadow-sm"
-                    : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                }`}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${stockFilter === "normal"
+                  ? "bg-emerald-500 text-white shadow-sm"
+                  : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                  }`}
               >
                 Còn hàng
                 <span
-                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    stockFilter === "normal"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-emerald-100 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-300"
-                  }`}
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${stockFilter === "normal"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-100 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-300"
+                    }`}
                 >
                   {materials.filter((m) => (m.stock || 0) > 10).length}
                 </span>
               </button>
               <button
                 onClick={() => setStockFilter("low")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  stockFilter === "low"
-                    ? "bg-amber-500 text-white shadow-sm"
-                    : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                }`}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${stockFilter === "low"
+                  ? "bg-amber-500 text-white shadow-sm"
+                  : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                  }`}
               >
                 Sắp hết
                 <span
-                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    stockFilter === "low"
-                      ? "bg-amber-600 text-white"
-                      : "bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-300"
-                  }`}
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${stockFilter === "low"
+                    ? "bg-amber-600 text-white"
+                    : "bg-amber-100 dark:bg-amber-800 text-amber-700 dark:text-amber-300"
+                    }`}
                 >
                   {materials.filter((m) => (m.stock || 0) > 0 && (m.stock || 0) <= 10).length}
                 </span>
               </button>
               <button
                 onClick={() => setStockFilter("empty")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  stockFilter === "empty"
-                    ? "bg-red-500 text-white shadow-sm"
-                    : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50"
-                }`}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${stockFilter === "empty"
+                  ? "bg-red-500 text-white shadow-sm"
+                  : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50"
+                  }`}
               >
                 Hết hàng
                 <span
-                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    stockFilter === "empty"
-                      ? "bg-red-600 text-white"
-                      : "bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300"
-                  }`}
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${stockFilter === "empty"
+                    ? "bg-red-600 text-white"
+                    : "bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300"
+                    }`}
                 >
                   {materials.filter((m) => (m.stock || 0) === 0).length}
                 </span>
@@ -4535,11 +4524,10 @@ const MaterialManager: React.FC<{
                       filteredMaterials.map((material) => (
                         <tr
                           key={material.id}
-                          className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-150 ${
-                            selectedItems.has(material.id)
-                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
-                              : ""
-                          }`}
+                          className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-150 ${selectedItems.has(material.id)
+                            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+                            : ""
+                            }`}
                         >
                           <td className="px-3 py-2 text-center">
                             <input
@@ -4568,13 +4556,12 @@ const MaterialManager: React.FC<{
                           <td className="px-3 py-2">
                             {(material as any).category ? (
                               <span
-                                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                                  (material as any).category === "material"
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                                    : (material as any).category === "product"
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                                      : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                                }`}
+                                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${(material as any).category === "material"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                                  : (material as any).category === "product"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                                    : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                                  }`}
                               >
                                 {(material as any).category === "material"
                                   ? "Vật tư"
@@ -4726,113 +4713,74 @@ const MaterialManager: React.FC<{
               </div>
             </div>
 
-            {/* Materials Cards - Mobile Only - Compact Design */}
-            <div className="md:hidden flex-1 overflow-auto space-y-1.5 pb-20">
+            {/* Materials Cards - Mobile Only - Compact Flattened Design */}
+            <div className="md:hidden flex-1 overflow-auto bg-white dark:bg-slate-900 pb-20">
               {filteredMaterials.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 text-center text-gray-500 dark:text-gray-400">
+                <div className="py-12 text-center text-gray-500 dark:text-gray-400">
                   {loading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-xs">Đang tải...</span>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm font-medium">Đang tải dữ liệu...</span>
                     </div>
                   ) : (
-                    <div className="text-xs">Không có nguyên vật liệu nào</div>
+                    <div className="flex flex-col items-center gap-2">
+                      <Icon name="package" className="w-12 h-12 text-slate-300 dark:text-slate-700" />
+                      <span className="text-sm">Không tìm thấy vật tư nào</span>
+                    </div>
                   )}
                 </div>
               ) : (
-                filteredMaterials.map((material) => {
-                  const stockValue = material.availableStock || material.stock;
-                  let stockBadgeColor = "";
-                  let stockIcon = "";
-                  if (stockValue === 0) {
-                    stockBadgeColor = "bg-rose-500/20 text-rose-400";
-                    stockIcon = "🔴";
-                  } else if (stockValue < 100) {
-                    stockBadgeColor = "bg-amber-500/20 text-amber-400";
-                    stockIcon = "🟡";
-                  } else if (stockValue < 500) {
-                    stockBadgeColor = "bg-blue-500/20 text-blue-400";
-                    stockIcon = "🔵";
-                  } else {
-                    stockBadgeColor = "bg-emerald-500/20 text-emerald-400";
-                    stockIcon = "🟢";
-                  }
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredMaterials.map((material) => {
+                    const stockValue = material.availableStock || material.stock;
+                    let stockColorClass = "text-emerald-600 dark:text-emerald-500";
 
-                  return (
-                    <div
-                      key={material.id}
-                      className={`bg-slate-800 rounded-lg p-2.5 ${
-                        selectedItems.has(material.id) ? "ring-1 ring-blue-500" : ""
-                      }`}
-                    >
-                      {/* Row 1: Name + Stock */}
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <button
-                          onClick={() => handleShowMaterialDetail(material)}
-                          className="flex-1 text-left text-sm font-medium text-white truncate"
-                        >
-                          {material.name}
-                        </button>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-bold ${stockBadgeColor}`}
-                        >
-                          {stockIcon} {stockValue}
-                        </span>
-                      </div>
+                    if (stockValue === 0) {
+                      stockColorClass = "text-rose-600 dark:text-rose-500";
+                    } else if (stockValue < 10) {
+                      stockColorClass = "text-amber-600 dark:text-amber-500";
+                    }
 
-                      {/* Row 2: SKU + Unit + Price */}
-                      <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-                        <span className="font-mono">{material.sku}</span>
-                        <span>{material.unit}</span>
-                        <span className="text-amber-400 font-medium">
-                          {formatCurrency(material.purchasePrice)}
-                        </span>
-                      </div>
+                    return (
+                      <div
+                        key={material.id}
+                        onClick={() => handleShowMaterialDetail(material)}
+                        className={`active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors cursor-pointer py-3 px-4 ${selectedItems.has(material.id) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
+                          }`}
+                      >
+                        <div className="flex justify-between items-start gap-3">
+                          {/* Left: Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                {material.name}
+                              </h4>
+                            </div>
 
-                      {/* Row 3: Supplier if exists */}
-                      {material.supplier && (
-                        <div className="text-xs text-slate-500 truncate mb-1.5">
-                          NCC: {material.supplier}
-                        </div>
-                      )}
+                            <div className="flex flex-wrap gap-y-1 gap-x-2 text-xs text-slate-500 dark:text-slate-400">
+                              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{material.sku}</span>
+                              {material.supplier && (
+                                <span className="truncate max-w-[120px] flex items-center gap-1">
+                                  • {material.supplier}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                      {/* Row 4: Actions - No checkbox on mobile */}
-                      <div className="flex items-center justify-end pt-1.5 border-t border-slate-700">
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleShowStockAdjustment(material)}
-                            className="h-7 w-7 rounded-full flex items-center justify-center bg-teal-900/40 active:bg-teal-800"
-                          >
-                            <Icon name="gear" weight="bold" className="w-3.5 h-3.5 text-teal-400" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedMaterialForEdit(material);
-                              setShowEditModal(true);
-                            }}
-                            className="h-7 w-7 rounded-full flex items-center justify-center bg-amber-900/40 active:bg-amber-800"
-                          >
-                            <Icon
-                              name="pencil"
-                              weight="bold"
-                              className="w-3.5 h-3.5 text-amber-400"
-                            />
-                          </button>
-                          <button
-                            onClick={() => deleteMaterial(material.id)}
-                            className="h-7 w-7 rounded-full flex items-center justify-center bg-rose-900/40 active:bg-rose-800"
-                          >
-                            <Icon
-                              name="trash"
-                              weight="bold"
-                              className="w-3.5 h-3.5 text-rose-400"
-                            />
-                          </button>
+                          {/* Right: Quantity & Price */}
+                          <div className="text-right flex-shrink-0">
+                            <div className={`font-bold text-sm ${stockColorClass}`}>
+                              {stockValue} <span className="text-[10px] font-normal text-slate-400">{material.unit}</span>
+                            </div>
+                            <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-1">
+                              {formatCurrency(material.purchasePrice)}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
 

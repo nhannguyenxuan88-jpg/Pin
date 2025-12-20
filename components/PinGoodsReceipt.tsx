@@ -1225,9 +1225,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       <div className="md:hidden flex border-b border-slate-700/50 bg-slate-800/50 shrink-0">
         <button
           onClick={() => setMobileActiveTab("products")}
-          className={`flex-1 py-3 text-xs font-medium transition-all relative ${
-            mobileActiveTab === "products" ? "text-cyan-400" : "text-slate-400"
-          }`}
+          className={`flex-1 py-3 text-xs font-medium transition-all relative ${mobileActiveTab === "products" ? "text-cyan-400" : "text-slate-400"
+            }`}
         >
           <div className="flex items-center justify-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1246,9 +1245,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         </button>
         <button
           onClick={() => setMobileActiveTab("cart")}
-          className={`flex-1 py-3 text-xs font-medium transition-all relative ${
-            mobileActiveTab === "cart" ? "text-orange-400" : "text-slate-400"
-          }`}
+          className={`flex-1 py-3 text-xs font-medium transition-all relative ${mobileActiveTab === "cart" ? "text-orange-400" : "text-slate-400"
+            }`}
         >
           <div className="flex items-center justify-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1272,9 +1270,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         </button>
         <button
           onClick={() => setMobileActiveTab("payment")}
-          className={`flex-1 py-3 text-xs font-medium transition-all relative ${
-            mobileActiveTab === "payment" ? "text-green-400" : "text-slate-400"
-          }`}
+          className={`flex-1 py-3 text-xs font-medium transition-all relative ${mobileActiveTab === "payment" ? "text-green-400" : "text-slate-400"
+            }`}
         >
           <div className="flex items-center justify-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1486,37 +1483,39 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                   key={item.internalId}
                   className="bg-slate-900/50 rounded-lg p-2 border border-slate-700/50 hover:border-slate-600 transition-all"
                 >
-                  {/* Mobile Layout - Compact */}
-                  <div className="md:hidden">
+                  {/* Mobile Layout - Optimized Spacing */}
+                  <div className="md:hidden space-y-3 p-1">
                     {/* Header row: Number + Name + Delete */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 bg-orange-500 text-white text-[9px] font-bold rounded flex items-center justify-center shrink-0">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-white text-xs truncate">
-                          {item.materialName}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <span className="mt-0.5 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded flex items-center justify-center shrink-0">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-white text-sm break-words leading-tight">
+                            {item.materialName}
+                          </div>
+                          {item.sku && <div className="text-[10px] text-slate-500 font-mono mt-0.5">{item.sku}</div>}
                         </div>
                       </div>
                       <button
                         onClick={() => handleRemoveItem(item.internalId)}
-                        className="p-1 text-slate-500 hover:text-red-400 rounded transition-all"
+                        className="p-2 -mr-2 -mt-2 text-slate-500 hover:text-red-400 transition-all"
                       >
-                        <XMarkIcon className="w-3.5 h-3.5" />
+                        <XMarkIcon className="w-5 h-5" />
                       </button>
                     </div>
 
-                    {/* Compact row: Qty + Prices + Total */}
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {/* Quantity */}
-                      <div>
-                        <label className="text-[8px] text-slate-500 mb-0.5 block">SL</label>
-                        <div className="flex items-center bg-slate-800 rounded overflow-hidden h-7">
+                    {/* Row 2: Quantity & Total Amount Card */}
+                    <div className="flex items-center justify-between bg-slate-800/40 rounded-lg p-2.5 border border-slate-700/50">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Số lượng</label>
+                        <div className="flex items-center bg-slate-700 rounded-lg overflow-hidden h-9 w-min shadow-sm">
                           <button
                             onClick={() => handleQuantityChange(item.internalId, -1)}
-                            className="w-5 h-7 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700"
+                            className="w-9 h-9 flex items-center justify-center text-slate-300 active:bg-slate-600 border-r border-slate-600/50"
                           >
-                            <MinusIcon className="w-2.5 h-2.5" />
+                            <MinusIcon className="w-4 h-4" />
                           </button>
                           <input
                             type="number"
@@ -1528,21 +1527,34 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                                 Math.max(1, Number(e.target.value))
                               )
                             }
-                            className="w-6 h-7 text-center text-white bg-transparent border-0 text-xs font-bold focus:outline-none"
+                            className="w-12 h-9 text-center text-white bg-transparent border-0 text-sm font-bold focus:outline-none"
                             min="1"
                           />
                           <button
                             onClick={() => handleQuantityChange(item.internalId, 1)}
-                            className="w-5 h-7 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700"
+                            className="w-9 h-9 flex items-center justify-center text-slate-300 active:bg-slate-600 border-l border-slate-600/50"
                           >
-                            <PlusIcon className="w-2.5 h-2.5" />
+                            <PlusIcon className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
 
+                      <div className="flex flex-col items-end gap-0.5">
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Thành tiền</label>
+                        <span className="text-lg font-bold text-cyan-400 bg-cyan-900/10 px-2 py-0.5 rounded border border-cyan-500/10">
+                          {formatCurrency(item.quantity * item.purchasePrice)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Row 3: Prices Inputs */}
+                    <div className="grid grid-cols-2 gap-3">
                       {/* Purchase Price */}
-                      <div>
-                        <label className="text-[8px] text-slate-500 mb-0.5 block">Giá nhập</label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+                          Giá nhập
+                          <span className="text-[9px] bg-slate-700 px-1 rounded text-slate-300">VND</span>
+                        </label>
                         <input
                           type="number"
                           value={item.purchasePrice || ""}
@@ -1553,33 +1565,26 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                               Number(e.target.value)
                             )
                           }
-                          className="w-full h-7 px-1 text-right text-white bg-slate-800 border border-orange-500/30 rounded text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-orange-500"
+                          className="w-full h-10 px-3 text-right text-white bg-slate-800 border border-orange-500/30 rounded-lg text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm"
                           placeholder="0"
                         />
                       </div>
 
                       {/* Retail Price */}
-                      <div>
-                        <label className="text-[8px] text-slate-500 mb-0.5 block">Giá bán</label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex items-center justify-between">
+                          Giá bán
+                          <span className="text-[9px] bg-slate-700 px-1 rounded text-slate-300">VND</span>
+                        </label>
                         <input
                           type="number"
                           value={item.retailPrice || ""}
                           onChange={(e) =>
                             handleUpdateItem(item.internalId, "retailPrice", Number(e.target.value))
                           }
-                          className="w-full h-7 px-1 text-right text-slate-300 bg-slate-800/50 border border-slate-600/30 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                          className="w-full h-10 px-3 text-right text-slate-300 bg-slate-800/50 border border-slate-600/50 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 shadow-sm"
                           placeholder="0"
                         />
-                      </div>
-
-                      {/* Total */}
-                      <div>
-                        <label className="text-[8px] text-slate-500 mb-0.5 block">T.Tiền</label>
-                        <div className="h-7 flex items-center justify-end px-1 bg-cyan-500/10 border border-cyan-500/20 rounded">
-                          <span className="text-[11px] font-bold text-cyan-400">
-                            {formatCurrency(item.quantity * item.purchasePrice)}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1798,22 +1803,20 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                     setIsDebt(false);
                     setDebtAmount(0);
                   }}
-                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all flex items-center justify-center gap-1 ${
-                    !isDebt
+                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all flex items-center justify-center gap-1 ${!isDebt
                       ? "bg-green-500/20 border-2 border-green-500 text-green-400"
                       : "bg-slate-900/50 border border-slate-600/50 text-slate-400 hover:border-slate-500"
-                  }`}
+                    }`}
                 >
                   ✅ Thanh toán đủ
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsDebt(true)}
-                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all flex items-center justify-center gap-1 ${
-                    isDebt
+                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all flex items-center justify-center gap-1 ${isDebt
                       ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
                       : "bg-slate-900/50 border border-slate-600/50 text-slate-400 hover:border-slate-500"
-                  }`}
+                    }`}
                 >
                   📝 Ghi nợ
                 </button>
@@ -1860,22 +1863,20 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("cash")}
-                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all ${
-                    paymentMethod === "cash"
+                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all ${paymentMethod === "cash"
                       ? "bg-green-500/20 border border-green-500/50 text-green-400"
                       : "bg-slate-900/50 border border-slate-600/50 text-slate-400 hover:border-slate-500"
-                  }`}
+                    }`}
                 >
                   💵 Tiền mặt
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("bank")}
-                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all ${
-                    paymentMethod === "bank"
+                  className={`py-2 md:py-2.5 rounded-xl text-[10px] md:text-xs font-medium transition-all ${paymentMethod === "bank"
                       ? "bg-blue-500/20 border border-blue-500/50 text-blue-400"
                       : "bg-slate-900/50 border border-slate-600/50 text-slate-400 hover:border-slate-500"
-                  }`}
+                    }`}
                 >
                   🏦 Chuyển khoản
                 </button>
