@@ -100,10 +100,9 @@ export default function RepairInvoiceTemplate({
   // A5 size for print: 148mm x 210mm, responsive for mobile
   return (
     <div
-      className="bg-white text-gray-900 mx-auto w-full max-w-[148mm] print:w-[148mm]"
+      className="bg-white text-gray-900 mx-auto w-full max-w-[148mm] print:w-[148mm] px-2 py-2 sm:p-4 print:p-4"
       style={{
         fontFamily: "Arial, sans-serif",
-        padding: "4mm",
         boxSizing: "border-box",
       }}
     >
