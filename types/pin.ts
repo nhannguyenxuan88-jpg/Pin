@@ -98,13 +98,13 @@ export interface ProductionOrder {
   productName: string;
   quantityProduced: number;
   status:
-    | "Đang chờ"
-    | "Đang sản xuất"
-    | "Hoàn thành"
-    | "Đã nhập kho"
-    | "Đã hủy"
-    | "Chờ sản xuất"
-    | "Mới";
+  | "Đang chờ"
+  | "Đang sản xuất"
+  | "Hoàn thành"
+  | "Đã nhập kho"
+  | "Đã hủy"
+  | "Chờ sản xuất"
+  | "Mới";
   materialsCost: number;
   additionalCosts: AdditionalCost[];
   totalCost: number;
@@ -183,6 +183,16 @@ export interface PinRepairMaterial {
   price: number;
 }
 
+// Gia công ngoài / Đặt hàng
+export interface OutsourcingItem {
+  id: string;
+  description: string;  // Mô tả công việc
+  quantity: number;     // Số lượng
+  costPrice: number;    // Giá nhập (chi phí bên thứ 3)
+  sellingPrice: number; // Đơn giá (giá tính cho khách)
+  total: number;        // Thành tiền
+}
+
 export interface PinRepairOrder {
   id: string;
   creationDate: string;
@@ -193,6 +203,7 @@ export interface PinRepairOrder {
   technicianName?: string;
   status: "Tiếp nhận" | "Đang sửa" | "Đã sửa xong" | "Trả máy" | "Chờ";
   materialsUsed?: PinRepairMaterial[];
+  outsourcingItems?: OutsourcingItem[];  // Gia công ngoài / Đặt hàng
   laborCost: number;
   total: number;
   notes?: string;
@@ -205,3 +216,4 @@ export interface PinRepairOrder {
   cashTransactionId?: string;
   created_at?: string;
 }
+

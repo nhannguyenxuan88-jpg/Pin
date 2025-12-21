@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { PinRepairOrder, PinRepairMaterial } from "../../types";
 import type { BusinessSettings } from "../../types/business";
+import { BusinessSettingsService } from "../../lib/services/BusinessSettingsService";
 
 interface RepairInvoiceTemplateProps {
   repairOrder: PinRepairOrder;
@@ -29,18 +30,41 @@ export default function RepairInvoiceTemplate({
   onClose,
 }: RepairInvoiceTemplateProps) {
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load business settings
-    const saved = localStorage.getItem("businessSettings");
-    if (saved) {
-      setBusinessSettings(JSON.parse(saved));
-    }
+    // Load business settings from Supabase
+    const loadSettings = async () => {
+      setIsLoading(true);
+      const saved = await BusinessSettingsService.getSettings();
+      if (saved) {
+        setBusinessSettings(saved);
+      }
+      setIsLoading(false);
+    };
+    loadSettings();
   }, []);
+
+  // Parse outsourcingItems from notes field if stored there
+  let outsourcingItems: any[] = repairOrder.outsourcingItems || [];
+  if (repairOrder.notes && repairOrder.notes.includes("__OUTSOURCING__")) {
+    try {
+      const parts = repairOrder.notes.split("__OUTSOURCING__");
+      if (parts[1]) {
+        outsourcingItems = JSON.parse(parts[1]);
+      }
+    } catch (e) {
+      console.warn("Failed to parse outsourcing items from notes");
+    }
+  }
 
   // Calculate totals from actual data
   const materialsCost =
     repairOrder.materialsUsed?.reduce((sum, mat) => sum + mat.price * mat.quantity, 0) || 0;
+  const outsourcingCost = outsourcingItems.reduce(
+    (sum, item) => sum + (item.sellingPrice || item.price || 0) * (item.quantity || 1),
+    0
+  );
   const laborCost = repairOrder.laborCost || 0;
   const total = repairOrder.total || 0;
 
@@ -53,6 +77,14 @@ export default function RepairInvoiceTemplate({
 
   // Còn nợ
   const remainingAmount = total - paidAmount;
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-gray-800">Đang tải thông tin doanh nghiệp...</p>
+      </div>
+    );
+  }
 
   if (!businessSettings) {
     return (
@@ -165,29 +197,29 @@ export default function RepairInvoiceTemplate({
         </div>
       </div>
 
-      {/* Materials/Parts Table */}
-      <div className="mb-3">
-        <p className="text-[11px] font-bold text-gray-800 mb-1">Vật liệu sử dụng:</p>
-        <table className="w-full text-[10px] border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-400 px-2 py-1 text-left font-bold text-gray-900">
-                Vật liệu
-              </th>
-              <th className="border border-gray-400 px-2 py-1 text-center font-bold text-gray-900 w-10">
-                SL
-              </th>
-              <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-20">
-                Đơn giá
-              </th>
-              <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-24">
-                Thành tiền
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {repairOrder.materialsUsed && repairOrder.materialsUsed.length > 0 ? (
-              repairOrder.materialsUsed.map((mat: PinRepairMaterial, index: number) => (
+      {/* Materials/Parts Table - Only show if has materials */}
+      {repairOrder.materialsUsed && repairOrder.materialsUsed.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] font-bold text-gray-800 mb-1">Vật liệu sử dụng:</p>
+          <table className="w-full text-[10px] border-collapse">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border border-gray-400 px-2 py-1 text-left font-bold text-gray-900">
+                  Vật liệu
+                </th>
+                <th className="border border-gray-400 px-2 py-1 text-center font-bold text-gray-900 w-10">
+                  SL
+                </th>
+                <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-20">
+                  Đơn giá
+                </th>
+                <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-24">
+                  Thành tiền
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {repairOrder.materialsUsed.map((mat: PinRepairMaterial, index: number) => (
                 <tr key={index}>
                   <td className="border border-gray-400 px-2 py-1 text-gray-900">
                     {mat.materialName}
@@ -202,30 +234,74 @@ export default function RepairInvoiceTemplate({
                     {formatCurrency(mat.price * mat.quantity)}
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="border border-gray-400 px-2 py-2 text-center text-gray-600 italic"
-                >
-                  Không có vật liệu
-                </td>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Outsourcing/Linh kiện thay thế Table */}
+      {outsourcingItems.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] font-bold text-gray-800 mb-1">Linh kiện thay thế:</p>
+          <table className="w-full text-[10px] border-collapse">
+            <thead>
+              <tr className="bg-blue-100">
+                <th className="border border-gray-400 px-2 py-1 text-left font-bold text-gray-900">
+                  Tên linh kiện
+                </th>
+                <th className="border border-gray-400 px-2 py-1 text-center font-bold text-gray-900 w-10">
+                  SL
+                </th>
+                <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-20">
+                  Đơn giá
+                </th>
+                <th className="border border-gray-400 px-2 py-1 text-right font-bold text-gray-900 w-24">
+                  Thành tiền
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {outsourcingItems.map((item: any, index: number) => (
+                <tr key={index}>
+                  <td className="border border-gray-400 px-2 py-1 text-gray-900">
+                    {item.description}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-center text-gray-900">
+                    {item.quantity || 1}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-right text-gray-900">
+                    {formatCurrency(item.sellingPrice || item.price || 0)}
+                  </td>
+                  <td className="border border-gray-400 px-2 py-1 text-right font-semibold text-gray-900">
+                    {formatCurrency((item.sellingPrice || item.price || 0) * (item.quantity || 1))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Summary Box */}
       <div className="bg-white border-2 border-gray-400 rounded p-3 mb-3">
         <div className="space-y-1 text-[11px]">
-          <div className="flex justify-between">
-            <span className="font-semibold text-gray-800">Tiền vật liệu:</span>
-            <span className="text-right font-semibold text-blue-700">
-              {formatCurrency(materialsCost)}
-            </span>
-          </div>
+          {materialsCost > 0 && (
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-800">Tiền vật liệu:</span>
+              <span className="text-right font-semibold text-blue-700">
+                {formatCurrency(materialsCost)}
+              </span>
+            </div>
+          )}
+          {outsourcingCost > 0 && (
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-800">Linh kiện:</span>
+              <span className="text-right font-semibold text-blue-700">
+                {formatCurrency(outsourcingCost)}
+              </span>
+            </div>
+          )}
           {laborCost > 0 && (
             <div className="flex justify-between">
               <span className="text-gray-700">Tiền công:</span>

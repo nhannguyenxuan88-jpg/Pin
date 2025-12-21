@@ -432,23 +432,23 @@ export interface FixedAsset {
   id: string;
   name: string;
   category:
-    | "machinery"
-    | "equipment"
-    | "vehicle"
-    | "building"
-    | "land"
-    | "software"
-    | "furniture"
-    | "other";
+  | "machinery"
+  | "equipment"
+  | "vehicle"
+  | "building"
+  | "land"
+  | "software"
+  | "furniture"
+  | "other";
   description?: string;
   purchaseDate: string;
   purchasePrice: number;
   currentValue: number;
   depreciationMethod:
-    | "straight_line"
-    | "declining_balance"
-    | "sum_of_years"
-    | "units_of_production";
+  | "straight_line"
+  | "declining_balance"
+  | "sum_of_years"
+  | "units_of_production";
   usefulLife: number; // in years
   salvageValue: number;
   accumulatedDepreciation: number;
@@ -578,13 +578,13 @@ export interface ProductionOrder {
   productName: string;
   quantityProduced: number;
   status:
-    | "Đang chờ"
-    | "Đang sản xuất"
-    | "Hoàn thành"
-    | "Đã nhập kho"
-    | "Đã hủy"
-    | "Chờ sản xuất"
-    | "Mới";
+  | "Đang chờ"
+  | "Đang sản xuất"
+  | "Hoàn thành"
+  | "Đã nhập kho"
+  | "Đã hủy"
+  | "Chờ sản xuất"
+  | "Mới";
   materialsCost: number; // Estimated cost
   additionalCosts: AdditionalCost[];
   totalCost: number; // Estimated total
@@ -728,6 +728,16 @@ export interface PinRepairMaterial {
   shortage?: number; // Số lượng thiếu (nếu có)
 }
 
+// Gia công ngoài / Đặt hàng
+export interface OutsourcingItem {
+  id: string;
+  description: string;  // Mô tả công việc
+  quantity: number;     // Số lượng
+  costPrice: number;    // Giá nhập (chi phí bên thứ 3)
+  sellingPrice: number; // Đơn giá (giá tính cho khách)
+  total: number;        // Thành tiền
+}
+
 // Status mới cho flow báo giá
 export type PinRepairStatus =
   | "Tiếp nhận" // Mới tạo phiếu
@@ -750,6 +760,7 @@ export interface PinRepairOrder {
   technicianName?: string;
   status: PinRepairStatus;
   materialsUsed?: PinRepairMaterial[];
+  outsourcingItems?: OutsourcingItem[];  // Gia công ngoài / Đặt hàng
   laborCost: number;
   total: number;
   notes?: string;
@@ -827,11 +838,11 @@ export interface CostPrediction {
 
 export interface PredictionFactor {
   factor:
-    | "material_price_trend"
-    | "seasonal_variation"
-    | "supplier_reliability"
-    | "complexity_level"
-    | "team_efficiency";
+  | "material_price_trend"
+  | "seasonal_variation"
+  | "supplier_reliability"
+  | "complexity_level"
+  | "team_efficiency";
   impact: "positive" | "negative" | "neutral";
   weight: number; // 0-1
   description: string;
@@ -845,11 +856,11 @@ export interface RiskAssessment {
 
 export interface RiskFactor {
   type:
-    | "budget_overrun"
-    | "material_shortage"
-    | "supplier_delay"
-    | "capacity_constraint"
-    | "quality_risk";
+  | "budget_overrun"
+  | "material_shortage"
+  | "supplier_delay"
+  | "capacity_constraint"
+  | "quality_risk";
   severity: "low" | "medium" | "high" | "critical";
   probability: number; // 0-1
   description: string;
@@ -994,11 +1005,11 @@ export interface ProductionOrderStatus {
 export interface ProductionAlert {
   id: string;
   type:
-    | "cost_overrun"
-    | "material_shortage"
-    | "schedule_delay"
-    | "quality_issue"
-    | "resource_conflict";
+  | "cost_overrun"
+  | "material_shortage"
+  | "schedule_delay"
+  | "quality_issue"
+  | "resource_conflict";
   severity: "info" | "warning" | "error" | "critical";
   orderId?: string;
   message: string;
