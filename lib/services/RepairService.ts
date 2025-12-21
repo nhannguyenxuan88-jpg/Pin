@@ -171,7 +171,8 @@ export function createRepairService(ctx: PinContextType): RepairService {
           materials_used: JSON.stringify(order.materialsUsed ?? []),
           labor_cost: order.laborCost || 0,
           total: order.total || 0,
-          notes: order.notes ? `${order.notes}\n__OUTSOURCING__${JSON.stringify(order.outsourcingItems ?? [])}` : (order.outsourcingItems?.length ? `__OUTSOURCING__${JSON.stringify(order.outsourcingItems)}` : ""),
+          // Stores Outsourcing Items JSON in notes for Profit Reporting
+          notes: order.notes ? (order.notes.includes("__OUTSOURCING__") ? order.notes : `${order.notes}\n__OUTSOURCING__${JSON.stringify(order.outsourcingItems ?? [])}`) : (order.outsourcingItems?.length ? `__OUTSOURCING__${JSON.stringify(order.outsourcingItems)}` : ""),
           payment_status: order.paymentStatus || "unpaid",
           partial_payment_amount: order.partialPaymentAmount,
           deposit_amount: order.depositAmount || 0,
@@ -206,24 +207,20 @@ export function createRepairService(ctx: PinContextType): RepairService {
           return;
         }
 
-        // ===== LOGIC TRỪ KHO CẢI TIẾN =====
-        // Trừ kho khi chuyển sang "Đang sửa" hoặc trạng thái hoàn thành
-        // CHỈ TRỪ 1 LẦN DUY NHẤT - không trừ lại khi cập nhật sau
-        const inProgressStatuses = ["Đang sửa", "in_progress", "working"];
-        const completedStatuses = ["completed", "Đã sửa xong", "Trả máy"];
-        const deductibleStatuses = [...inProgressStatuses, ...completedStatuses];
+        // ===== LOGIC TRỪ KHO (MOTOCARE STANDARD) =====
+        // Chỉ trừ kho khi status là 'Trả máy' (Hoàn thành & Giao khách)
+        const completedStatuses = ["Trả máy", "completed", "Delivered"];
 
         const shouldDeductMaterials =
-          deductibleStatuses.includes(order.status) &&
+          completedStatuses.includes(order.status) &&
           order.materialsUsed &&
           order.materialsUsed.length > 0 &&
-          !order.materialsDeducted; // ✅ Chỉ trừ nếu chưa trừ trước đó
+          !order.materialsDeducted; // ✅ Chỉ trừ nếu chưa trừ
 
         if (shouldDeductMaterials) {
           const warnings: string[] = [];
 
           for (const m of order.materialsUsed!) {
-            // Tìm material bằng ID hoặc theo tên
             let mat = ctx.pinMaterials.find(
               (material: PinMaterial) => material.id === m.materialId
             );
@@ -241,14 +238,13 @@ export function createRepairService(ctx: PinContextType): RepairService {
             const currentStock = mat.stock || 0;
             const requestedQty = m.quantity || 0;
 
-            // ⚠️ Cảnh báo nếu không đủ hàng
             if (currentStock < requestedQty) {
               warnings.push(
                 `⚠️ ${mat.name}: Tồn kho ${currentStock}, cần ${requestedQty} (thiếu ${requestedQty - currentStock})`
               );
             }
 
-            // Cho phép trừ kho (có thể âm để phản ánh thiếu hàng thực tế)
+            // Thực hiện trừ kho
             const remaining = currentStock - requestedQty;
 
             await supabase.from("pin_materials").update({ stock: remaining }).eq("id", mat.id);
@@ -259,7 +255,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
             );
           }
 
-          // Cập nhật flag đã trừ kho (ĐẢM BẢO CHỈ TRỪ 1 LẦN)
+          // Cập nhật flag đã trừ kho
           await supabase
             .from("pin_repair_orders")
             .update({
@@ -271,50 +267,74 @@ export function createRepairService(ctx: PinContextType): RepairService {
           order.materialsDeducted = true;
           order.materialsDeductedAt = new Date().toISOString();
 
-          // Hiển thị cảnh báo nếu có
           if (warnings.length > 0) {
             ctx.addToast?.({
-              title: "⚠️ Cảnh báo tồn kho",
+              title: "⚠️ Cảnh báo tồn kho khi trả máy",
               message: warnings.join("\n"),
               type: "warn",
             });
           }
         }
 
-        // Create cash transaction for payment
-        const paidStatuses = ["paid", "partial"];
-        if (paidStatuses.includes(order.paymentStatus || "") && ctx.addCashTransaction) {
-          // Check if cash transaction already exists for this repair
-          const existingTx = ctx.cashTransactions?.find(
-            (t: CashTransaction) => t.workOrderId === order.id
-          );
+        // ===== LOGIC THANH TOÁN (Atomic Simulation) =====
+        // 1. Check existing transactions
+        const existingTxs = ctx.cashTransactions?.filter(t => t.workOrderId === order.id) || [];
 
-          // Calculate payment amount
-          let paymentAmount = 0;
-          if (order.paymentStatus === "paid") {
-            paymentAmount = order.total || 0;
-          } else if (order.paymentStatus === "partial") {
-            paymentAmount = (order.depositAmount || 0) + (order.partialPaymentAmount || 0);
+        // 2. Handle Deposit Transaction (if added/changed)
+        const depositAmount = order.depositAmount || 0;
+        const hasDepositTx = existingTxs.some(t => t.category === 'deposit' || t.notes?.toLowerCase().includes('đặt cọc'));
+
+        if (depositAmount > 0 && !hasDepositTx && ctx.addCashTransaction) {
+          const depositTx: CashTransaction = {
+            id: `CT-DEPOSIT-${order.id}-${Date.now()}`,
+            type: "income",
+            date: new Date().toISOString(),
+            amount: depositAmount,
+            contact: {
+              id: order.customerPhone || order.id,
+              name: order.customerName || "Khách sửa chữa",
+            },
+            notes: `Đặt cọc sửa chữa: ${order.deviceName} - ${order.id} #app:pincorp`,
+            paymentSourceId: order.paymentMethod || "cash",
+            branchId: "main",
+            workOrderId: order.id,
+            category: "service_deposit" as any, // Cast to match category types if needed
+          };
+          await ctx.addCashTransaction(depositTx);
+        }
+
+        // 3. Handle Final Payment Transaction
+        // Chỉ tạo khi 'Trả máy' VÀ có thanh toán (paid/partial) VÀ chưa có giao dịch thu nhập dịch vụ
+        const hasServiceIncomeTx = existingTxs.some(t => t.category === 'service_income');
+        const isCompleted = completedStatuses.includes(order.status);
+        const isPaidOrPartial = order.paymentStatus === 'paid' || order.paymentStatus === 'partial';
+
+        if (isCompleted && isPaidOrPartial && !hasServiceIncomeTx && ctx.addCashTransaction) {
+          let finalAmount = 0;
+          if (order.paymentStatus === 'paid') {
+            finalAmount = (order.total || 0) - depositAmount;
+          } else if (order.paymentStatus === 'partial') {
+            // Nếu partial, lấy số tiền khách trả thêm (ngoài cọc)
+            finalAmount = (order.partialPaymentAmount || 0);
           }
 
-          // Only create/update if there's a payment and no existing transaction
-          if (paymentAmount > 0 && !existingTx) {
-            const cashTx: CashTransaction = {
-              id: `CT-REPAIR-${Date.now()}`,
+          if (finalAmount > 0) {
+            const finalTx: CashTransaction = {
+              id: `CT-FINAL-${order.id}-${Date.now()}`,
               type: "income",
               date: new Date().toISOString(),
-              amount: paymentAmount,
+              amount: finalAmount,
               contact: {
                 id: order.customerPhone || order.id,
                 name: order.customerName || "Khách sửa chữa",
               },
-              notes: `Thu tiền sửa chữa: ${order.deviceName || order.productName || "Thiết bị"} - ${order.id} #app:pincorp`,
+              notes: `Thu tiền sửa chữa (Hoàn tất): ${order.deviceName} - ${order.id} #app:pincorp`,
               paymentSourceId: order.paymentMethod || "cash",
               branchId: "main",
               workOrderId: order.id,
               category: "service_income",
             };
-            await ctx.addCashTransaction(cashTx);
+            await ctx.addCashTransaction(finalTx);
           }
         }
 
@@ -323,7 +343,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
         );
         ctx.addToast?.({
           title: "Đã cập nhật đơn sửa chữa",
-          message: order.id,
+          message: `${order.status} - ${order.id}`,
           type: "success",
         });
       } catch (e: unknown) {

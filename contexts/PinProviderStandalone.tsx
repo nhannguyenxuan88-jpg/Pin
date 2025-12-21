@@ -70,7 +70,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
       console[t?.type === "error" ? "error" : t?.type === "warn" ? "warn" : "log"]?.(
         `[${t?.type || "info"}] ${t?.title || ""}: ${t?.message || ""}`
       );
-    } catch {}
+    } catch { }
   };
 
   // PIN state
@@ -106,7 +106,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
         .select("*")
         .order("import_date", { ascending: false });
       if (!error) setPinMaterialHistory(data || []);
-    } catch {}
+    } catch { }
   };
 
   // Basic cash transaction upsert (tagged for PIN)
@@ -393,10 +393,10 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             retailPrice: Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0),
             wholesalePrice: Number(
               row.wholesaleprice ??
-                row.wholesale_price ??
-                Math.round(
-                  (Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0) || 0) * 0.9
-                )
+              row.wholesale_price ??
+              Math.round(
+                (Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0) || 0) * 0.9
+              )
             ),
             sellingPrice: Number(row.sellingprice ?? 0) || undefined,
             created_at: (row.created_at || row.createdat || undefined) as string | undefined,
@@ -467,6 +467,30 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               return [];
             })(),
             laborCost: Number(row.labor_cost ?? row.laborcost ?? 0),
+            outsourcingItems: (() => {
+              // Priority 1: Direct column
+              const items = row.outsourcing_items || row.outsourcingitems;
+              if (Array.isArray(items) && items.length > 0) return items;
+              if (typeof items === "string") {
+                try {
+                  const parsed = JSON.parse(items);
+                  if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                } catch { }
+              }
+
+              // Priority 2: Fallback to notes (Legacy)
+              const note = (row.notes || "") as string;
+              if (note.includes("__OUTSOURCING__")) {
+                try {
+                  const parts = note.split("__OUTSOURCING__");
+                  if (parts[1]) {
+                    return JSON.parse(parts[1]);
+                  }
+                } catch { }
+              }
+
+              return [];
+            })(),
             total: Number(row.total ?? 0),
             notes: (row.notes || "") as string,
             paymentStatus: (row.payment_status || row.paymentstatus || "unpaid") as string,

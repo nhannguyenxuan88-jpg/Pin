@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import type { PinRepairOrder } from "../types";
+import { supabase } from "../supabaseClient";
 import { usePinContext } from "../contexts/PinContext";
 import { Card, CardGrid, CardTitle, StatsCard } from "./ui/Card";
 import { StatusBadge, PaymentBadge } from "./ui/Badge";
@@ -21,6 +22,12 @@ const formatCurrency = (amount: number) =>
 // Date filter options
 type DateFilter = "all" | "today" | "week" | "month";
 
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+}
+
 const PinRepairManagerNew: React.FC = () => {
   const { pinRepairOrders, upsertPinRepairOrder, deletePinRepairOrder, currentUser } =
     usePinContext();
@@ -34,6 +41,30 @@ const PinRepairManagerNew: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoiceRepairOrder, setInvoiceRepairOrder] = useState<PinRepairOrder | null>(null);
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+
+  // Fetch profiles for name mapping
+  React.useEffect(() => {
+    const fetchProfiles = async () => {
+      const { data } = await supabase.from("profiles").select("id, name, email");
+      if (data) setProfiles(data as UserProfile[]);
+    };
+    fetchProfiles();
+  }, []);
+
+  const getDisplayName = (technicianName?: string) => {
+    if (!technicianName) return "";
+
+    // Check if it matches a profile email
+    const profile = profiles.find(p => p.email === technicianName || p.name === technicianName);
+    if (profile && profile.name) return profile.name;
+
+    // Fallback logic
+    if (technicianName.includes("@")) {
+      return technicianName.split("@")[0];
+    }
+    return technicianName;
+  };
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -391,12 +422,14 @@ const PinRepairManagerNew: React.FC = () => {
           {order.technicianName && (
             <div className="flex items-center gap-1.5 text-xs text-pin-gray-600 dark:text-pin-dark-600">
               <Icon name="technician" tone="primary" size="sm" />
-              <span>{order.technicianName}</span>
+              <span>{getDisplayName(order.technicianName)}</span>
             </div>
           )}
         </div>
       ),
     },
+    // ... other columns ...
+
     {
       key: "customer",
       label: "Khách hàng",
@@ -424,10 +457,12 @@ const PinRepairManagerNew: React.FC = () => {
       label: "Chi tiết",
       render: (order) => {
         const materials = order.materialsUsed || [];
-        if (materials.length === 0) {
+        const outsourcing = order.outsourcingItems || [];
+
+        if (materials.length === 0 && outsourcing.length === 0) {
           return (
             <div className="text-xs text-pin-gray-400 dark:text-pin-dark-400 italic">
-              Chưa có vật tư
+              Chưa có chi tiết
             </div>
           );
         }
@@ -435,7 +470,7 @@ const PinRepairManagerNew: React.FC = () => {
           <div className="space-y-1">
             {materials.slice(0, 3).map((m: any, idx: number) => (
               <div
-                key={idx}
+                key={`mat-${idx}`}
                 className="flex items-center gap-1.5 text-xs text-pin-gray-600 dark:text-pin-dark-600"
               >
                 <Icon name="stock" tone="primary" size="sm" />
@@ -444,9 +479,20 @@ const PinRepairManagerNew: React.FC = () => {
                 </span>
               </div>
             ))}
-            {materials.length > 3 && (
+            {outsourcing.slice(0, 3).map((o: any, idx: number) => (
+              <div
+                key={`out-${idx}`}
+                className="flex items-center gap-1.5 text-xs text-pin-purple-600 dark:text-pin-purple-400"
+              >
+                <span className="text-xs">🛠️</span>
+                <span>
+                  {o.description} ×{o.quantity}
+                </span>
+              </div>
+            ))}
+            {materials.length + outsourcing.length > 3 && (
               <div className="text-xs text-pin-gray-400 dark:text-pin-dark-400 italic">
-                +{materials.length - 3} vật tư khác
+                +{materials.length + outsourcing.length - 3} chi tiết khác
               </div>
             )}
           </div>
@@ -544,8 +590,8 @@ const PinRepairManagerNew: React.FC = () => {
         <button
           onClick={() => setStatusFilter("all")}
           className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${statusFilter === "all"
-              ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-900/20"
-              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-blue-300"
+            ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-900/20"
+            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-blue-300"
             }`}
         >
           <div className="text-xl md:text-3xl font-bold text-pin-blue-600 dark:text-pin-blue-400">
@@ -557,8 +603,8 @@ const PinRepairManagerNew: React.FC = () => {
         <button
           onClick={() => setStatusFilter("pending")}
           className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${statusFilter === "pending"
-              ? "border-pin-amber-500 bg-pin-amber-50 dark:bg-pin-amber-900/20"
-              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-amber-300"
+            ? "border-pin-amber-500 bg-pin-amber-50 dark:bg-pin-amber-900/20"
+            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-amber-300"
             }`}
         >
           <div className="text-xl md:text-3xl font-bold text-pin-amber-600 dark:text-pin-amber-400">
@@ -570,8 +616,8 @@ const PinRepairManagerNew: React.FC = () => {
         <button
           onClick={() => setStatusFilter("inProgress")}
           className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${statusFilter === "inProgress"
-              ? "border-pin-cyan-500 bg-pin-cyan-50 dark:bg-pin-cyan-900/20"
-              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-cyan-300"
+            ? "border-pin-cyan-500 bg-pin-cyan-50 dark:bg-pin-cyan-900/20"
+            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-cyan-300"
             }`}
         >
           <div className="text-xl md:text-3xl font-bold text-pin-cyan-600 dark:text-pin-cyan-400">
@@ -585,8 +631,8 @@ const PinRepairManagerNew: React.FC = () => {
         <button
           onClick={() => setStatusFilter("completed")}
           className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all col-span-1 ${statusFilter === "completed"
-              ? "border-pin-green-500 bg-pin-green-50 dark:bg-pin-green-900/20"
-              : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-green-300"
+            ? "border-pin-green-500 bg-pin-green-50 dark:bg-pin-green-900/20"
+            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-green-300"
             }`}
         >
           <div className="text-xl md:text-3xl font-bold text-pin-green-600 dark:text-pin-green-400">
@@ -641,8 +687,8 @@ const PinRepairManagerNew: React.FC = () => {
               key={opt.value}
               onClick={() => setDateFilter(opt.value as DateFilter)}
               className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${dateFilter === opt.value
-                  ? "bg-white dark:bg-pin-dark-100 text-pin-blue-600 shadow-sm"
-                  : "text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-blue-600"
+                ? "bg-white dark:bg-pin-dark-100 text-pin-blue-600 shadow-sm"
+                : "text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-blue-600"
                 }`}
             >
               {opt.label}
@@ -826,7 +872,7 @@ const PinRepairManagerNew: React.FC = () => {
         }}
         onSave={handleSaveOrder}
         initialOrder={selectedOrder}
-        currentUser={currentUser}
+        currentUser={currentUser as any}
       />
 
       {/* Delete Confirmation Modal */}

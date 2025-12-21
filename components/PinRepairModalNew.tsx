@@ -387,6 +387,13 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       return;
     }
 
+    if (outsourcingInput.costPrice <= 0) {
+      const confirmZero = confirm(
+        "⚠️ Cảnh báo lợi nhuận:\nGiá nhập (Giá vốn) đang là 0.\n\nViệc này sẽ khiến Lợi nhuận = Doanh thu (lãi 100%).\nBạn có chắc chắn muốn tiếp tục?"
+      );
+      if (!confirmZero) return;
+    }
+
     const newItem: OutsourcingItem = {
       id: generateUniqueId("GC"),
       description: outsourcingInput.description.trim(),
@@ -536,6 +543,22 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         dueDate: formData.dueDate,
         cashTransactionId: formData.cashTransactionId,
       };
+
+      // Warn when marking as "Trả máy" (Complete) -> Inventory Deduction
+      if (orderToSave.status === "Trả máy" && (!initialOrder?.materialsDeducted)) {
+        const confirmDeduct = confirm(
+          "⚠️ XÁC NHẬN HOÀN TẤT & TRỪ KHO\n\n" +
+          "Khi chuyển sang 'Trả máy', hệ thống sẽ:\n" +
+          "1. 📉 TRỪ TỒN KHO vật tư đã sử dụng\n" +
+          "2. 💰 Ghi nhận DOANH THU & LỢI NHUẬN\n" +
+          "3. 📝 Tạo phiếu thu (nếu thanh toán)\n\n" +
+          "Bạn có chắc chắn muốn thực hiện?"
+        );
+        if (!confirmDeduct) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       await onSave(orderToSave);
       onClose();
@@ -757,182 +780,126 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                 />
               </div>
 
-              {/* Card: Thiết bị & Sự cố */}
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-purple-200 dark:border-purple-700 shadow-sm">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
-                  <svg
-                    className="w-4 h-4 text-purple-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
+              {/* Card Merged: Thông tin tiếp nhận & Trạng thái */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-blue-200 dark:border-blue-700 shadow-sm">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  Thiết bị & Sự cố
+                  Thông tin tiếp nhận & Trạng thái
                 </h3>
-                <div className="space-y-2">
+
+                <div className="space-y-3">
+                  {/* Row 1: Thiết bị & KTV */}
+                  <div className="grid grid-cols-12 gap-3">
+                    <div className="col-span-7">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Tên thiết bị
+                      </label>
+                      <input
+                        type="text"
+                        name="deviceName"
+                        value={formData.deviceName || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-medium"
+                        placeholder="VD: iPhone 13 Pro Max"
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Kỹ thuật viên
+                      </label>
+                      <input
+                        name="technicianName"
+                        type="text"
+                        value={formData.technicianName || ""}
+                        onChange={handleInputChange}
+                        placeholder="Tên KTV"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Mô tả sự cố */}
                   <div>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                      Tên thiết bị
-                    </label>
-                    <input
-                      type="text"
-                      name="deviceName"
-                      value={formData.deviceName || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-1 focus:ring-purple-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
-                      placeholder="VD: iPhone 13 Pro Max"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
                       Mô tả sự cố <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       name="issueDescription"
                       value={formData.issueDescription || ""}
                       onChange={handleInputChange}
-                      rows={3}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
-                      placeholder="VD: Màn hình bị vỡ, cảm ứng không hoạt động..."
+                      rows={2}
+                      className="w-full px-3 py-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                      placeholder="Mô tả tìn trạng hư hỏng..."
                       required
                     />
                   </div>
+
+                  {/* Row 3: Trạng thái */}
+                  <div className="bg-slate-50 dark:bg-slate-700/30 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 min-w-[70px]">Trạng thái:</span>
+                      <select
+                        name="status"
+                        value={formData.status || "Tiếp nhận"}
+                        onChange={handleInputChange}
+                        className={`flex-1 px-3 py-1.5 border-2 rounded-lg text-sm font-bold transition-all ${formData.status === "Tiếp nhận" ? "border-blue-300 text-blue-700 bg-blue-50" :
+                          formData.status === "Sẵn sàng sửa" ? "border-purple-300 text-purple-700 bg-purple-50" :
+                            formData.status === "Đã sửa xong" ? "border-green-300 text-green-700 bg-green-50" :
+                              formData.status === "Trả máy" ? "border-slate-400 text-slate-700 bg-slate-100" :
+                                "border-amber-300 text-amber-700 bg-amber-50"
+                          } dark:bg-slate-800`}
+                      >
+                        <option value="Tiếp nhận">🆕 Tiếp nhận</option>
+                        <option value="Chờ báo giá">📋 Chờ báo giá</option>
+                        <option value="Chờ vật liệu">📦 Chờ vật liệu</option>
+                        <option value="Sẵn sàng sửa">✅ Sẵn sàng sửa</option>
+                        <option value="Đang sửa">🔧 Đang sửa</option>
+                        <option value="Đã sửa xong">✨ Đã sửa xong</option>
+                        <option value="Trả máy">📤 Trả máy</option>
+                        <option value="Đã hủy">❌ Đã hủy</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Card ngang: Trạng thái & Kỹ thuật viên */}
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-amber-200 dark:border-amber-700 shadow-sm">
-                  <label className="block text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1.5 flex items-center gap-1.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                      />
-                    </svg>
-                    Trạng thái phiếu
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status || "Tiếp nhận"}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border-2 border-amber-300 dark:border-amber-700 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium transition-all"
-                  >
-                    <option value="Tiếp nhận">🆕 Tiếp nhận</option>
-                    <option value="Chờ báo giá">📋 Chờ báo giá</option>
-                    <option value="Chờ vật liệu">📦 Chờ vật liệu</option>
-                    <option value="Sẵn sàng sửa">✅ Sẵn sàng sửa</option>
-                    <option value="Đang sửa">🔧 Đang sửa</option>
-                    <option value="Đã sửa xong">✨ Đã sửa xong</option>
-                    <option value="Trả máy">📤 Trả máy</option>
-                    <option value="Đã hủy">❌ Đã hủy</option>
-                  </select>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-5 border-2 border-cyan-200 dark:border-cyan-700 shadow-md hover:shadow-lg transition-shadow">
-                  <label className="block text-xs sm:text-sm font-semibold text-cyan-800 dark:text-cyan-300 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                    Kỹ thuật viên
-                  </label>
-                  <input
-                    name="technicianName"
-                    type="text"
-                    value={formData.technicianName || ""}
-                    onChange={handleInputChange}
-                    placeholder="Nhập tên KTV"
-                    className="w-full px-4 py-2.5 border-2 border-cyan-300 dark:border-cyan-700 rounded-lg focus:ring-2 focus:ring-cyan-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Card: Phí dịch vụ */}
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800 shadow-sm">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                  <svg
-                    className="w-5 h-5 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+              {/* Card Merged: Hẹn trả & Ghi chú */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                  <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Chi phí dịch vụ
+                  Hẹn trả & Ghi chú
                 </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Phí công (VNĐ)
-                    </label>
-                    <input
-                      type="text"
-                      name="laborCost"
-                      placeholder="100.000"
-                      value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Tiền đặt cọc (VNĐ)
-                    </label>
-                    <input
-                      type="text"
-                      name="depositAmount"
-                      placeholder="0"
-                      value={
-                        formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""
-                      }
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Thời gian hẹn trả
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="dueDate"
-                      value={formData.dueDate?.slice(0, 16) || ""}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Ghi chú nội bộ
-                    </label>
-                    <textarea
-                      name="notes"
-                      placeholder="VD: Khách yêu cầu kiểm tra thêm..."
-                      value={formData.notes || ""}
-                      onChange={handleInputChange}
-                      rows={2}
-                      className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
-                    />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Thời gian hẹn trả
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="dueDate"
+                        value={formData.dueDate?.slice(0, 16) || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Ghi chú nội bộ
+                      </label>
+                      <input
+                        type="text"
+                        name="notes"
+                        placeholder="Ghi chú..."
+                        value={formData.notes || ""}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -988,111 +955,109 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       Vật liệu sử dụng
                     </h3>
 
-                    {/* Input thêm vật liệu */}
-                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 mb-3 border-2 border-indigo-200 dark:border-indigo-700">
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="🔍 Tìm vật liệu..."
-                            value={materialSearch}
-                            onChange={(e) => {
-                              setMaterialSearch(e.target.value);
-                              setShowMaterialDropdown(true);
-                              setMaterialInput((prev) => ({
-                                ...prev,
-                                materialName: e.target.value,
-                              }));
-                            }}
-                            onFocus={() => setShowMaterialDropdown(true)}
-                            onBlur={() => setTimeout(() => setShowMaterialDropdown(false), 200)}
-                            className="w-full px-4 py-2.5 border-2 border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all"
-                          />
-                          {showMaterialDropdown && filteredMaterials.length > 0 && (
-                            <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-indigo-300 dark:border-indigo-600 rounded-lg shadow-2xl max-h-60 overflow-y-auto">
-                              {filteredMaterials.map((material: any) => {
-                                const stock = material.stock || 0;
-                                const isOutOfStock = stock <= 0;
-                                return (
-                                  <button
-                                    key={material.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setMaterialInput({
-                                        materialName: material.name,
-                                        quantity: 1,
-                                        price: material.retailPrice || material.purchasePrice || 0,
-                                      });
-                                      setMaterialSearch(material.name);
-                                      setShowMaterialDropdown(false);
-                                    }}
-                                    className={`w-full text-left px-4 py-3 border-b dark:border-slate-700 last:border-0 transition-colors ${isOutOfStock
-                                      ? "bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30"
-                                      : "hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                                      }`}
-                                  >
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100 flex justify-between items-center">
-                                      <span>{material.name}</span>
-                                      <span
-                                        className={`text-xs px-2 py-0.5 rounded-full ${isOutOfStock
-                                          ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
-                                          : stock < 5
-                                            ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400"
-                                            : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                          }`}
-                                      >
-                                        {isOutOfStock ? "⚠️ Hết hàng" : `Tồn: ${stock}`}
-                                      </span>
-                                    </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 flex justify-between mt-0.5">
-                                      <span>SKU: {material.sku}</span>
-                                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                                        {formatCurrency(
-                                          material.retailPrice || material.purchasePrice || 0
-                                        )}
-                                      </span>
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <input
-                            type="number"
-                            placeholder="SL"
-                            value={materialInput.quantity}
-                            min="1"
-                            onChange={(e) =>
-                              setMaterialInput((prev) => ({
-                                ...prev,
-                                quantity: parseInt(e.target.value) || 1,
-                              }))
-                            }
-                            className="px-3 py-2.5 border-2 border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Giá (VNĐ)"
-                            value={materialInput.price ? formatCurrencyInput(materialInput.price) : ""}
-                            onChange={(e) =>
-                              setMaterialInput((prev) => ({
-                                ...prev,
-                                price: parseCurrencyInput(e.target.value),
-                              }))
-                            }
-                            className="col-span-2 px-3 py-2.5 border-2 border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleAddMaterial}
-                          className="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/30 transition-all"
-                        >
-                          <PlusIcon className="w-5 h-5" /> Thêm vật liệu
-                        </button>
+                    {/* Input thêm vật liệu - Compact Design */}
+                    <div className="grid grid-cols-12 gap-2 mb-3 items-start relative">
+                      {/* 1. Material Search Input */}
+                      <div className="col-span-6 relative">
+                        <input
+                          type="text"
+                          placeholder="🔍 Tìm vật liệu..."
+                          value={materialSearch}
+                          onChange={(e) => {
+                            setMaterialSearch(e.target.value);
+                            setShowMaterialDropdown(true);
+                            setMaterialInput((prev) => ({
+                              ...prev,
+                              materialName: e.target.value,
+                            }));
+                          }}
+                          onFocus={() => setShowMaterialDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowMaterialDropdown(false), 200)}
+                          className="w-full px-3 py-2 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                        />
+
+                        {/* Dropdown Results */}
+                        {showMaterialDropdown && filteredMaterials.length > 0 && (
+                          <div className="absolute z-30 w-[150%] left-0 mt-1 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                            {filteredMaterials.map((material: any) => {
+                              const stock = material.stock || 0;
+                              const isOutOfStock = stock <= 0;
+                              return (
+                                <button
+                                  key={material.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setMaterialInput({
+                                      materialName: material.name,
+                                      quantity: 1,
+                                      price: material.retailPrice || material.purchasePrice || 0,
+                                    });
+                                    setMaterialSearch(material.name);
+                                    setShowMaterialDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 border-b dark:border-slate-700 last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors ${isOutOfStock ? "opacity-75" : ""
+                                    }`}
+                                >
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-slate-900 dark:text-slate-100">{material.name}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isOutOfStock
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-green-100 text-green-700"
+                                      }`}>
+                                      {isOutOfStock ? "Hết" : `Tồn:${stock}`}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-xs text-slate-500 mt-0.5">
+                                    <span>{material.sku}</span>
+                                    <span className="text-indigo-600 font-medium">
+                                      {formatCurrency(material.retailPrice || 0)}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
+
+                      {/* 2. Quantity Input */}
+                      <input
+                        type="number"
+                        placeholder="SL"
+                        value={materialInput.quantity}
+                        min="1"
+                        onChange={(e) =>
+                          setMaterialInput((prev) => ({
+                            ...prev,
+                            quantity: parseInt(e.target.value) || 1,
+                          }))
+                        }
+                        className="col-span-2 px-2 py-2 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all text-sm text-center"
+                      />
+
+                      {/* 3. Price Input */}
+                      <input
+                        type="text"
+                        placeholder="Giá"
+                        value={materialInput.price ? formatCurrencyInput(materialInput.price) : ""}
+                        onChange={(e) =>
+                          setMaterialInput((prev) => ({
+                            ...prev,
+                            price: parseCurrencyInput(e.target.value),
+                          }))
+                        }
+                        className="col-span-3 px-2 py-2 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 transition-all text-sm text-right"
+                      />
+
+                      {/* 4. Add Button */}
+                      <button
+                        type="button"
+                        onClick={handleAddMaterial}
+                        className="col-span-1 h-[38px] flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors"
+                        title="Thêm vật liệu"
+                      >
+                        <PlusIcon className="w-5 h-5" />
+                      </button>
                     </div>
 
                     {/* Cảnh báo thiếu hàng */}
@@ -1400,244 +1365,171 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               </div>
 
               {/* Card: Báo giá (chỉ hiện khi có vật liệu) */}
-              {(formData.materialsUsed || []).length > 0 && (
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-amber-200 dark:border-amber-700 shadow-sm">
-                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-amber-900 dark:text-amber-100">
-                    <svg
-                      className="w-5 h-5 text-amber-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                      />
+              {/* Card Merged: Chi phí & Thanh toán - Consolidated Design */}
+              <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-lg border border-emerald-200 dark:border-emerald-700 shadow-sm overflow-hidden">
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 border-b border-emerald-100 dark:border-emerald-800 flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    💰 Báo giá
+                    Chi phí & Thanh toán
                     {materialShortageInfo.hasShortage && (
-                      <span className="ml-2 text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded-full">
-                        ⚠️ Thiếu hàng
+                      <span className="ml-2 text-[10px] px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded-full font-extrabold uppercase tracking-wide">
+                        Thiếu Hàng
                       </span>
                     )}
                   </h3>
+                </div>
 
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600 dark:text-slate-400">Vật liệu:</span>
-                      <span className="font-medium text-slate-800 dark:text-slate-200">
-                        {formatCurrency(materialsTotal)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600 dark:text-slate-400">Công sửa chữa:</span>
-                      <span className="font-medium text-slate-800 dark:text-slate-200">
-                        {formatCurrency(formData.laborCost || 0)}
-                      </span>
-                    </div>
-                    <div className="border-t border-amber-200 dark:border-amber-700 pt-2 mt-2">
-                      <div className="flex justify-between font-bold text-base">
-                        <span className="text-amber-800 dark:text-amber-300">TỔNG BÁO GIÁ:</span>
-                        <span className="text-amber-600 dark:text-amber-400">
-                          {formatCurrency(total)}
+                <div className="p-4 space-y-4">
+                  {/* 1. Cost Breakdown Grid */}
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                    {/* Left: Materials & Outsourcing (Read Only) */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1">
+                        <span className="text-slate-600 dark:text-slate-400">Vật liệu ({formData.materialsUsed?.length || 0}):</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(materialsTotal)}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1">
+                        <span className="text-slate-600 dark:text-slate-400">Gia công ({formData.outsourcingItems?.length || 0}):</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {formatCurrency((formData.outsourcingItems || []).reduce((sum, item) => sum + item.total, 0))}
                         </span>
                       </div>
                     </div>
-                    {(formData.depositAmount || 0) > 0 && (
-                      <>
-                        <div className="flex justify-between text-green-600 dark:text-green-400">
-                          <span>Đã đặt cọc:</span>
-                          <span>-{formatCurrency(formData.depositAmount || 0)}</span>
-                        </div>
-                        <div className="flex justify-between font-bold">
-                          <span className="text-slate-700 dark:text-slate-300">Còn lại:</span>
-                          <span className="text-rose-600 dark:text-rose-400">
-                            {formatCurrency(remaining)}
-                          </span>
-                        </div>
-                      </>
-                    )}
+
+                    {/* Right: Labor & Deposit (Inputs) */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-slate-600 dark:text-slate-400">Phí công:</label>
+                        <input
+                          type="text"
+                          name="laborCost"
+                          placeholder="0"
+                          value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
+                          onChange={handleInputChange}
+                          className="w-28 px-2 py-1 text-right text-sm border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <label className="text-slate-600 dark:text-slate-400">Đã cọc:</label>
+                        <input
+                          type="text"
+                          name="depositAmount"
+                          placeholder="0"
+                          value={formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""}
+                          onChange={handleInputChange}
+                          className="w-28 px-2 py-1 text-right text-sm border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium text-yellow-600 dark:text-yellow-400"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Checkbox khách duyệt báo giá */}
-                  <div className="mt-4 pt-3 border-t border-amber-200 dark:border-amber-700">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.quoteApproved || false}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            quoteApproved: e.target.checked,
-                            quoteApprovedAt: e.target.checked
-                              ? new Date().toISOString()
-                              : undefined,
-                          }))
-                        }
-                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                      />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        ✅ Khách đã đồng ý báo giá
-                      </span>
-                    </label>
-                    {formData.quoteApproved && formData.quoteApprovedAt && (
-                      <p className="text-xs text-green-600 dark:text-green-400 mt-1 ml-6">
-                        Duyệt lúc: {new Date(formData.quoteApprovedAt).toLocaleString("vi-VN")}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Nút In báo giá */}
-                  <button
-                    type="button"
-                    onClick={() => setShowQuotePrint(true)}
-                    className="mt-4 w-full px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 shadow-md transition-all"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                      />
-                    </svg>
-                    🖨️ In báo giá
-                  </button>
-                </div>
-              )}
-
-              {/* Card: Thanh toán */}
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-emerald-200 dark:border-emerald-700 shadow-sm">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-emerald-900 dark:text-emerald-100">
-                  <svg
-                    className="w-5 h-5 text-emerald-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                    />
-                  </svg>
-                  Thanh toán
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* 2. Grand Total Highlight */}
+                  <div className="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800/50 flex justify-between items-center">
                     <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
-                        Trạng thái thanh toán
-                      </label>
+                      <div className="text-xs text-emerald-800 dark:text-emerald-400 font-bold uppercase tracking-wider">Tổng cộng</div>
+                      <div className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 leading-none mt-1">
+                        {formatCurrency(total)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-rose-800 dark:text-rose-400 font-bold uppercase tracking-wider">Khách cần trả</div>
+                      <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 leading-none mt-1">
+                        {formatCurrency(remaining)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Payment Controls - Compact */}
+                  <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-700/30 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Trạng thái thanh toán</label>
                       <select
                         name="paymentStatus"
                         value={formData.paymentStatus || "unpaid"}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2.5 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium transition-all"
+                        className="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium"
                       >
                         <option value="unpaid">Chưa thanh toán</option>
                         <option value="partial">Thanh toán một phần</option>
-                        <option value="paid">Đã thanh toán đầy đủ</option>
+                        <option value="paid">Đã thanh toán hết</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
-                        Phương thức thanh toán{" "}
-                        {(formData.depositAmount && Number(formData.depositAmount) > 0) ||
-                          formData.paymentStatus === "paid" ||
-                          formData.paymentStatus === "partial" ? (
-                          <span className="text-red-500">*</span>
-                        ) : null}
-                      </label>
-                      <select
-                        name="paymentMethod"
-                        value={formData.paymentMethod || ""}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2.5 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium transition-all"
-                      >
-                        <option value="">-- Chọn --</option>
-                        <option value="cash">💵 Tiền mặt</option>
-                        <option value="transfer">🏦 Chuyển khoản</option>
-                        <option value="card">💳 Thẻ</option>
-                      </select>
-                    </div>
+
+                    {formData.paymentStatus === "partial" ? (
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Số tiền đã trả</label>
+                        <input
+                          type="text"
+                          name="partialPaymentAmount"
+                          placeholder="0"
+                          value={formData.partialPaymentAmount ? formatCurrencyInput(formData.partialPaymentAmount) : ""}
+                          onChange={(e) => setFormData(prev => ({ ...prev, partialPaymentAmount: parseCurrencyInput(e.target.value) }))}
+                          className="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-right font-medium"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Phương thức</label>
+                        <select
+                          name="paymentMethod"
+                          value={formData.paymentMethod || ""}
+                          onChange={handleInputChange}
+                          className="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                        >
+                          <option value="">-- Chọn --</option>
+                          <option value="cash">💵 Tiền mặt</option>
+                          <option value="bank">🏦 Chuyển khoản</option>
+                          <option value="card">💳 Thẻ</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
 
-                  {formData.paymentStatus === "partial" && (
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
-                        Số tiền thanh toán một phần (VNĐ)
-                      </label>
-                      <input
-                        type="text"
-                        name="partialPaymentAmount"
-                        placeholder="0"
-                        value={
-                          formData.partialPaymentAmount
-                            ? formatCurrencyInput(formData.partialPaymentAmount)
-                            : ""
-                        }
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            partialPaymentAmount: parseCurrencyInput(e.target.value),
-                          }))
-                        }
-                        className="w-full px-4 py-2.5 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+                  {/* 4. Footer: Approve & Print */}
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none group">
+                      <div className="relative flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.quoteApproved || false}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              quoteApproved: e.target.checked,
+                              quoteApprovedAt: e.target.checked ? new Date().toISOString() : undefined,
+                            }))
+                          }
+                          className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-300 group-hover:text-amber-600 transition-colors">Khách duyệt giá</span>
+                        {formData.quoteApproved && formData.quoteApprovedAt && (
+                          <span className="text-[10px] text-green-600 dark:text-green-400 block -mt-0.5">
+                            {new Date(formData.quoteApprovedAt).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                    </label>
 
-              {/* Card: Tổng kết thanh toán */}
-              <div className="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 rounded-lg p-3 sm:p-4 shadow-lg">
-                <h3 className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Tổng kết
-                </h3>
-                <div className="space-y-2 text-white">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-blue-100">Tổng vật liệu:</span>
-                    <span className="font-semibold">{formatCurrency(materialsTotal)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuotePrint(true)}
+                      className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 text-amber-700 dark:text-amber-400 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" />
+                      </svg>
+                      In Báo Giá
+                    </button>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-blue-100">Phí công:</span>
-                    <span className="font-semibold">{formatCurrency(formData.laborCost || 0)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-blue-100">Đặt cọc:</span>
-                    <span className="font-semibold text-yellow-300">
-                      {formatCurrency(formData.depositAmount || 0)}
-                    </span>
-                  </div>
-                  <div className="h-px bg-white/30 my-3"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">TỔNG CỘNG:</span>
-                    <span className="text-2xl sm:text-3xl font-bold">{formatCurrency(total)}</span>
-                  </div>
-                  {(formData.depositAmount || 0) > 0 && (
-                    <div className="flex justify-between items-center pt-2 border-t border-white/30">
-                      <span className="text-sm text-blue-100">Còn lại:</span>
-                      <span className="text-xl font-bold text-yellow-300">
-                        {formatCurrency(remaining)}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
           </div>
+
 
           {/* Footer Sticky - Action Buttons */}
           <div className="sticky bottom-0 bg-white dark:bg-slate-900 pt-4 pb-4 px-4 sm:px-6 border-t-2 border-slate-200 dark:border-slate-700 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
@@ -1681,289 +1573,292 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
             </div>
           </div>
         </form>
-      </div>
+      </div >
 
       {/* Modal thêm khách hàng mới */}
-      {showAddCustomerModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 flex justify-between items-center rounded-t-2xl">
-              <h3 className="text-xl font-bold text-white">Thêm khách hàng mới</h3>
-              <button
-                onClick={() => {
-                  setShowAddCustomerModal(false);
-                  setNewCustomerData({
-                    name: "",
-                    phone: "",
-                    email: "",
-                    address: "",
-                  });
-                }}
-                className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
-                type="button"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Họ và tên <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newCustomerData.name}
-                  onChange={(e) =>
-                    setNewCustomerData((prev) => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  placeholder="Nguyễn Văn A"
-                  autoFocus
-                />
+      {
+        showAddCustomerModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md">
+              <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 flex justify-between items-center rounded-t-2xl">
+                <h3 className="text-xl font-bold text-white">Thêm khách hàng mới</h3>
+                <button
+                  onClick={() => {
+                    setShowAddCustomerModal(false);
+                    setNewCustomerData({
+                      name: "",
+                      phone: "",
+                      email: "",
+                      address: "",
+                    });
+                  }}
+                  className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+                  type="button"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Số điện thoại <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={newCustomerData.phone}
-                  onChange={(e) =>
-                    setNewCustomerData((prev) => ({
-                      ...prev,
-                      phone: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  placeholder="0901234567"
-                />
-              </div>
-            </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomerData.name}
+                    onChange={(e) =>
+                      setNewCustomerData((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    placeholder="Nguyễn Văn A"
+                    autoFocus
+                  />
+                </div>
 
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-3 rounded-b-2xl">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddCustomerModal(false);
-                  setNewCustomerData({
-                    name: "",
-                    phone: "",
-                    email: "",
-                    address: "",
-                  });
-                }}
-                className="flex-1 px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleAddNewCustomer}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <PlusIcon className="w-5 h-5" />
-                Thêm khách hàng
-              </button>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Số điện thoại <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={newCustomerData.phone}
+                    onChange={(e) =>
+                      setNewCustomerData((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    placeholder="0901234567"
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-3 rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddCustomerModal(false);
+                    setNewCustomerData({
+                      name: "",
+                      phone: "",
+                      email: "",
+                      address: "",
+                    });
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddNewCustomer}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  Thêm khách hàng
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal In báo giá */}
-      {showQuotePrint && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-bold text-slate-800">🖨️ Xem trước Báo giá</h3>
-              <button
-                onClick={() => setShowQuotePrint(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Nội dung báo giá để in */}
-            <div id="quote-print-content" className="p-6 bg-white text-black">
-              {/* Header công ty */}
-              <div className="text-center mb-6 border-b-2 border-slate-300 pb-4">
-                <h1 className="text-2xl font-bold text-slate-800">PIN CORP</h1>
-                <p className="text-sm text-slate-600">Chuyên sửa chữa Pin - Laptop - Điện thoại</p>
-                <p className="text-xs text-slate-500 mt-1">Hotline: 0123.456.789</p>
+      {
+        showQuotePrint && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-bold text-slate-800">🖨️ Xem trước Báo giá</h3>
+                <button
+                  onClick={() => setShowQuotePrint(false)}
+                  className="p-2 hover:bg-slate-100 rounded-lg"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Tiêu đề báo giá */}
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-bold text-amber-600">BÁO GIÁ SỬA CHỮA</h2>
-                <p className="text-sm text-slate-500">
-                  Ngày: {new Date().toLocaleDateString("vi-VN")}
-                </p>
-                <p className="text-sm text-slate-500">Mã phiếu: {initialOrder?.id || "Mới"}</p>
-              </div>
+              {/* Nội dung báo giá để in */}
+              <div id="quote-print-content" className="p-6 bg-white text-black">
+                {/* Header công ty */}
+                <div className="text-center mb-6 border-b-2 border-slate-300 pb-4">
+                  <h1 className="text-2xl font-bold text-slate-800">PIN CORP</h1>
+                  <p className="text-sm text-slate-600">Chuyên sửa chữa Pin - Laptop - Điện thoại</p>
+                  <p className="text-xs text-slate-500 mt-1">Hotline: 0123.456.789</p>
+                </div>
 
-              {/* Thông tin khách hàng */}
-              <div className="mb-6 p-4 bg-slate-50 rounded-lg">
-                <h3 className="font-semibold text-slate-700 mb-2">👤 KHÁCH HÀNG</h3>
-                <p className="text-sm">
-                  <strong>Họ tên:</strong> {formData.customerName}
-                </p>
-                <p className="text-sm">
-                  <strong>SĐT:</strong> {formData.customerPhone}
-                </p>
-              </div>
+                {/* Tiêu đề báo giá */}
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-bold text-amber-600">BÁO GIÁ SỬA CHỮA</h2>
+                  <p className="text-sm text-slate-500">
+                    Ngày: {new Date().toLocaleDateString("vi-VN")}
+                  </p>
+                  <p className="text-sm text-slate-500">Mã phiếu: {initialOrder?.id || "Mới"}</p>
+                </div>
 
-              {/* Thông tin thiết bị */}
-              <div className="mb-6 p-4 bg-slate-50 rounded-lg">
-                <h3 className="font-semibold text-slate-700 mb-2">📱 THIẾT BỊ</h3>
-                <p className="text-sm">
-                  <strong>Tên thiết bị:</strong> {formData.deviceName || "N/A"}
-                </p>
-                <p className="text-sm">
-                  <strong>Tình trạng:</strong> {formData.issueDescription}
-                </p>
-              </div>
-
-              {/* Bảng chi tiết báo giá */}
-              <div className="mb-6">
-                <h3 className="font-semibold text-slate-700 mb-2">📋 CHI TIẾT BÁO GIÁ</h3>
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100">
-                      <th className="border border-slate-300 px-3 py-2 text-left">Hạng mục</th>
-                      <th className="border border-slate-300 px-3 py-2 text-center">SL</th>
-                      <th className="border border-slate-300 px-3 py-2 text-right">Đơn giá</th>
-                      <th className="border border-slate-300 px-3 py-2 text-right">Thành tiền</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(formData.materialsUsed || []).map((m, i) => (
-                      <tr key={i}>
-                        <td className="border border-slate-300 px-3 py-2">{m.materialName}</td>
-                        <td className="border border-slate-300 px-3 py-2 text-center">
-                          {m.quantity}
-                        </td>
-                        <td className="border border-slate-300 px-3 py-2 text-right">
-                          {formatCurrency(m.price)}
-                        </td>
-                        <td className="border border-slate-300 px-3 py-2 text-right">
-                          {formatCurrency(m.quantity * m.price)}
-                        </td>
-                      </tr>
-                    ))}
-                    {(formData.laborCost || 0) > 0 && (
-                      <tr>
-                        <td className="border border-slate-300 px-3 py-2">Công sửa chữa</td>
-                        <td className="border border-slate-300 px-3 py-2 text-center">1</td>
-                        <td className="border border-slate-300 px-3 py-2 text-right">
-                          {formatCurrency(formData.laborCost || 0)}
-                        </td>
-                        <td className="border border-slate-300 px-3 py-2 text-right">
-                          {formatCurrency(formData.laborCost || 0)}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-amber-50 font-bold">
-                      <td colSpan={3} className="border border-slate-300 px-3 py-2 text-right">
-                        TỔNG CỘNG:
-                      </td>
-                      <td className="border border-slate-300 px-3 py-2 text-right text-amber-600">
-                        {formatCurrency(total)}
-                      </td>
-                    </tr>
-                    {(formData.depositAmount || 0) > 0 && (
-                      <>
-                        <tr>
-                          <td
-                            colSpan={3}
-                            className="border border-slate-300 px-3 py-2 text-right text-green-600"
-                          >
-                            Đặt cọc:
-                          </td>
-                          <td className="border border-slate-300 px-3 py-2 text-right text-green-600">
-                            -{formatCurrency(formData.depositAmount || 0)}
-                          </td>
-                        </tr>
-                        <tr className="font-bold">
-                          <td colSpan={3} className="border border-slate-300 px-3 py-2 text-right">
-                            Còn lại:
-                          </td>
-                          <td className="border border-slate-300 px-3 py-2 text-right text-rose-600">
-                            {formatCurrency(remaining)}
-                          </td>
-                        </tr>
-                      </>
-                    )}
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Cảnh báo thiếu hàng */}
-              {materialShortageInfo.hasShortage && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h3 className="font-semibold text-red-700 mb-2">⚠️ LƯU Ý - VẬT LIỆU THIẾU</h3>
-                  <ul className="text-sm text-red-600">
-                    {materialShortageInfo.shortages.map((s, i) => (
-                      <li key={i}>
-                        • {s.materialName}: thiếu {s.shortage} (đang đặt hàng)
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-red-500 mt-2 italic">
-                    Thời gian chờ hàng: 2-5 ngày làm việc
+                {/* Thông tin khách hàng */}
+                <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+                  <h3 className="font-semibold text-slate-700 mb-2">👤 KHÁCH HÀNG</h3>
+                  <p className="text-sm">
+                    <strong>Họ tên:</strong> {formData.customerName}
+                  </p>
+                  <p className="text-sm">
+                    <strong>SĐT:</strong> {formData.customerPhone}
                   </p>
                 </div>
-              )}
 
-              {/* Ghi chú */}
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg text-sm">
-                <h3 className="font-semibold text-blue-700 mb-2">📌 GHI CHÚ</h3>
-                <ul className="text-blue-600 space-y-1">
-                  <li>• Báo giá có hiệu lực 7 ngày kể từ ngày lập</li>
-                  <li>• Yêu cầu đặt cọc 50% để tiến hành sửa chữa</li>
-                  <li>• Bảo hành: 3-6 tháng tùy loại linh kiện</li>
-                  <li>• Miễn phí kiểm tra nếu không sửa</li>
-                </ul>
+                {/* Thông tin thiết bị */}
+                <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+                  <h3 className="font-semibold text-slate-700 mb-2">📱 THIẾT BỊ</h3>
+                  <p className="text-sm">
+                    <strong>Tên thiết bị:</strong> {formData.deviceName || "N/A"}
+                  </p>
+                  <p className="text-sm">
+                    <strong>Tình trạng:</strong> {formData.issueDescription}
+                  </p>
+                </div>
+
+                {/* Bảng chi tiết báo giá */}
+                <div className="mb-6">
+                  <h3 className="font-semibold text-slate-700 mb-2">📋 CHI TIẾT BÁO GIÁ</h3>
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        <th className="border border-slate-300 px-3 py-2 text-left">Hạng mục</th>
+                        <th className="border border-slate-300 px-3 py-2 text-center">SL</th>
+                        <th className="border border-slate-300 px-3 py-2 text-right">Đơn giá</th>
+                        <th className="border border-slate-300 px-3 py-2 text-right">Thành tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(formData.materialsUsed || []).map((m, i) => (
+                        <tr key={i}>
+                          <td className="border border-slate-300 px-3 py-2">{m.materialName}</td>
+                          <td className="border border-slate-300 px-3 py-2 text-center">
+                            {m.quantity}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-right">
+                            {formatCurrency(m.price)}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-right">
+                            {formatCurrency(m.quantity * m.price)}
+                          </td>
+                        </tr>
+                      ))}
+                      {(formData.laborCost || 0) > 0 && (
+                        <tr>
+                          <td className="border border-slate-300 px-3 py-2">Công sửa chữa</td>
+                          <td className="border border-slate-300 px-3 py-2 text-center">1</td>
+                          <td className="border border-slate-300 px-3 py-2 text-right">
+                            {formatCurrency(formData.laborCost || 0)}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-right">
+                            {formatCurrency(formData.laborCost || 0)}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-amber-50 font-bold">
+                        <td colSpan={3} className="border border-slate-300 px-3 py-2 text-right">
+                          TỔNG CỘNG:
+                        </td>
+                        <td className="border border-slate-300 px-3 py-2 text-right text-amber-600">
+                          {formatCurrency(total)}
+                        </td>
+                      </tr>
+                      {(formData.depositAmount || 0) > 0 && (
+                        <>
+                          <tr>
+                            <td
+                              colSpan={3}
+                              className="border border-slate-300 px-3 py-2 text-right text-green-600"
+                            >
+                              Đặt cọc:
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 text-right text-green-600">
+                              -{formatCurrency(formData.depositAmount || 0)}
+                            </td>
+                          </tr>
+                          <tr className="font-bold">
+                            <td colSpan={3} className="border border-slate-300 px-3 py-2 text-right">
+                              Còn lại:
+                            </td>
+                            <td className="border border-slate-300 px-3 py-2 text-right text-rose-600">
+                              {formatCurrency(remaining)}
+                            </td>
+                          </tr>
+                        </>
+                      )}
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Cảnh báo thiếu hàng */}
+                {materialShortageInfo.hasShortage && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 className="font-semibold text-red-700 mb-2">⚠️ LƯU Ý - VẬT LIỆU THIẾU</h3>
+                    <ul className="text-sm text-red-600">
+                      {materialShortageInfo.shortages.map((s, i) => (
+                        <li key={i}>
+                          • {s.materialName}: thiếu {s.shortage} (đang đặt hàng)
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-red-500 mt-2 italic">
+                      Thời gian chờ hàng: 2-5 ngày làm việc
+                    </p>
+                  </div>
+                )}
+
+                {/* Ghi chú */}
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg text-sm">
+                  <h3 className="font-semibold text-blue-700 mb-2">📌 GHI CHÚ</h3>
+                  <ul className="text-blue-600 space-y-1">
+                    <li>• Báo giá có hiệu lực 7 ngày kể từ ngày lập</li>
+                    <li>• Yêu cầu đặt cọc 50% để tiến hành sửa chữa</li>
+                    <li>• Bảo hành: 3-6 tháng tùy loại linh kiện</li>
+                    <li>• Miễn phí kiểm tra nếu không sửa</li>
+                  </ul>
+                </div>
+
+                {/* Chữ ký */}
+                <div className="grid grid-cols-2 gap-8 mt-8 pt-4 border-t text-center text-sm">
+                  <div>
+                    <p className="font-semibold text-slate-700">Khách hàng</p>
+                    <p className="text-slate-500 text-xs mt-1">(Ký, ghi rõ họ tên)</p>
+                    <div className="h-16"></div>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-700">Nhân viên</p>
+                    <p className="text-slate-500 text-xs mt-1">(Ký, ghi rõ họ tên)</p>
+                    <div className="h-16"></div>
+                    <p className="font-medium">{formData.technicianName || currentUser?.name}</p>
+                  </div>
+                </div>
               </div>
 
-              {/* Chữ ký */}
-              <div className="grid grid-cols-2 gap-8 mt-8 pt-4 border-t text-center text-sm">
-                <div>
-                  <p className="font-semibold text-slate-700">Khách hàng</p>
-                  <p className="text-slate-500 text-xs mt-1">(Ký, ghi rõ họ tên)</p>
-                  <div className="h-16"></div>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-700">Nhân viên</p>
-                  <p className="text-slate-500 text-xs mt-1">(Ký, ghi rõ họ tên)</p>
-                  <div className="h-16"></div>
-                  <p className="font-medium">{formData.technicianName || currentUser?.name}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer buttons */}
-            <div className="flex gap-3 p-4 border-t bg-slate-50">
-              <button
-                onClick={() => setShowQuotePrint(false)}
-                className="flex-1 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-semibold transition-colors"
-              >
-                Đóng
-              </button>
-              <button
-                onClick={() => {
-                  const printContent = document.getElementById("quote-print-content");
-                  if (printContent) {
-                    const printWindow = window.open("", "_blank");
-                    if (printWindow) {
-                      printWindow.document.write(`
+              {/* Footer buttons */}
+              <div className="flex gap-3 p-4 border-t bg-slate-50">
+                <button
+                  onClick={() => setShowQuotePrint(false)}
+                  className="flex-1 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-semibold transition-colors"
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={() => {
+                    const printContent = document.getElementById("quote-print-content");
+                    if (printContent) {
+                      const printWindow = window.open("", "_blank");
+                      if (printWindow) {
+                        printWindow.document.write(`
                         <html>
                           <head>
                             <title>Báo giá - ${formData.customerName}</title>
@@ -1980,27 +1875,28 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                           <body>${printContent.innerHTML}</body>
                         </html>
                       `);
-                      printWindow.document.close();
-                      printWindow.print();
+                        printWindow.document.close();
+                        printWindow.print();
+                      }
                     }
-                  }
-                }}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                  />
-                </svg>
-                In báo giá
-              </button>
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                    />
+                  </svg>
+                  In báo giá
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </div>
   );
 };

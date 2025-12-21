@@ -25,6 +25,15 @@ const formatDateTime = (date: string | Date) => {
     .padStart(2, "0")} ${formatDate(d)}`;
 };
 
+const formatUserName = (name: string | undefined) => {
+  if (!name) return "";
+  if (name.includes("@")) {
+    const [localPart] = name.split("@");
+    return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+  }
+  return name;
+};
+
 export default function RepairInvoiceTemplate({
   repairOrder,
   onClose,
@@ -350,7 +359,7 @@ export default function RepairInvoiceTemplate({
         </div>
         <div>
           <p className="font-bold text-gray-900">Nhân viên</p>
-          <p className="text-[10px] text-gray-800">{repairOrder.technicianName || ""}</p>
+          <p className="text-[10px] text-gray-800">{formatUserName(repairOrder.technicianName)}</p>
           <div className="h-10"></div>
         </div>
       </div>

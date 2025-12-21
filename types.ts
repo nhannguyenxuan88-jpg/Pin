@@ -371,7 +371,9 @@ export type CashTransactionCategory =
   | "utilities"
   | "logistics"
   | "sale_refund"
-  | "other_expense";
+  | "other_expense"
+  | "deposit"
+  | "service_deposit";
 
 export interface CashTransaction {
   id: string;

@@ -88,6 +88,16 @@ const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
     onMove(order.id, newStatus);
   };
 
+  // Helper to format user name (e.g. "lam.tcag@gmail.com" -> "Lam.tcag")
+  const formatUserName = (name: string | undefined) => {
+    if (!name) return "";
+    if (name.includes("@")) {
+      const [localPart] = name.split("@");
+      return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+    }
+    return name;
+  };
+
   return (
     <div
       className={`
@@ -143,7 +153,7 @@ const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
         {order.userName && (
           <div className="flex items-center space-x-2">
             <UserIcon className="w-3 h-3" />
-            <span>{order.userName}</span>
+            <span>{formatUserName(order.userName)}</span>
           </div>
         )}
         <div className="flex items-center space-x-2">
