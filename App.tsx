@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense } from "react";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, IS_OFFLINE_MODE, DEV_AUTH_BYPASS } from "./supabaseClient";
 import { usePinStandaloneContext } from "./contexts/PinProviderStandalone";
@@ -86,6 +86,8 @@ const AppPin: React.FC = () => {
               />
             }
           />
+          {/* Catch-all route: redirect any unmatched routes to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </HashRouter>
     );
@@ -93,7 +95,7 @@ const AppPin: React.FC = () => {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <PinCorpApp onSwitchApp={() => {}} />
+      <PinCorpApp onSwitchApp={() => { }} />
     </Suspense>
   );
 };
