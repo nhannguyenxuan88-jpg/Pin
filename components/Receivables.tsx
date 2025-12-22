@@ -684,7 +684,7 @@ export default function Receivables() {
         <div className="space-y-1">
           <div className="font-semibold text-slate-800 dark:text-slate-100">{row.customerName}</div>
           {row.customerPhone && <div className="text-sm text-slate-500">{row.customerPhone}</div>}
-          <div className="text-xs text-blue-600">{row.title}</div>
+          <div className="text-xs text-sky-400 dark:text-cyan-400">{row.title}</div>
           <div className="text-xs text-slate-500">
             {new Date(row.date).toLocaleDateString("vi-VN")}
           </div>
@@ -704,8 +704,8 @@ export default function Receivables() {
           {row.details.length > 0 && (
             <ul className="space-y-0.5 text-xs">
               {row.details.map((d, i) => (
-                <li key={i} className="text-slate-600 dark:text-slate-400 flex items-start">
-                  <span className="text-blue-500 mr-1">•</span>
+                <li key={i} className="text-slate-700 dark:text-slate-300 flex items-start">
+                  <span className="text-sky-500 dark:text-cyan-400 mr-1">•</span>
                   <span className="flex-1">{d}</span>
                 </li>
               ))}
@@ -752,7 +752,7 @@ export default function Receivables() {
       width: "120px",
       render: (row: Row) => (
         <div className="text-right">
-          <span className="font-bold text-rose-600">{fmt(row.debt)}</span>
+          <span className="font-bold text-red-500 dark:text-red-400">{fmt(row.debt)}</span>
         </div>
       ),
     },
@@ -780,7 +780,7 @@ export default function Receivables() {
       render: (row: SupplierRow) => (
         <div className="space-y-1">
           <div className="font-semibold text-slate-800 dark:text-slate-100">{row.customerName}</div>
-          <div className="text-xs text-blue-600">{row.title}</div>
+          <div className="text-xs text-sky-400 dark:text-cyan-400">{row.title}</div>
           <div className="text-xs text-slate-500">
             {new Date(row.date).toLocaleDateString("vi-VN")}
           </div>
@@ -793,7 +793,7 @@ export default function Receivables() {
       render: (row: SupplierRow) => (
         <div className="space-y-0.5">
           {row.details.map((d, i) => (
-            <div key={i} className="text-sm text-slate-600 dark:text-slate-400">
+            <div key={i} className="text-sm text-slate-700 dark:text-slate-300">
               {d}
             </div>
           ))}
