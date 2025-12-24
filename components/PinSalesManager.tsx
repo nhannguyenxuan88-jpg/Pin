@@ -134,11 +134,10 @@ const NewPinCustomerModal: React.FC<{
               type="submit"
               disabled={!currentUser}
               title={!currentUser ? "Bạn phải đăng nhập để thêm khách hàng" : undefined}
-              className={`font-semibold py-2 px-4 rounded-lg ${
-                currentUser
-                  ? "bg-sky-600 text-white"
-                  : "bg-sky-300 text-white/70 cursor-not-allowed"
-              }`}
+              className={`font-semibold py-2 px-4 rounded-lg ${currentUser
+                ? "bg-sky-600 text-white"
+                : "bg-sky-300 text-white/70 cursor-not-allowed"
+                }`}
             >
               Lưu
             </button>
@@ -211,6 +210,13 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   // Installment (trả góp) state
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [installmentPlan, setInstallmentPlan] = useState<InstallmentPlan | null>(null);
+
+  // Delivery (giao hàng) state
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryPhone, setDeliveryPhone] = useState('');
+  const [deliveryNote, setDeliveryNote] = useState('');
+  const [shippingFee, setShippingFee] = useState(0);
 
   // Customer state
   const [customerSearch, setCustomerSearch] = useState("");
@@ -434,11 +440,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
     const customerDetails = selectedCustomer
       ? {
-          id: selectedCustomer.id,
-          name: selectedCustomer.name,
-          phone: selectedCustomer.phone,
-          address: selectedCustomer.address,
-        }
+        id: selectedCustomer.id,
+        name: selectedCustomer.name,
+        phone: selectedCustomer.phone,
+        address: selectedCustomer.address,
+      }
       : { name: customerSearch || "Khách lẻ" };
 
     // Determine payment status and paid amount based on mode
@@ -471,6 +477,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       dueDate: paymentMode === "debt" ? dueDate || undefined : undefined,
       isInstallment: paymentMode === "installment",
       installmentPlan: paymentMode === "installment" ? installmentPlan || undefined : undefined,
+      // Delivery fields
+      delivery_method: deliveryMethod,
+      delivery_status: deliveryMethod === 'delivery' ? 'pending' : undefined,
+      delivery_address: deliveryMethod === 'delivery' ? deliveryAddress : undefined,
+      delivery_phone: deliveryMethod === 'delivery' ? (deliveryPhone || selectedCustomer?.phone) : undefined,
+      delivery_note: deliveryMethod === 'delivery' ? deliveryNote : undefined,
+      cod_amount: deliveryMethod === 'delivery' ? (total + shippingFee - finalPaidAmount) : undefined,
+      shipping_fee: deliveryMethod === 'delivery' ? shippingFee : undefined,
     };
     handleSale(saleData);
 
@@ -508,11 +522,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     setDiscountType("VND");
     setCustomerSearch("");
     setSelectedCustomer(null);
-    setPaymentMethod(null);
+    setPaymentMethod("cash");
     setPaymentMode("full");
     setPaidAmount(0);
     setDueDate("");
     setInstallmentPlan(null);
+    setDeliveryMethod('pickup');
+    setDeliveryAddress('');
+    setDeliveryPhone('');
+    setDeliveryNote('');
+    setShippingFee(0);
     setMobileView("products");
   };
 
@@ -598,21 +617,19 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         <nav className="-mb-px flex space-x-4 md:space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab("pos")}
-            className={`py-2 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${
-              activeTab === "pos"
-                ? "border-sky-500 text-sky-600 dark:text-sky-400"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-            }`}
+            className={`py-2 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === "pos"
+              ? "border-sky-500 text-sky-600 dark:text-sky-400"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
           >
             🛒 Bán hàng
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`py-2 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${
-              activeTab === "history"
-                ? "border-sky-500 text-sky-600 dark:text-sky-400"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-            }`}
+            className={`py-2 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm ${activeTab === "history"
+              ? "border-sky-500 text-sky-600 dark:text-sky-400"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
           >
             📋 Lịch sử
           </button>
@@ -625,9 +642,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         >
           {/* Product List */}
           <div
-            className={`${
-              mobileView === "products" ? "flex" : "hidden"
-            } lg:flex flex-col bg-white dark:bg-slate-800 p-2 md:p-4 rounded-lg shadow-sm border dark:border-slate-700 h-full ${cartItems.length > 0 ? "lg:col-span-2" : "lg:col-span-1"}`}
+            className={`${mobileView === "products" ? "flex" : "hidden"
+              } lg:flex flex-col bg-white dark:bg-slate-800 p-2 md:p-4 rounded-lg shadow-sm border dark:border-slate-700 h-full ${cartItems.length > 0 ? "lg:col-span-2" : "lg:col-span-1"}`}
           >
             {/* Compact Search for mobile */}
             <input
@@ -642,31 +658,28 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
             <div className="flex gap-1 mb-2 overflow-x-auto pb-1 scrollbar-hide">
               <button
                 onClick={() => setSalesCategory("all")}
-                className={`px-2 py-1 text-[10px] font-medium rounded-full transition-colors whitespace-nowrap ${
-                  salesCategory === "all"
-                    ? "bg-blue-500 text-white"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                }`}
+                className={`px-2 py-1 text-[10px] font-medium rounded-full transition-colors whitespace-nowrap ${salesCategory === "all"
+                  ? "bg-blue-500 text-white"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  }`}
               >
                 Tất cả ({availableItems.length})
               </button>
               <button
                 onClick={() => setSalesCategory("products")}
-                className={`px-2 py-1 text-[10px] font-medium rounded-full transition-colors whitespace-nowrap ${
-                  salesCategory === "products"
-                    ? "bg-green-500 text-white"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                }`}
+                className={`px-2 py-1 text-[10px] font-medium rounded-full transition-colors whitespace-nowrap ${salesCategory === "products"
+                  ? "bg-green-500 text-white"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  }`}
               >
                 📱 TP ({products.filter((p) => p.stock > 0).length})
               </button>
               <button
                 onClick={() => setSalesCategory("materials")}
-                className={`px-2 py-1 text-[10px] font-medium rounded-full transition-colors whitespace-nowrap ${
-                  salesCategory === "materials"
-                    ? "bg-orange-500 text-white"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                }`}
+                className={`px-2 py-1 text-[10px] font-medium rounded-full transition-colors whitespace-nowrap ${salesCategory === "materials"
+                  ? "bg-orange-500 text-white"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  }`}
               >
                 📦 NVL ({(pinMaterials || []).filter((m: PinMaterial) => (m.stock || 0) > 0).length}
                 )
@@ -684,11 +697,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       <div className="md:hidden flex items-center gap-2">
                         {/* Type badge */}
                         <span
-                          className={`w-6 h-6 flex items-center justify-center text-xs rounded flex-shrink-0 ${
-                            (product as any).type === "material"
-                              ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
-                              : "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                          }`}
+                          className={`w-6 h-6 flex items-center justify-center text-xs rounded flex-shrink-0 ${(product as any).type === "material"
+                            ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                            }`}
                         >
                           {(product as any).type === "material" ? "📦" : "📱"}
                         </span>
@@ -705,13 +717,12 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                               )}
                             </span>
                             <span
-                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                product.stock === 0
-                                  ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                  : product.stock <= 5
-                                    ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                                    : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                              }`}
+                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${product.stock === 0
+                                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                : product.stock <= 5
+                                  ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                }`}
                             >
                               {product.stock === 0 ? "Hết" : `Kho: ${product.stock}`}
                             </span>
@@ -751,11 +762,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             {product.name}
                           </h3>
                           <span
-                            className={`px-1 py-0.5 text-[10px] font-medium rounded flex-shrink-0 ${
-                              (product as any).type === "material"
-                                ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
-                                : "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                            }`}
+                            className={`px-1 py-0.5 text-[10px] font-medium rounded flex-shrink-0 ${(product as any).type === "material"
+                              ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                              }`}
                           >
                             {(product as any).type === "material" ? "📦" : "📱"}
                           </span>
@@ -878,9 +888,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           {/* Cart & Checkout - Chỉ hiện khi có sản phẩm trong giỏ */}
           {(cartItems.length > 0 || mobileView === "cart") && (
             <div
-              className={`${
-                mobileView === "cart" ? "flex" : "hidden lg:flex"
-              } w-full lg:w-auto flex-col bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border dark:border-slate-700 mt-6 lg:mt-0 lg:col-span-1 animate-in slide-in-from-right-5 duration-300 h-fit`}
+              className={`${mobileView === "cart" ? "flex" : "hidden lg:flex"
+                } w-full lg:w-auto flex-col bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border dark:border-slate-700 mt-6 lg:mt-0 lg:col-span-1 animate-in slide-in-from-right-5 duration-300 h-fit`}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
@@ -972,11 +981,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             ? "Bạn phải đăng nhập để thêm khách hàng"
                             : "Thêm khách hàng mới"
                         }
-                        className={`px-4 py-2 border-t border-b border-r rounded-r-md h-[42px] flex items-center justify-center transition-colors ${
-                          currentUser
-                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 border-blue-300 dark:border-blue-600"
-                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed border-slate-300 dark:border-slate-600"
-                        }`}
+                        className={`px-4 py-2 border-t border-b border-r rounded-r-md h-[42px] flex items-center justify-center transition-colors ${currentUser
+                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 border-blue-300 dark:border-blue-600"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed border-slate-300 dark:border-slate-600"
+                          }`}
                       >
                         <PlusIcon className="w-4 h-4" />
                       </button>
@@ -995,9 +1003,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                               <div
                                 key={c.id}
                                 onClick={() => handleSelectCustomer(c)}
-                                className={`p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-slate-100 dark:border-slate-700 transition-colors group ${
-                                  index === filteredCustomers.length - 1 ? "border-b-0" : ""
-                                }`}
+                                className={`p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-slate-100 dark:border-slate-700 transition-colors group ${index === filteredCustomers.length - 1 ? "border-b-0" : ""
+                                  }`}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1">
@@ -1099,11 +1106,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             {item.name}
                           </span>
                           <span
-                            className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                              item.priceType === "wholesale"
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                            }`}
+                            className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded ${item.priceType === "wholesale"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                              : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                              }`}
                           >
                             {item.priceType === "wholesale" ? "Sỉ" : "Lẻ"}
                           </span>
@@ -1221,22 +1227,20 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setPaymentMethod("cash")}
-                    className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${
-                      paymentMethod === "cash"
-                        ? "border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-md"
-                        : "border-slate-300 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-600"
-                    }`}
+                    className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${paymentMethod === "cash"
+                      ? "border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-md"
+                      : "border-slate-300 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-600"
+                      }`}
                   >
                     <BanknotesIcon className="w-5 h-5" />
                     <span className="font-medium">Tiền mặt</span>
                   </button>
                   <button
                     onClick={() => setPaymentMethod("bank")}
-                    className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${
-                      paymentMethod === "bank"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-md"
-                        : "border-slate-300 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600"
-                    }`}
+                    className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${paymentMethod === "bank"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-md"
+                      : "border-slate-300 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600"
+                      }`}
                   >
                     <span className="text-base">🏦</span>
                     <span className="font-medium">Chuyển khoản</span>
@@ -1252,11 +1256,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     <div className="grid grid-cols-4 gap-2">
                       <button
                         onClick={() => setPaymentMode("full")}
-                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${
-                          paymentMode === "full"
-                            ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
-                            : "border-slate-300 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-600"
-                        }`}
+                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "full"
+                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                          : "border-slate-300 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-600"
+                          }`}
                       >
                         Đủ
                       </button>
@@ -1265,11 +1268,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           setPaymentMode("partial");
                           setPaidAmount((prev) => (prev > 0 ? prev : total));
                         }}
-                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${
-                          paymentMode === "partial"
-                            ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
-                            : "border-slate-300 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600"
-                        }`}
+                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "partial"
+                          ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                          : "border-slate-300 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600"
+                          }`}
                       >
                         1 phần
                       </button>
@@ -1278,11 +1280,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           setPaymentMode("debt");
                           setPaidAmount(0);
                         }}
-                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${
-                          paymentMode === "debt"
-                            ? "border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                            : "border-slate-300 dark:border-slate-600 hover:border-red-300 dark:hover:border-red-600"
-                        }`}
+                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "debt"
+                          ? "border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                          : "border-slate-300 dark:border-slate-600 hover:border-red-300 dark:hover:border-red-600"
+                          }`}
                       >
                         Ghi nợ
                       </button>
@@ -1295,11 +1296,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           setPaymentMode("installment");
                           setShowInstallmentModal(true);
                         }}
-                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${
-                          paymentMode === "installment"
-                            ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                            : "border-slate-300 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600"
-                        }`}
+                        className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "installment"
+                          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                          : "border-slate-300 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600"
+                          }`}
                       >
                         Trả góp
                       </button>
@@ -1385,6 +1385,118 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 )}
               </div>
 
+              {/* Delivery Section */}
+              <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  🚚 Giao hàng
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setDeliveryMethod('pickup');
+                      setDeliveryAddress('');
+                      setDeliveryPhone('');
+                      setDeliveryNote('');
+                      setShippingFee(0);
+                    }}
+                    className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${deliveryMethod === 'pickup'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-md'
+                      : 'border-slate-300 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600'
+                      }`}
+                  >
+                    <span className="text-base">🏪</span>
+                    <span className="font-medium">Tự lấy</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeliveryMethod('delivery');
+                      // Auto-fill from selected customer
+                      if (selectedCustomer) {
+                        setDeliveryAddress(selectedCustomer.address || '');
+                        setDeliveryPhone(selectedCustomer.phone || '');
+                      }
+                    }}
+                    className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${deliveryMethod === 'delivery'
+                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 shadow-md'
+                      : 'border-slate-300 dark:border-slate-600 hover:border-orange-300 dark:hover:border-orange-600'
+                      }`}
+                  >
+                    <span className="text-base">🚚</span>
+                    <span className="font-medium">Giao hàng</span>
+                  </button>
+                </div>
+
+                {deliveryMethod === 'delivery' && (
+                  <div className="mt-3 space-y-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Địa chỉ giao hàng *
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Nhập địa chỉ giao hàng"
+                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        SĐT nhận hàng
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryPhone}
+                        onChange={(e) => setDeliveryPhone(e.target.value)}
+                        placeholder={selectedCustomer?.phone || "Số điện thoại"}
+                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Phí ship
+                      </label>
+                      <input
+                        type="number"
+                        value={shippingFee || ''}
+                        onChange={(e) => setShippingFee(Number(e.target.value) || 0)}
+                        placeholder="0"
+                        min="0"
+                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Ghi chú
+                      </label>
+                      <textarea
+                        value={deliveryNote}
+                        onChange={(e) => setDeliveryNote(e.target.value)}
+                        placeholder="Ghi chú giao hàng (tùy chọn)"
+                        rows={2}
+                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    {shippingFee > 0 && (
+                      <div className="flex justify-between items-center text-sm pt-2 border-t border-orange-200 dark:border-orange-700">
+                        <span className="text-slate-600 dark:text-slate-400">Tổng + phí ship:</span>
+                        <span className="font-bold text-orange-600 dark:text-orange-400">
+                          {formatCurrency(total + shippingFee)}
+                        </span>
+                      </div>
+                    )}
+                    {deliveryMethod === 'delivery' && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">COD cần thu:</span>
+                        <span className="font-bold text-red-600 dark:text-red-400">
+                          {formatCurrency(total + shippingFee - (paymentMode === 'full' ? total : (paidAmount || 0)))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Checkout Options */}
               <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
                 <label className="flex items-center text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
@@ -1416,13 +1528,12 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         ? "Giỏ hàng trống"
                         : "Hoàn tất thanh toán"
                   }
-                  className={`w-full font-bold py-3 md:py-4 rounded-lg text-base md:text-lg flex items-center justify-center gap-2 transition-all shadow-lg ${
-                    !currentUser ||
+                  className={`w-full font-bold py-3 md:py-4 rounded-lg text-base md:text-lg flex items-center justify-center gap-2 transition-all shadow-lg ${!currentUser ||
                     cartItems.length === 0 ||
                     (paymentMode === "partial" && !(paidAmount > 0 && paidAmount < total))
-                      ? "bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transform hover:scale-105 active:scale-95"
-                  }`}
+                    ? "bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transform hover:scale-105 active:scale-95"
+                    }`}
                 >
                   {!currentUser ? (
                     <>🔐 Đăng nhập</>
@@ -1615,17 +1726,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             setShowPaymentDetail(true);
                           }
                         }}
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusConfig.color} ${
-                          paymentStatus === "installment" ||
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusConfig.color} ${paymentStatus === "installment" ||
                           paymentStatus === "partial" ||
                           paymentStatus === "debt"
-                            ? "cursor-pointer hover:opacity-80"
-                            : ""
-                        }`}
+                          ? "cursor-pointer hover:opacity-80"
+                          : ""
+                          }`}
                         title={
                           paymentStatus === "installment" ||
-                          paymentStatus === "partial" ||
-                          paymentStatus === "debt"
+                            paymentStatus === "partial" ||
+                            paymentStatus === "debt"
                             ? "Click để xem chi tiết"
                             : ""
                         }
@@ -1880,17 +1990,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                               setShowPaymentDetail(true);
                             }
                           }}
-                          className={`inline-flex flex-col items-start text-xs px-3 py-1 rounded-lg font-medium whitespace-nowrap ${statusConfig.color} ${
-                            paymentStatus === "installment" ||
+                          className={`inline-flex flex-col items-start text-xs px-3 py-1 rounded-lg font-medium whitespace-nowrap ${statusConfig.color} ${paymentStatus === "installment" ||
                             paymentStatus === "partial" ||
                             paymentStatus === "debt"
-                              ? "cursor-pointer hover:opacity-80"
-                              : ""
-                          }`}
+                            ? "cursor-pointer hover:opacity-80"
+                            : ""
+                            }`}
                           title={
                             paymentStatus === "installment" ||
-                            paymentStatus === "partial" ||
-                            paymentStatus === "debt"
+                              paymentStatus === "partial" ||
+                              paymentStatus === "debt"
                               ? "Click để xem chi tiết"
                               : ""
                           }
@@ -1921,9 +2030,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           onClick={() => openEdit(s)}
                           disabled={!currentUser}
                           title={!currentUser ? "Bạn phải đăng nhập để sửa" : "Sửa hoá đơn"}
-                          className={`mr-2 ${
-                            currentUser ? "text-sky-600" : "text-slate-400 cursor-not-allowed"
-                          }`}
+                          className={`mr-2 ${currentUser ? "text-sky-600" : "text-slate-400 cursor-not-allowed"
+                            }`}
                         >
                           <PencilSquareIcon className="w-5 h-5" />
                         </button>
@@ -1939,9 +2047,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           }}
                           disabled={!currentUser}
                           title={!currentUser ? "Bạn phải đăng nhập để xoá" : "Xoá hoá đơn"}
-                          className={`${
-                            currentUser ? "text-red-500" : "text-red-300 cursor-not-allowed"
-                          }`}
+                          className={`${currentUser ? "text-red-500" : "text-red-300 cursor-not-allowed"
+                            }`}
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
@@ -2015,17 +2122,15 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 <div className="flex gap-2 mt-1">
                   <button
                     onClick={() => setEditPayment("cash")}
-                    className={`flex-1 p-2 border rounded ${
-                      editPayment === "cash" ? "border-sky-500" : "border-slate-300"
-                    }`}
+                    className={`flex-1 p-2 border rounded ${editPayment === "cash" ? "border-sky-500" : "border-slate-300"
+                      }`}
                   >
                     Tiền mặt
                   </button>
                   <button
                     onClick={() => setEditPayment("bank")}
-                    className={`flex-1 p-2 border rounded ${
-                      editPayment === "bank" ? "border-sky-500" : "border-slate-300"
-                    }`}
+                    className={`flex-1 p-2 border rounded ${editPayment === "bank" ? "border-sky-500" : "border-slate-300"
+                      }`}
                   >
                     Chuyển khoản
                   </button>
@@ -2112,7 +2217,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 <div className="text-sm font-semibold mb-3">Thông tin thanh toán</div>
 
                 {(paymentDetailSale.isInstallment || paymentDetailSale.installmentPlan) &&
-                paymentDetailSale.installmentPlan ? (
+                  paymentDetailSale.installmentPlan ? (
                   // Trả góp
                   <div className="space-y-3 bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl">
                     <div className="flex justify-between items-center">
@@ -2299,11 +2404,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           total,
           customer: selectedCustomer
             ? {
-                id: selectedCustomer.id,
-                name: selectedCustomer.name,
-                phone: selectedCustomer.phone,
-                address: selectedCustomer.address,
-              }
+              id: selectedCustomer.id,
+              name: selectedCustomer.name,
+              phone: selectedCustomer.phone,
+              address: selectedCustomer.address,
+            }
             : { name: customerSearch || "Khách lẻ" },
           paymentMethod: paymentMethod || "cash",
         }}

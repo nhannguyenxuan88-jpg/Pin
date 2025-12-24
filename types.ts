@@ -665,6 +665,19 @@ export interface PinSale {
   // === Trả góp (Installment) ===
   isInstallment?: boolean; // Có phải trả góp không?
   installmentPlan?: InstallmentPlan; // Chi tiết kế hoạch trả góp
+
+  // === Giao hàng (Delivery/Shipping) ===
+  delivery_method?: 'pickup' | 'delivery'; // Phương thức: tự lấy hoặc giao hàng
+  delivery_status?: 'pending' | 'preparing' | 'shipping' | 'delivered' | 'cancelled';
+  delivery_address?: string; // Địa chỉ giao hàng
+  delivery_phone?: string; // SĐT nhận hàng
+  delivery_note?: string; // Ghi chú giao hàng
+  shipper_id?: string; // ID nhân viên giao hàng
+  shipper_name?: string; // Tên shipper (joined từ employees)
+  cod_amount?: number; // Số tiền thu hộ COD
+  shipping_fee?: number; // Phí ship
+  estimated_delivery_date?: string; // Ngày giao dự kiến
+  actual_delivery_date?: string; // Ngày giao thực tế
 }
 
 // === Installment Types (Trả góp) ===

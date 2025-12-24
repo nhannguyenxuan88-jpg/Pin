@@ -19,6 +19,7 @@ import AdvancedAnalyticsDashboard from "./AdvancedAnalyticsDashboard";
 import BusinessSettings from "./BusinessSettings";
 import { TaxReportPage } from "./TaxReportPage";
 import { MobileMoreMenu } from "./mobile";
+import DeliveryOrdersView from "./DeliveryOrdersView";
 import { CashTransaction, PinSale } from "../types";
 
 interface PinCorpAppProps {
@@ -155,6 +156,7 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
           />
           <Route path="/financial" element={<PinFinancialManager />} />
           <Route path="/receivables" element={<Receivables />} />
+          <Route path="/delivery" element={<DeliveryOrdersView />} />
           <Route path="/settings" element={<PinSettings />} />
           <Route path="/business-settings" element={<BusinessSettings />} />
           <Route path="/tax-report" element={<TaxReportPage />} />
