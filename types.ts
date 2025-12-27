@@ -1175,3 +1175,40 @@ export interface CashFlowProjection {
   amount: number;
   probability: number; // 0-1
 }
+
+// =====================================================
+// Purchase Order Types (Đặt hàng NCC)
+// =====================================================
+
+export type PurchaseOrderStatus = 'draft' | 'confirmed' | 'partial' | 'received' | 'cancelled';
+
+export interface PurchaseOrderItem {
+  id: string;
+  purchaseOrderId?: string;
+  materialId: string;
+  materialName: string;
+  materialSku?: string;
+  quantity: number;
+  unit?: string;
+  unitPrice: number;
+  totalPrice: number;
+  receivedQuantity: number;
+  created_at?: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  code: string;
+  supplierId?: string;
+  supplierName: string;
+  status: PurchaseOrderStatus;
+  totalAmount: number;
+  paidAmount: number;
+  notes?: string;
+  expectedDate?: string;
+  receivedDate?: string;
+  items: PurchaseOrderItem[];
+  createdBy?: string;
+  created_at?: string;
+  updated_at?: string;
+}

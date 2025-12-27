@@ -50,6 +50,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
+    // NEVER cache API requests (Supabase, REST endpoints)
+    if (url.hostname.includes('supabase') ||
+        url.pathname.includes('/rest/') ||
+        url.pathname.includes('/api/') ||
+        url.pathname.includes('/auth/')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     // Network-first strategy for HTML files (always get fresh content)
     if (event.request.mode === 'navigate' || url.pathname.endsWith('.html')) {
         event.respondWith(

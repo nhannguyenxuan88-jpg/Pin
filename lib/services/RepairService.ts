@@ -76,7 +76,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           issue_description: order.issueDescription,
           technician_name: order.technicianName || "",
           status: order.status,
-          materials_used: JSON.stringify(order.materialsUsed ?? []),
+          materials_used: order.materialsUsed ?? [],
           labor_cost: order.laborCost || 0,
           total: order.total || 0,
           notes: order.notes ? `${order.notes}\n__OUTSOURCING__${JSON.stringify(order.outsourcingItems ?? [])}` : (order.outsourcingItems?.length ? `__OUTSOURCING__${JSON.stringify(order.outsourcingItems)}` : ""),
@@ -168,7 +168,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           issue_description: order.issueDescription,
           technician_name: order.technicianName || "",
           status: order.status,
-          materials_used: JSON.stringify(order.materialsUsed ?? []),
+          materials_used: order.materialsUsed ?? [],
           labor_cost: order.laborCost || 0,
           total: order.total || 0,
           // Stores Outsourcing Items JSON in notes for Profit Reporting

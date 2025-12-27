@@ -8,6 +8,7 @@ import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon, EyeIcon } from "./com
 import { Icon, type IconName } from "./common/Icon";
 import PinImportHistory from "./PinImportHistory";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
+import PurchaseOrderManager from "./PurchaseOrderManager";
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
@@ -2951,8 +2952,8 @@ const MaterialManager: React.FC<{
   // CSV import modal state
   const [showImportModal, setShowImportModal] = useState(false);
 
-  // Tab management for History view
-  const [activeView, setActiveView] = useState<"materials" | "history">("materials");
+  // Tab management for main views
+  const [activeView, setActiveView] = useState<"materials" | "history" | "orders">("materials");
   // Note: History view now self-fetches; no need to trigger context reload here
 
   // Tổng giá trị nhập kho từ lịch sử (để hiển thị chính xác)
@@ -4007,6 +4008,12 @@ const MaterialManager: React.FC<{
             >
               Lịch sử
             </button>
+            <button
+              onClick={() => setActiveView("orders")}
+              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${activeView === "orders" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
+            >
+              Đặt hàng
+            </button>
           </div>
 
           {/* Mobile Actions */}
@@ -4146,6 +4153,15 @@ const MaterialManager: React.FC<{
           >
             📊 Lịch sử
           </button>
+          <button
+            onClick={() => setActiveView("orders")}
+            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${activeView === "orders"
+              ? "bg-blue-500 text-white shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
+          >
+            📦 Đặt hàng NCC
+          </button>
         </div>
 
         {/* Actions */}
@@ -4177,6 +4193,8 @@ const MaterialManager: React.FC<{
         })()}
         {activeView === "history" ? (
           <PinImportHistory />
+        ) : activeView === "orders" ? (
+          <PurchaseOrderManager materials={materials} suppliers={suppliers} />
         ) : (
           <div className="gap-2 flex flex-col h-full">
             {/* Original content continues here */}
