@@ -33,7 +33,7 @@ const PinNavItem: React.FC<{
   color?: string;
 }> = ({ to, icon, label, color = "text-sky-600 dark:text-sky-400" }) => {
   const baseItem =
-    "flex flex-col items-center justify-center text-center px-2 py-1.5 rounded-lg w-16 h-14 transition-all duration-200 border";
+    "flex flex-col items-center justify-center text-center px-2 py-1.5 rounded-lg min-w-[4.5rem] w-auto transition-all duration-200 border";
   const activeClass =
     "bg-white border-slate-200 shadow-md shadow-slate-200/60 dark:bg-slate-800 dark:border-slate-600 dark:shadow-none";
   const inactiveClass =
@@ -47,22 +47,19 @@ const PinNavItem: React.FC<{
       {({ isActive }) => (
         <>
           <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${
-              isActive
+            className={`w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${isActive
                 ? "bg-slate-50 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500"
                 : "bg-slate-100 ring-transparent dark:bg-slate-800/40"
-            }`}
+              }`}
           >
             {React.cloneElement(icon, {
-              className: `w-4 h-4 transition-opacity duration-200 ${color} ${
-                isActive ? "opacity-100" : "opacity-75"
-              }`,
+              className: `w-4 h-4 transition-opacity duration-200 ${color} ${isActive ? "opacity-100" : "opacity-75"
+                }`,
             })}
           </div>
           <span
-            className={`text-[10px] font-medium mt-1 truncate w-full ${
-              isActive ? "text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"
-            }`}
+            className={`text-[10px] font-medium mt-1 w-full whitespace-nowrap ${isActive ? "text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"
+              }`}
           >
             {label}
           </span>
@@ -347,9 +344,8 @@ const MobileNavItem: React.FC<{
           className: `w-6 h-6 ${isActive ? color : "text-slate-500 dark:text-slate-400"}`,
         })}
         <span
-          className={`text-xs font-medium mt-1 ${
-            isActive ? color : "text-slate-500 dark:text-slate-400"
-          }`}
+          className={`text-xs font-medium mt-1 ${isActive ? color : "text-slate-500 dark:text-slate-400"
+            }`}
         >
           {label}
         </span>
