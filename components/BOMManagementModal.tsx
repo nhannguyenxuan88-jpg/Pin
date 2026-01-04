@@ -200,7 +200,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
 
     onSaveBOM(bomToSave);
 
-    // Reset form để có thể tạo BOM mới tiếp
+    // Reset form sau khi lưu thành công
     setBomForm({
       id: "",
       productName: "",
@@ -209,8 +209,8 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
       materials: [],
     });
 
-    // Giữ modal mở và ở chế độ tạo mới
-    // setIsCreating(false); // Không đóng form, để người dùng tiếp tục tạo BOM mới
+    // Đóng form tạo/chỉnh sửa sau khi lưu
+    setIsCreating(false);
   };
 
   const handleAddMaterial = () => {
@@ -630,7 +630,8 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
                       setBomForm({
                         id: "",
                         productName: "",
-                        description: "",
+                        productSku: "",
+                        notes: "",
                         materials: [],
                       });
                     }}

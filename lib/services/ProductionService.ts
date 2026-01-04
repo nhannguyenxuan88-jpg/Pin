@@ -147,12 +147,14 @@ export function createProductionService(ctx: PinContextType): ProductionService 
 
       // If bom.id is not a valid UUID, insert without id so DB generates one
       if (!isValidUUID(bom.id)) {
+        console.log(`🆕 Inserting new BOM: ${bom.productName}`);
         const { data, error } = await supabase
           .from("pin_boms")
           .insert(basePayload)
           .select()
           .single();
         if (error) {
+          console.error("❌ Error inserting BOM:", error);
           ctx.addToast?.({
             title: "Lỗi lưu BOM",
             message: error.message || String(error),
@@ -160,15 +162,19 @@ export function createProductionService(ctx: PinContextType): ProductionService 
           });
           return;
         }
-        const newBom: PinBOM = { ...bom, id: data.id };
+        console.log(`✅ BOM inserted with ID: ${data.id}`);
+        const newBom: PinBOM = {
+          id: data.id,
+          productName: data.product_name,
+          productSku: data.product_sku,
+          materials: data.materials || [],
+          notes: data.notes || "",
+          created_at: data.created_at,
+        };
         ctx.setBoms((prev: PinBOM[]) => {
-          const idx = prev.findIndex((b) => b.id === bom.id);
-          if (idx > -1) {
-            const next = [...prev];
-            next[idx] = newBom;
-            return next;
-          }
-          return [newBom, ...prev];
+          // Loại bỏ BOM tạm nếu có (với ID không hợp lệ)
+          const filtered = prev.filter((b) => isValidUUID(b.id));
+          return [newBom, ...filtered];
         });
         ctx.addToast?.({
           title: "Đã lưu BOM",
