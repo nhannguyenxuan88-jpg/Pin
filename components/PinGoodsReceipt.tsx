@@ -1127,10 +1127,9 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         }
       }
 
-      alert("Nhập hàng thành công!");
-
-      // Reload materials from database to ensure local state is in sync
+      // Reload materials AND history from database to ensure local state is in sync
       try {
+        // Refresh materials
         const { data: refreshedMaterials, error: refreshError } = await supabase
           .from("pin_materials")
           .select("*");
@@ -1153,9 +1152,38 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
           setMaterials(mappedMaterials);
           console.log("✅ Đã đồng bộ kho tự động:", mappedMaterials.length, "vật liệu");
         }
+
+        // Refresh material history
+        const { data: refreshedHistory, error: historyError } = await supabase
+          .from("pin_material_history")
+          .select("*")
+          .order("import_date", { ascending: false });
+
+        if (!historyError && refreshedHistory) {
+          const mappedHistory: PinMaterialHistory[] = refreshedHistory.map((row: any) => ({
+            id: row.id,
+            materialId: row.material_id,
+            materialName: row.material_name,
+            materialSku: row.material_sku,
+            quantity: Number(row.quantity ?? 0),
+            purchasePrice: Number(row.purchase_price ?? 0),
+            totalCost: Number(row.total_cost ?? 0),
+            supplier: row.supplier,
+            importDate: row.import_date,
+            notes: row.notes,
+            userId: row.user_id,
+            userName: row.user_name,
+            branchId: row.branch_id || "main",
+            created_at: row.created_at,
+          }));
+          setPinMaterialHistory(mappedHistory);
+          console.log("✅ Đã đồng bộ lịch sử nhập kho tự động:", mappedHistory.length, "bản ghi");
+        }
       } catch (refreshErr) {
-        console.error("Error refreshing materials:", refreshErr);
+        console.error("Error refreshing data:", refreshErr);
       }
+
+      alert("✅ Nhập hàng thành công! Dữ liệu đã được đồng bộ tự động.");
 
       // Reset form
       setReceiptItems([]);
