@@ -110,7 +110,8 @@ export function useMultiplePermissions(
 
   useEffect(() => {
     const checkPermissions = async () => {
-      if (!user?.id) {
+      const userId = user?.id;
+      if (!userId) {
         setResults(new Map());
         setIsLoading(false);
         return;
@@ -125,7 +126,7 @@ export function useMultiplePermissions(
         await Promise.all(
           permissions.map(async (perm) => {
             const key = `${perm.module}:${perm.action}`;
-            const hasAccess = await checkUserPermission(user.id, perm.module, perm.action, app);
+            const hasAccess = await checkUserPermission(userId, perm.module, perm.action, app);
             permissionResults.set(key, hasAccess);
           })
         );

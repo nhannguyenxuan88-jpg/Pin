@@ -5,7 +5,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../supabaseClient";
 import type {
   User,
   Part,
@@ -13,7 +13,7 @@ import type {
   WorkOrder,
   CashTransaction,
   Customer,
-} from "../types";
+} from "../../types";
 
 // Query keys for consistent cache management
 export const queryKeys = {

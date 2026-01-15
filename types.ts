@@ -501,7 +501,7 @@ export interface PinMaterial {
   // FIX: Change unit to string to allow adding new units dynamically in the UI.
   unit: string;
   // Danh mục: phân biệt vật tư, thành phẩm, sản phẩm
-  category?: "material" | "finished_product" | "product";
+  category?: "material" | "finished_goods" | "product";
   category_id?: string; // Liên kết với bảng pin_categories
   purchasePrice: number;
   // Optional selling prices for materials
@@ -512,6 +512,7 @@ export interface PinMaterial {
   quantity?: number; // Alias for stock (legacy compatibility)
   committedQuantity?: number; // Reserved for production orders
   supplier?: string;
+  supplierPhone?: string;
   description?: string;
   created_at?: string;
 

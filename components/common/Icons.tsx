@@ -454,6 +454,63 @@ export const ChevronRightIcon = (props: IconProps) => (
   </svg>
 );
 
+export const ChevronLeftIcon = (props: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    {...props}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
+  </svg>
+);
+
+export const QuestionMarkCircleIcon = (props: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    {...props}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M8.25 9a3.75 3.75 0 1 1 7.5 0c0 1.593-.76 2.096-1.712 2.707-.951.61-1.538 1.157-1.538 2.543v.75M12 17.25h.008v.008H12v-.008Z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
+export const TruckIcon = (props: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    {...props}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 13.5V6.75A1.5 1.5 0 0 1 4.5 5.25h9A1.5 1.5 0 0 1 15 6.75v6.75m0 0h2.25a1.5 1.5 0 0 0 1.2-.6l1.8-2.4V8.25A1.5 1.5 0 0 0 19.75 6.75H15M3 13.5h18"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M7.5 18a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm12 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+    />
+  </svg>
+);
+
 export const ExclamationTriangleIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"

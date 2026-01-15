@@ -18,9 +18,8 @@ import Receivables from "./Receivables";
 import AdvancedAnalyticsDashboard from "./AdvancedAnalyticsDashboard";
 import BusinessSettings from "./BusinessSettings";
 import { TaxReportPage } from "./TaxReportPage";
-import { MobileMoreMenu } from "./mobile";
 import DeliveryOrdersView from "./DeliveryOrdersView";
-import { CashTransaction, PinSale } from "../types";
+import { CashTransaction, PinSale, User } from "../types";
 
 interface PinCorpAppProps {
   onSwitchApp: () => void;
@@ -29,6 +28,21 @@ interface PinCorpAppProps {
 const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
   // FIX: Destructure all necessary props from useAppContext to pass down to components.
   const appContext = usePinContext();
+
+  // Some legacy components expect the full `User` type (email/loginPhone/status/departmentIds).
+  // Adapt `CurrentUser` to that shape with safe defaults.
+  const legacyUser: User | null = React.useMemo(() => {
+    if (!appContext.currentUser) return null;
+    const u = appContext.currentUser;
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email ?? "",
+      loginPhone: u.loginPhone ?? u.email ?? "",
+      status: u.status ?? "active",
+      departmentIds: u.departmentIds ?? [],
+    };
+  }, [appContext.currentUser]);
 
   // FIX: Wrapper function to create CashTransaction before calling context's handlePinSale
   const wrappedHandlePinSale = (saleData: Omit<PinSale, "id" | "date" | "userId" | "userName">) => {
@@ -52,9 +66,6 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
     };
     appContext.handlePinSale(saleData, newCashTx);
   };
-
-  // More menu state for mobile
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = React.useState(false);
 
   return (
     <HashRouter>
@@ -80,7 +91,7 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
               <PinGoodsReceipt
                 suppliers={appContext.suppliers}
                 setSuppliers={appContext.setSuppliers}
-                currentUser={appContext.currentUser!}
+                currentUser={legacyUser}
               />
             }
           />
@@ -91,7 +102,7 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
                 boms={appContext.pinBOMs}
                 setBoms={appContext.setBoms}
                 materials={appContext.pinMaterials}
-                currentUser={appContext.currentUser!}
+                currentUser={legacyUser as User}
                 orders={appContext.productionOrders}
                 addOrder={appContext.addProductionOrder}
                 updateOrder={appContext.updateProductionOrderStatus}
@@ -167,7 +178,6 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
             path="/more"
             element={
               <>
-                <MobileMoreMenu isOpen={true} onClose={() => window.history.back()} />
                 <div className="text-center py-8 text-slate-500">
                   <p>Chọn một chức năng từ menu</p>
                 </div>

@@ -46,11 +46,16 @@ const PinRepairManagerNew: React.FC = () => {
   // Fetch profiles for name mapping
   React.useEffect(() => {
     const fetchProfiles = async () => {
-      const { data } = await supabase.from("profiles").select("id, name, email");
-      if (data) setProfiles(data as UserProfile[]);
+      if (!currentUser) return;
+      const { data, error } = await supabase.from("profiles").select("id, name, email");
+      if (!error && data) setProfiles(data as UserProfile[]);
     };
     fetchProfiles();
-  }, []);
+  }, [currentUser]);
+
+  const STATUS_PENDING = ["Tiếp nhận", "Chờ", "Chờ báo giá", "Chờ vật liệu", "Sẵn sàng sửa"] as const;
+  const STATUS_IN_PROGRESS = ["Đang sửa"] as const;
+  const STATUS_COMPLETED = ["Đã sửa xong", "Trả máy"] as const;
 
   const getDisplayName = (technicianName?: string) => {
     if (!technicianName) return "";
@@ -70,12 +75,14 @@ const PinRepairManagerNew: React.FC = () => {
   const stats = useMemo(() => {
     const orders = pinRepairOrders || [];
     const total = orders.length;
-    const pending = orders.filter(
-      (o: PinRepairOrder) => o.status === "Tiếp nhận" || o.status === "Chờ"
+    const pending = orders.filter((o: PinRepairOrder) =>
+      (STATUS_PENDING as readonly string[]).includes(o.status)
     ).length;
-    const inProgress = orders.filter((o: PinRepairOrder) => o.status === "Đang sửa").length;
-    const completed = orders.filter(
-      (o: PinRepairOrder) => o.status === "Đã sửa xong" || o.status === "Trả máy"
+    const inProgress = orders.filter((o: PinRepairOrder) =>
+      (STATUS_IN_PROGRESS as readonly string[]).includes(o.status)
+    ).length;
+    const completed = orders.filter((o: PinRepairOrder) =>
+      (STATUS_COMPLETED as readonly string[]).includes(o.status)
     ).length;
     const totalRevenue = orders.reduce((sum: number, o: PinRepairOrder) => sum + (o.total || 0), 0);
 
@@ -133,10 +140,9 @@ const PinRepairManagerNew: React.FC = () => {
     // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((o: PinRepairOrder) => {
-        if (statusFilter === "pending") return o.status === "Tiếp nhận" || o.status === "Chờ";
-        if (statusFilter === "inProgress") return o.status === "Đang sửa";
-        if (statusFilter === "completed")
-          return o.status === "Đã sửa xong" || o.status === "Trả máy";
+        if (statusFilter === "pending") return (STATUS_PENDING as readonly string[]).includes(o.status);
+        if (statusFilter === "inProgress") return (STATUS_IN_PROGRESS as readonly string[]).includes(o.status);
+        if (statusFilter === "completed") return (STATUS_COMPLETED as readonly string[]).includes(o.status);
         return true;
       });
     }
@@ -165,12 +171,13 @@ const PinRepairManagerNew: React.FC = () => {
   };
 
   const handleSaveOrder = async (order: PinRepairOrder) => {
+    const isNew = !selectedOrder;
     await upsertPinRepairOrder(order);
     setModalOpen(false);
     setSelectedOrder(null);
 
     // Show invoice preview for new or completed orders
-    if (!order.id || order.status === "Đã sửa xong" || order.status === "Trả máy") {
+    if (isNew || order.status === "Đã sửa xong" || order.status === "Trả máy") {
       setInvoiceRepairOrder(order);
       setShowInvoicePreview(true);
     }

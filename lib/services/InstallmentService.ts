@@ -350,7 +350,7 @@ export class InstallmentService {
       ...plan,
       payments: updatedPayments,
       status: "completed",
-      remainingBalance: 0,
+      remainingAmount: 0,
     };
 
     await this.saveInstallmentPlan(updatedPlan);
@@ -361,7 +361,7 @@ export class InstallmentService {
    * Kiểm tra và cập nhật trạng thái quá hạn
    */
   static checkOverdue(plan: InstallmentPlan): InstallmentPlan {
-    if (plan.status === "completed" || plan.status === "cancelled") {
+    if (plan.status === "completed" || plan.status === "settled") {
       return plan;
     }
 

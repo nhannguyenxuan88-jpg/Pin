@@ -97,6 +97,34 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
   const [capitalInvestments, setCapitalInvestments] = useState<CapitalInvestment[]>([]);
   const [pinRepairOrders, setRepairOrders] = useState<PinRepairOrder[]>([]);
 
+  const coerceRepairStatus = (value: unknown): PinRepairOrder["status"] => {
+    const v = typeof value === "string" ? value : "";
+    const allowed: PinRepairOrder["status"][] = [
+      "Tiếp nhận",
+      "Chờ báo giá",
+      "Chờ vật liệu",
+      "Sẵn sàng sửa",
+      "Đang sửa",
+      "Đã sửa xong",
+      "Trả máy",
+      "Đã hủy",
+      "Chờ",
+    ];
+    return (allowed as string[]).includes(v) ? (v as PinRepairOrder["status"]) : "Tiếp nhận";
+  };
+
+  const coerceRepairPaymentStatus = (value: unknown): PinRepairOrder["paymentStatus"] => {
+    const v = typeof value === "string" ? value : "";
+    if (v === "paid" || v === "unpaid" || v === "partial") return v;
+    return "unpaid";
+  };
+
+  const coerceRepairPaymentMethod = (value: unknown): PinRepairOrder["paymentMethod"] => {
+    const v = typeof value === "string" ? value : "";
+    if (v === "cash" || v === "bank" || v === "transfer" || v === "card") return v;
+    return undefined;
+  };
+
   // Simple helpers
   const reloadPinMaterialHistory = async () => {
     if (IS_OFFLINE_MODE || !currentUser) return;
@@ -311,7 +339,12 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             amount: Number(row.amount ?? 0),
             description: (row.description || "") as string,
             source: (row.source as CapitalInvestment["source"]) || "Vốn chủ sở hữu",
-            interestRate: row.interestrate ?? row.interest_rate ?? undefined,
+            interestRate: (() => {
+              const v = row.interestrate ?? row.interest_rate;
+              if (v === null || v === undefined) return undefined;
+              const n = Number(v);
+              return Number.isFinite(n) ? n : undefined;
+            })(),
             branchId: (row.branchid || row.branch_id || "main") as string,
             created_at: (row.created_at || row.createdat || undefined) as string | undefined,
           });
@@ -370,6 +403,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             name: row.name as string,
             sku: row.sku as string,
             unit: row.unit as string,
+            category: (row.category || undefined) as PinMaterial["category"],
             purchasePrice: Number(row.purchaseprice ?? row.purchase_price ?? 0),
             retailPrice:
               Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0) || undefined,
@@ -378,6 +412,9 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             committedQuantity:
               Number(row.committedquantity ?? row.committed_quantity ?? 0) || undefined,
             supplier: (row.supplier || undefined) as string | undefined,
+            supplierPhone: (row.supplierphone || row.supplier_phone || undefined) as
+              | string
+              | undefined,
             description: (row.description || undefined) as string | undefined,
             created_at: (row.created_at || row.createdat || undefined) as string | undefined,
           });
@@ -449,7 +486,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               row.technician_name ||
               row.technicianName ||
               "") as string,
-            status: row.status as string,
+            status: coerceRepairStatus(row.status),
             materialsUsed: (() => {
               // Parse materials_used if it's a JSON string
               const materialsData = row.materials_used || row.materialsused;
@@ -493,16 +530,18 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             })(),
             total: Number(row.total ?? 0),
             notes: (row.notes || "") as string,
-            paymentStatus: (row.payment_status || row.paymentstatus || "unpaid") as string,
+            paymentStatus: coerceRepairPaymentStatus(
+              (row.payment_status || row.paymentstatus || "unpaid") as unknown
+            ),
             partialPaymentAmount: (row.partial_payment_amount ??
               row.partialpaymentamount ??
               undefined) as number | undefined,
             depositAmount: (row.deposit_amount ?? row.depositamount ?? undefined) as
               | number
               | undefined,
-            paymentMethod: (row.payment_method || row.paymentmethod || undefined) as
-              | string
-              | undefined,
+            paymentMethod: coerceRepairPaymentMethod(
+              (row.payment_method || row.paymentmethod || undefined) as unknown
+            ),
             paymentDate: (row.payment_date || row.paymentdate || undefined) as string | undefined,
             dueDate: (row.due_date || row.duedate || undefined) as string | undefined,
             cashTransactionId: (row.cash_transaction_id || row.cashtransactionid || undefined) as
@@ -541,18 +580,23 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               id: row.id as string,
               code: row.code as string | undefined,
               date: String(row.date || row.created_at || new Date().toISOString()),
-              items: Array.isArray(items) ? items : [],
+              items: (Array.isArray(items) ? items : []) as PinCartItem[],
               subtotal: Number(row.subtotal ?? 0),
               discount: Number(row.discount ?? 0),
               total: Number(row.total ?? 0),
               customer: (customer || { name: "Khách lẻ" }) as PinSale["customer"],
-              paymentMethod: (row.payment_method || row.paymentMethod || "cash") as string,
+              paymentMethod: (() => {
+                const v = String(row.payment_method || row.paymentMethod || "cash");
+                return v === "bank" ? "bank" : "cash";
+              })(),
               userId: (row.user_id || row.userid || row.userId || "") as string,
               userName: (row.user_name || row.username || row.userName || "") as string,
               created_at: (row.created_at || row.createdat || undefined) as string | undefined,
-              paymentStatus: (row.payment_status || row.paymentstatus || undefined) as
-                | string
-                | undefined,
+              paymentStatus: (() => {
+                const v = row.payment_status || row.paymentstatus;
+                if (v === "paid" || v === "partial" || v === "debt" || v === "installment") return v;
+                return undefined;
+              })(),
               paidAmount: (row.paid_amount ?? row.paidamount ?? undefined) as number | undefined,
               dueDate: (row.due_date || row.duedate || undefined) as string | undefined,
             };
@@ -567,7 +611,6 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             name: (row.name || "") as string,
             phone: (row.phone || "") as string,
             address: (row.address || "") as string,
-            email: (row.email || "") as string,
             notes: (row.notes || "") as string,
             created_at: (row.created_at || row.createdat || undefined) as string | undefined,
           });
@@ -594,8 +637,10 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
     fetchPinFinance();
   }, [currentUser]);
 
-  // Build services using this standalone context - use PinContextType for type safety
-  const ctxForServices: PinContextType = {
+  // Build services using this standalone context.
+  // The service layer currently expects the full PinContextType, but only uses a subset.
+  // Cast to keep TypeScript from forcing us to implement unrelated parts here.
+  const ctxForServices = ({
     currentUser,
     addToast,
     pinMaterials,
@@ -628,7 +673,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
     setFixedAssets,
     capitalInvestments,
     setCapitalInvestments,
-  };
+  } as unknown) as PinContextType;
 
   const materialsSvc = useMemo(() => createMaterialsService(ctxForServices), [ctxForServices]);
   const productionSvc = useMemo(() => createProductionService(ctxForServices), [ctxForServices]);
@@ -639,7 +684,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
   const adminSvc = useMemo(() => createProductionAdminService(ctxForServices), [ctxForServices]);
   const financeSvc = useMemo(() => createFinanceService(ctxForServices), [ctxForServices]);
 
-  const value: PinContextType = {
+  const value = ({
     // auth & settings
     currentUser,
     storeSettings,
@@ -711,7 +756,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
 
     // Admin
     resetProductionData: adminSvc.resetProductionData,
-  } as PinContextType;
+  } as unknown) as PinContextType;
 
   return <PinStandaloneContext.Provider value={value}>{children}</PinStandaloneContext.Provider>;
 };

@@ -866,6 +866,40 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
     }
 
     try {
+      const adjustMaterialStockSafe = async (materialId: string, delta: number) => {
+        const d = Number(delta);
+        if (!Number.isFinite(d) || d === 0) return;
+
+        try {
+          const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
+            p_material_id: materialId,
+            p_delta: d,
+          });
+          if (error) throw error;
+          return data;
+        } catch (e: any) {
+          // Fallback if RPC is missing
+          if (String(e?.code || "") === "42883") {
+            const { data: row, error: selErr } = await supabase
+              .from("pin_materials")
+              .select("stock")
+              .eq("id", materialId)
+              .single();
+            if (selErr) throw selErr;
+            const current = Number((row as any)?.stock ?? 0);
+            const next = current + d;
+            if (next < 0) throw new Error("Tồn kho không thể âm");
+            const { error: updErr } = await supabase
+              .from("pin_materials")
+              .update({ stock: next })
+              .eq("id", materialId);
+            if (updErr) throw updErr;
+            return next;
+          }
+          throw e;
+        }
+      };
+
       // Cập nhật hoặc tạo mới materials
       const updatedMaterials = [...(materials || [])];
       const newHistoryRecords: PinMaterialHistory[] = [];
@@ -982,16 +1016,15 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             if (insertError.code === "23505") {
               const { data: existingData } = await supabase
                 .from("pin_materials")
-                .select("id, stock")
+                .select("id")
                 .eq("sku", material.sku)
                 .single();
               if (existingData?.id) {
-                // Update stock of existing material + supplier info
-                const newStock = (existingData.stock || 0) + (material.stock || 0);
+                // Atomically increase stock of existing material + update supplier info
+                await adjustMaterialStockSafe(existingData.id, Number(material.stock || 0));
                 await supabase
                   .from("pin_materials")
                   .update({
-                    stock: newStock,
                     supplier: material.supplier || undefined,
                     supplier_phone: material.supplierPhone || undefined,
                   })
@@ -1003,7 +1036,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                   newHistoryRecords[historyIdx].materialId = existingData.id;
                 }
                 console.log(
-                  `Updated existing material ${material.name} with new stock: ${newStock}`
+                  `Updated existing material ${material.name} (duplicate SKU) with +stock: ${material.stock}`
                 );
               }
             }
@@ -1023,18 +1056,28 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       }
 
       // Save UPDATED materials (existing materials with stock change)
-      if (upsertPinMaterial) {
-        const updatedMaterialsToSave = updatedMaterials.filter((mat) => {
-          return receiptItems.some((item) => !item.isNew && item.materialId === mat.id);
-        });
+      // Persist existing-material stock updates atomically to avoid stale-state overwrites.
+      for (const item of receiptItems) {
+        if (item.isNew) continue;
+        if (!item.materialId) continue;
+        const qty = Number(item.quantity || 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue;
 
-        for (const mat of updatedMaterialsToSave) {
-          try {
-            await upsertPinMaterial(mat);
-          } catch (err) {
-            console.error("Error updating material:", err);
-          }
-        }
+        // 1) Atomic +stock
+        await adjustMaterialStockSafe(item.materialId, qty);
+
+        // 2) Best-effort price/supplier updates (do not overwrite stock here)
+        await supabase
+          .from("pin_materials")
+          .update({
+            purchase_price: Number(item.purchasePrice || 0),
+            retail_price: Number(item.retailPrice || 0),
+            wholesale_price: Number(item.wholesalePrice || 0),
+            supplier: selectedSupplier?.name || undefined,
+            supplier_phone: selectedSupplier?.phone || undefined,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", item.materialId);
       }
 
       // Save History (now with real UUIDs)
@@ -1146,6 +1189,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             stock: Number(row.stock ?? 0),
             committedQuantity: Number(row.committed_quantity ?? row.committedquantity ?? 0),
             supplier: row.supplier || undefined,
+            supplierPhone: row.supplier_phone || undefined,
+            category: row.category || undefined,
             description: row.description || undefined,
             created_at: row.created_at || row.createdat || undefined,
           }));

@@ -42,7 +42,11 @@ const PinReceiptModal: React.FC<PinReceiptModalProps> = ({
         customer = { name: saleData.customer, phone: "", address: "" };
       }
     } else {
-      customer = saleData.customer;
+      customer = {
+        name: saleData.customer.name || "Khách lẻ",
+        phone: saleData.customer.phone || "",
+        address: saleData.customer.address || "",
+      };
     }
   }
 

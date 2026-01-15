@@ -29,11 +29,11 @@ const ResetPassword: React.FC = () => {
         const refresh =
           hashParams["refresh_token"] ||
           new URLSearchParams(window.location.search).get("refresh_token");
-        if (token) {
+        if (token && refresh) {
           // set session so supabase.auth.updateUser will work
           await supabase.auth.setSession({
             access_token: token,
-            refresh_token: refresh || undefined,
+            refresh_token: refresh,
           });
           // Remove token from URL to avoid leaking it (clean hash keeping path)
           try {

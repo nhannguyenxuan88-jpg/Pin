@@ -6,6 +6,7 @@ import {
   BeakerIcon,
   WrenchScrewdriverIcon,
   BanknotesIcon,
+  Squares2X2Icon,
 } from "../common/Icons";
 
 interface NavItem {
@@ -13,6 +14,7 @@ interface NavItem {
   IconComponent: React.FC<React.SVGProps<SVGSVGElement>>;
   label: string;
   activeColor: string;
+  activeIndicatorBg: string;
 }
 
 export const MobileBottomNav: React.FC = () => {
@@ -25,30 +27,42 @@ export const MobileBottomNav: React.FC = () => {
       IconComponent: ShoppingCartIcon,
       label: "Bán hàng",
       activeColor: "text-emerald-500",
+      activeIndicatorBg: "bg-emerald-500",
     },
     {
       to: "/materials",
       IconComponent: CubeIcon,
-      label: "Vật tư",
+      label: "Vật liệu",
       activeColor: "text-teal-500",
+      activeIndicatorBg: "bg-teal-500",
     },
     {
       to: "/boms",
       IconComponent: BeakerIcon,
       label: "Sản xuất",
       activeColor: "text-rose-500",
+      activeIndicatorBg: "bg-rose-500",
     },
     {
       to: "/repairs",
       IconComponent: WrenchScrewdriverIcon,
       label: "Sửa chữa",
       activeColor: "text-pink-500",
+      activeIndicatorBg: "bg-pink-500",
     },
     {
       to: "/financial",
       IconComponent: BanknotesIcon,
       label: "Tài chính",
       activeColor: "text-cyan-500",
+      activeIndicatorBg: "bg-cyan-500",
+    },
+    {
+      to: "/more",
+      IconComponent: Squares2X2Icon,
+      label: "Khác",
+      activeColor: "text-slate-600 dark:text-slate-200",
+      activeIndicatorBg: "bg-slate-600 dark:bg-slate-200",
     },
   ];
 
@@ -71,7 +85,7 @@ export const MobileBottomNav: React.FC = () => {
               className="flex flex-col items-center justify-center w-full h-full touch-manipulation"
             >
               <div
-                className={`flex flex-col items-center justify-center transition-all duration-200 ${
+                className={`relative flex flex-col items-center justify-center transition-all duration-200 ${
                   active ? "scale-110" : "scale-100"
                 }`}
               >
@@ -100,10 +114,7 @@ export const MobileBottomNav: React.FC = () => {
                 {/* Active Indicator */}
                 {active && (
                   <div
-                    className={`absolute bottom-1 w-1 h-1 rounded-full ${item.activeColor.replace(
-                      "text-",
-                      "bg-"
-                    )}`}
+                    className={`absolute bottom-1 w-1 h-1 rounded-full ${item.activeIndicatorBg}`}
                   />
                 )}
               </div>

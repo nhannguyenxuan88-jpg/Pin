@@ -9,6 +9,7 @@ import {
   CapitalStructure,
   FinancialRatio,
   CashFlowForecast,
+  CashFlowProjection,
   InventoryTransaction,
   CashTransaction,
 } from "../../types";
@@ -227,8 +228,8 @@ export class FinancialAnalyticsService {
     // Analyze historical patterns
     const monthlyPatterns = this.analyzeMonthlyPatterns(historicalCashFlows);
 
-    const projectedInflows = [];
-    const projectedOutflows = [];
+    const projectedInflows: CashFlowProjection[] = [];
+    const projectedOutflows: CashFlowProjection[] = [];
 
     for (let month = 0; month < forecastPeriodMonths; month++) {
       const forecastDate = new Date(

@@ -3641,6 +3641,14 @@ const MaterialManager: React.FC<{
       }
       const user = currentUser;
 
+      const desiredStock = Number(adjustment.actual_stock);
+      if (!Number.isFinite(desiredStock)) {
+        throw new Error("Tồn kho thực tế không hợp lệ");
+      }
+      if (desiredStock < 0) {
+        throw new Error("Tồn kho không thể âm");
+      }
+
       // First, try to create the stock_history table if it doesn't exist
       const createTableSQL = `
         CREATE TABLE IF NOT EXISTS pin_stock_history(
@@ -3666,12 +3674,63 @@ const MaterialManager: React.FC<{
       }
 
       // Record the stock history
+      let beforeStockForHistory = Number(adjustment.current_stock);
+      let afterStockForHistory = desiredStock;
+
+      // Update material stock atomically (DB-locked) when possible.
+      // Fallback to direct update if RPC is not available.
+      let updateError: any = null;
+      try {
+        const { data, error } = await supabase.rpc("pin_set_material_stock", {
+          p_material_id: adjustment.material_id,
+          p_new_stock: desiredStock,
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : undefined;
+        if (row) {
+          const b = Number((row as any).before_stock);
+          const a = Number((row as any).after_stock);
+          if (Number.isFinite(b)) beforeStockForHistory = b;
+          if (Number.isFinite(a)) afterStockForHistory = a;
+        }
+      } catch (e) {
+        updateError = e;
+      }
+
+      if (updateError && (user.id === "dev-bypass-user" || user.id === "offline-user")) {
+        console.warn("⚠️ RLS/RPC Error in Dev Mode (Stock Adj) - Mocking success");
+        updateError = null;
+
+        // Manually update local state
+        setMaterials(
+          materials.map((m) =>
+            m.id === adjustment.material_id ? { ...m, stock: desiredStock } : m
+          )
+        );
+      }
+
+      // If RPC failed because it doesn't exist, fallback to direct update.
+      if (updateError && String(updateError?.code || "") === "42883") {
+        try {
+          const { error } = await supabase
+            .from("pin_materials")
+            .update({ stock: desiredStock })
+            .eq("id", adjustment.material_id);
+          if (error) throw error;
+          updateError = null;
+        } catch (e) {
+          updateError = e;
+        }
+      }
+
+      if (updateError) throw updateError;
+
       const historyPayload = {
         material_id: adjustment.material_id,
         transaction_type: "adjustment",
-        quantity_before: adjustment.current_stock,
-        quantity_change: adjustment.actual_stock - adjustment.current_stock,
-        quantity_after: adjustment.actual_stock,
+        quantity_before: Math.round(beforeStockForHistory),
+        quantity_change: Math.round(afterStockForHistory - beforeStockForHistory),
+        quantity_after: Math.round(afterStockForHistory),
         reason: adjustment.reason,
         invoice_number: `ADJ - ${Date.now()} `,
         created_by: user.id,
@@ -3692,32 +3751,6 @@ const MaterialManager: React.FC<{
       }
 
       if (historyError) throw historyError;
-
-      // Update material stock
-      let updateError = null;
-      try {
-        const { error } = await supabase
-          .from("pin_materials")
-          .update({ stock: adjustment.actual_stock })
-          .eq("id", adjustment.material_id);
-        updateError = error;
-      } catch (e) {
-        updateError = e;
-      }
-
-      if (updateError && (user.id === "dev-bypass-user" || user.id === "offline-user")) {
-        console.warn("⚠️ RLS Error in Dev Mode (Stock Update) - Mocking success");
-        updateError = null;
-
-        // Manually update local state
-        setMaterials(
-          materials.map((m) =>
-            m.id === adjustment.material_id ? { ...m, stock: adjustment.actual_stock } : m
-          )
-        );
-      }
-
-      if (updateError) throw updateError;
 
       // Reload materials
       await loadMaterials();

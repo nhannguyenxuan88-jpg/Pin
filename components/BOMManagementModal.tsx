@@ -13,12 +13,32 @@ import Pagination from "./common/Pagination";
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
-const generateUuid = () =>
-  typeof crypto !== "undefined" && (crypto as any).randomUUID
-    ? (crypto as any).randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${Math.random()
-        .toString(36)
-        .slice(2, 10)}`;
+const generateUuid = (): string => {
+  // Prefer native UUID
+  if (typeof crypto !== "undefined" && (crypto as any).randomUUID) {
+    return (crypto as any).randomUUID();
+  }
+
+  // RFC4122 v4 using getRandomValues
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    // Set version (4) and variant (10xx)
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  // Last resort (still UUID-shaped)
+  const rnd = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0");
+  const a = rnd() + rnd();
+  const b = rnd();
+  const c = ("4" + rnd().slice(1)).slice(0, 4) + rnd().slice(4, 8);
+  const d = ((8 + Math.floor(Math.random() * 4)).toString(16) + rnd().slice(1)).slice(0, 4) + rnd().slice(4, 8);
+  const e = rnd() + rnd() + rnd();
+  return `${a.slice(0, 8)}-${a.slice(8, 12)}-${b.slice(0, 4)}-${d.slice(0, 4)}-${e.slice(0, 12)}`;
+};
 
 interface BOMManagementModalProps {
   isOpen: boolean;

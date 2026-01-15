@@ -123,7 +123,19 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
+/* Back-compat alias used in some layout components */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
 .dark .glass {
+  background: rgba(51, 65, 85, 0.7);
+  border: 1px solid rgba(71, 85, 105, 0.18);
+}
+
+.dark .apple-glass {
   background: rgba(51, 65, 85, 0.7);
   border: 1px solid rgba(71, 85, 105, 0.18);
 }

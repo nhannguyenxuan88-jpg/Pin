@@ -19,7 +19,8 @@ interface DBPinRepairOrder {
   issue_description: string;
   technician_name?: string;
   status: string;
-  materials_used?: string; // JSONB stored as string
+  // JSONB column (Supabase accepts arrays/objects directly)
+  materials_used?: unknown;
   labor_cost: number;
   total: number;
   notes?: string;
@@ -45,6 +46,57 @@ interface DBPinRepairOrder {
 }
 
 export function createRepairService(ctx: PinContextType): RepairService {
+  const isMissingRpcError = (message: string): boolean => {
+    const m = (message || "").toLowerCase();
+    return (
+      m.includes("does not exist") ||
+      m.includes("function") && m.includes("pin_adjust_material_stock") && m.includes("not")
+    );
+  };
+
+  const adjustStockSafe = async (
+    materialId: string,
+    delta: number,
+    materialNameForToast: string
+  ): Promise<{ ok: true; nextStock?: number } | { ok: false; message: string }> => {
+    try {
+      // Preferred: atomic adjustment via RPC
+      const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
+        p_material_id: materialId,
+        p_delta: delta,
+      });
+
+      if (error) {
+        if (isMissingRpcError(error.message || "")) {
+          // Fallback: best-effort non-atomic update (requires RPC migration in DB for safety)
+          const mat = ctx.pinMaterials.find((m: PinMaterial) => m.id === materialId);
+          const current = Number(mat?.stock ?? 0);
+          const next = current + delta;
+          if (next < 0) {
+            return {
+              ok: false,
+              message: `${materialNameForToast}: tồn kho ${current}, thay đổi ${delta} (không đủ)`,
+            };
+          }
+          const { error: upErr } = await supabase
+            .from("pin_materials")
+            .update({ stock: next })
+            .eq("id", materialId);
+          if (upErr) {
+            return { ok: false, message: upErr.message || String(upErr) };
+          }
+          return { ok: true, nextStock: next };
+        }
+
+        return { ok: false, message: error.message || String(error) };
+      }
+
+      return { ok: true, nextStock: typeof data === "number" ? data : undefined };
+    } catch (e: unknown) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) };
+    }
+  };
+
   return {
     addRepairOrder: async (order) => {
       if (IS_OFFLINE_MODE) {
@@ -104,7 +156,8 @@ export function createRepairService(ctx: PinContextType): RepairService {
         const depositAmount = order.depositAmount || 0;
         if (depositAmount > 0 && ctx.addCashTransaction) {
           const depositTx: CashTransaction = {
-            id: `CT-DEPOSIT-${order.id}-${Date.now()}`,
+            // Deterministic id prevents duplicate rows on retries
+            id: `CT-DEPOSIT-${order.id}`,
             type: "income",
             date: new Date().toISOString(),
             amount: depositAmount,
@@ -207,86 +260,108 @@ export function createRepairService(ctx: PinContextType): RepairService {
           return;
         }
 
-        // ===== LOGIC TRỪ KHO (MOTOCARE STANDARD) =====
-        // Chỉ trừ kho khi status là 'Trả máy' (Hoàn thành & Giao khách)
-        const completedStatuses = ["Trả máy", "completed", "Delivered"];
-
+        // ===== LOGIC TRỪ KHO (SAFER) =====
+        // Chỉ trừ kho khi status là 'Trả máy' và chưa trừ (materialsDeducted=false)
         const shouldDeductMaterials =
-          completedStatuses.includes(order.status) &&
-          order.materialsUsed &&
-          order.materialsUsed.length > 0 &&
-          !order.materialsDeducted; // ✅ Chỉ trừ nếu chưa trừ
+          order.status === "Trả máy" &&
+          !!order.materialsUsed?.length &&
+          !order.materialsDeducted;
 
         if (shouldDeductMaterials) {
-          const warnings: string[] = [];
-
-          for (const m of order.materialsUsed!) {
-            let mat = ctx.pinMaterials.find(
-              (material: PinMaterial) => material.id === m.materialId
-            );
-            if (!mat && m.materialName) {
-              mat = ctx.pinMaterials.find(
-                (material: PinMaterial) =>
-                  material.name.toLowerCase() === m.materialName.toLowerCase()
-              );
-            }
-            if (!mat) {
-              warnings.push(`⚠️ Không tìm thấy vật tư: ${m.materialName}`);
-              continue;
-            }
-
-            const currentStock = mat.stock || 0;
-            const requestedQty = m.quantity || 0;
-
-            if (currentStock < requestedQty) {
-              warnings.push(
-                `⚠️ ${mat.name}: Tồn kho ${currentStock}, cần ${requestedQty} (thiếu ${requestedQty - currentStock})`
-              );
-            }
-
-            // Thực hiện trừ kho
-            const remaining = currentStock - requestedQty;
-
-            await supabase.from("pin_materials").update({ stock: remaining }).eq("id", mat.id);
-            ctx.setPinMaterials((prev: PinMaterial[]) =>
-              prev.map((material: PinMaterial) =>
-                material.id === mat!.id ? { ...material, stock: remaining } : material
-              )
-            );
-          }
-
-          // Cập nhật flag đã trừ kho
-          await supabase
+          // Acquire a lightweight "lock" to avoid double-deduct
+          const { data: lockRows, error: lockErr } = await supabase
             .from("pin_repair_orders")
             .update({
               materials_deducted: true,
               materials_deducted_at: new Date().toISOString(),
             })
-            .eq("id", order.id);
+            .eq("id", order.id)
+            .eq("materials_deducted", false)
+            .select("id");
 
-          order.materialsDeducted = true;
-          order.materialsDeductedAt = new Date().toISOString();
-
-          if (warnings.length > 0) {
+          if (lockErr) {
             ctx.addToast?.({
-              title: "⚠️ Cảnh báo tồn kho khi trả máy",
-              message: warnings.join("\n"),
-              type: "warn",
+              title: "Lỗi trừ kho",
+              message: lockErr.message || String(lockErr),
+              type: "error",
             });
+          } else if (!lockRows || lockRows.length === 0) {
+            // Someone else already deducted
+            order.materialsDeducted = true;
+          } else {
+            const errors: string[] = [];
+
+            for (const m of order.materialsUsed!) {
+              let mat = ctx.pinMaterials.find(
+                (material: PinMaterial) => material.id === m.materialId
+              );
+              if (!mat && m.materialName) {
+                mat = ctx.pinMaterials.find(
+                  (material: PinMaterial) =>
+                    material.name.toLowerCase() === m.materialName.toLowerCase()
+                );
+              }
+              if (!mat) {
+                errors.push(`Không tìm thấy vật tư: ${m.materialName}`);
+                continue;
+              }
+
+              const requestedQty = Number(m.quantity || 0);
+              if (requestedQty <= 0) continue;
+
+              const res = await adjustStockSafe(mat.id, -requestedQty, mat.name);
+              if (!res.ok) {
+                errors.push(res.message);
+                continue;
+              }
+
+              if (typeof res.nextStock === "number") {
+                const next = res.nextStock;
+                ctx.setPinMaterials((prev: PinMaterial[]) =>
+                  prev.map((material: PinMaterial) =>
+                    material.id === mat!.id ? { ...material, stock: next } : material
+                  )
+                );
+              }
+            }
+
+            if (errors.length > 0) {
+              // Revert lock flag if deduction failed
+              await supabase
+                .from("pin_repair_orders")
+                .update({ materials_deducted: false, materials_deducted_at: null })
+                .eq("id", order.id);
+
+              order.materialsDeducted = false;
+              order.materialsDeductedAt = undefined;
+
+              ctx.addToast?.({
+                title: "Không thể trừ kho khi trả máy",
+                message:
+                  errors.join("\n") +
+                  "\n\nGợi ý: chạy migration sql_migrations/2026-01-15_add_pin_adjust_material_stock_rpc.sql trên Supabase để trừ kho an toàn.",
+                type: "error",
+              });
+            } else {
+              order.materialsDeducted = true;
+              order.materialsDeductedAt = new Date().toISOString();
+            }
           }
         }
 
         // ===== LOGIC THANH TOÁN (Atomic Simulation) =====
         // 1. Check existing transactions
-        const existingTxs = ctx.cashTransactions?.filter(t => t.workOrderId === order.id) || [];
+        const existingTxs = ctx.cashTransactions?.filter((t) => t.workOrderId === order.id) || [];
 
         // 2. Handle Deposit Transaction (if added/changed)
         const depositAmount = order.depositAmount || 0;
-        const hasDepositTx = existingTxs.some(t => t.category === 'deposit' || t.notes?.toLowerCase().includes('đặt cọc'));
+        const hasDepositTx = existingTxs.some(
+          (t) => t.id === `CT-DEPOSIT-${order.id}` || t.category === "deposit"
+        );
 
-        if (depositAmount > 0 && !hasDepositTx && ctx.addCashTransaction) {
+        if (depositAmount > 0 && ctx.addCashTransaction) {
           const depositTx: CashTransaction = {
-            id: `CT-DEPOSIT-${order.id}-${Date.now()}`,
+            id: `CT-DEPOSIT-${order.id}`,
             type: "income",
             date: new Date().toISOString(),
             amount: depositAmount,
@@ -298,18 +373,27 @@ export function createRepairService(ctx: PinContextType): RepairService {
             paymentSourceId: order.paymentMethod || "cash",
             branchId: "main",
             workOrderId: order.id,
-            category: "service_deposit" as any, // Cast to match category types if needed
+            category: "service_deposit",
           };
           await ctx.addCashTransaction(depositTx);
+        } else if (depositAmount <= 0 && hasDepositTx) {
+          // Best-effort cleanup
+          await supabase
+            .from("cashtransactions")
+            .delete()
+            .eq("work_order_id", order.id)
+            .eq("id", `CT-DEPOSIT-${order.id}`);
         }
 
         // 3. Handle Final Payment Transaction
         // Chỉ tạo khi 'Trả máy' VÀ có thanh toán (paid/partial) VÀ chưa có giao dịch thu nhập dịch vụ
-        const hasServiceIncomeTx = existingTxs.some(t => t.category === 'service_income');
-        const isCompleted = completedStatuses.includes(order.status);
-        const isPaidOrPartial = order.paymentStatus === 'paid' || order.paymentStatus === 'partial';
+        const hasServiceIncomeTx = existingTxs.some(
+          (t) => t.id === `CT-FINAL-${order.id}` || t.category === "service_income"
+        );
+        const isCompleted = order.status === "Trả máy";
+        const isPaidOrPartial = order.paymentStatus === "paid" || order.paymentStatus === "partial";
 
-        if (isCompleted && isPaidOrPartial && !hasServiceIncomeTx && ctx.addCashTransaction) {
+        if (isCompleted && isPaidOrPartial && ctx.addCashTransaction) {
           let finalAmount = 0;
           if (order.paymentStatus === 'paid') {
             finalAmount = (order.total || 0) - depositAmount;
@@ -320,7 +404,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
 
           if (finalAmount > 0) {
             const finalTx: CashTransaction = {
-              id: `CT-FINAL-${order.id}-${Date.now()}`,
+              id: `CT-FINAL-${order.id}`,
               type: "income",
               date: new Date().toISOString(),
               amount: finalAmount,
@@ -335,6 +419,13 @@ export function createRepairService(ctx: PinContextType): RepairService {
               category: "service_income",
             };
             await ctx.addCashTransaction(finalTx);
+          } else if (hasServiceIncomeTx) {
+            // Cleanup stale final tx if amount becomes 0
+            await supabase
+              .from("cashtransactions")
+              .delete()
+              .eq("work_order_id", order.id)
+              .eq("id", `CT-FINAL-${order.id}`);
           }
         }
 
@@ -398,14 +489,18 @@ export function createRepairService(ctx: PinContextType): RepairService {
             }
             if (!mat) continue;
 
-            // Hoàn trả số lượng về kho
-            const restoredStock = (mat.stock || 0) + (m.quantity || 0);
-            await supabase.from("pin_materials").update({ stock: restoredStock }).eq("id", mat.id);
-            ctx.setPinMaterials((prev: PinMaterial[]) =>
-              prev.map((material: PinMaterial) =>
-                material.id === mat!.id ? { ...material, stock: restoredStock } : material
-              )
-            );
+            const qty = Number(m.quantity || 0);
+            if (qty <= 0) continue;
+
+            const res = await adjustStockSafe(mat.id, qty, mat.name);
+            if (res.ok && typeof res.nextStock === "number") {
+              const restoredStock = res.nextStock;
+              ctx.setPinMaterials((prev: PinMaterial[]) =>
+                prev.map((material: PinMaterial) =>
+                  material.id === mat!.id ? { ...material, stock: restoredStock } : material
+                )
+              );
+            }
           }
 
           ctx.addToast?.({
@@ -428,6 +523,13 @@ export function createRepairService(ctx: PinContextType): RepairService {
           });
           return;
         }
+
+        // Best-effort cleanup related cash transactions
+        await supabase
+          .from("cashtransactions")
+          .delete()
+          .eq("work_order_id", orderId)
+          .ilike("notes", "%#app:pincorp%");
 
         ctx.setRepairOrders((prev: PinRepairOrder[]) =>
           prev.filter((o: PinRepairOrder) => o.id !== orderId)

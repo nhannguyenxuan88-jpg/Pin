@@ -48,7 +48,7 @@ export function useServiceReminders(
 
       // Sort by date descending
       const sortedOrders = customerWorkOrders
-        .filter((wo) => wo.status === "Hoàn thành")
+        .filter((wo) => wo.status === "Trả máy")
         .sort(
           (a, b) =>
             new Date(b.creationDate).getTime() -

@@ -327,7 +327,7 @@ export class BusinessLogicService {
         return {
           ...material,
           committedQuantity: newCommittedQuantity,
-        };
+        } as PinMaterial;
       })
       .filter((m): m is PinMaterial => m !== null);
 

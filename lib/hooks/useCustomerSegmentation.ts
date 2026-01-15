@@ -58,12 +58,13 @@ export function useCustomerSegmentation(
 
     // Process sales
     sales.forEach((sale) => {
-      if (!sale.customer_id) return;
+      const customerId = sale.customer?.id;
+      if (!customerId) return;
 
-      const data = customerData.get(sale.customer_id);
+      const data = customerData.get(customerId);
       if (!data) return;
 
-      const saleDate = new Date(sale.created_at || sale.sale_date);
+      const saleDate = new Date(sale.created_at || sale.date);
 
       // Update last purchase
       if (!data.lastPurchase || saleDate > data.lastPurchase) {
@@ -72,7 +73,7 @@ export function useCustomerSegmentation(
 
       // Update frequency and monetary
       data.totalPurchases++;
-      data.totalSpent += sale.total_amount || 0;
+      data.totalSpent += sale.total || 0;
     });
 
     // Calculate RFM metrics

@@ -5,6 +5,34 @@ import { generateProductSKU } from "../../lib/sku";
 
 let syncRunning = false;
 
+const isMissingRpcError = (message: string): boolean => {
+  const m = (message || "").toLowerCase();
+  return (
+    m.includes("does not exist") ||
+    (m.includes("function") && m.includes("pin_adjust_material_stock") && m.includes("not"))
+  );
+};
+
+const uuidV4 = (): string => {
+  if (typeof crypto !== "undefined" && (crypto as any).randomUUID) return (crypto as any).randomUUID();
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  // Fallback: UUID-shaped string
+  const rnd = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0");
+  const a = rnd() + rnd();
+  const b = rnd();
+  const c = ("4" + rnd().slice(1)).slice(0, 4) + rnd().slice(4, 8);
+  const d = ((8 + Math.floor(Math.random() * 4)).toString(16) + rnd().slice(1)).slice(0, 4) + rnd().slice(4, 8);
+  const e = rnd() + rnd() + rnd();
+  return `${a.slice(0, 8)}-${a.slice(8, 12)}-${b.slice(0, 4)}-${d.slice(0, 4)}-${e.slice(0, 12)}`;
+};
+
 // Helper to convert date formats (dd/MM/yyyy -> yyyy-MM-dd for PostgreSQL)
 const toPostgresDate = (dateStr: string | undefined): string => {
   if (!dateStr) return new Date().toISOString().split('T')[0];
@@ -71,6 +99,43 @@ function isValidUUID(v: string | undefined): boolean {
 }
 
 export function createProductionService(ctx: PinContextType): ProductionService {
+  const adjustMaterialStockSafe = async (
+    materialId: string,
+    delta: number,
+    materialName: string
+  ): Promise<{ ok: true; nextStock?: number } | { ok: false; message: string }> => {
+    try {
+      const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
+        p_material_id: materialId,
+        p_delta: delta,
+      });
+      if (error) {
+        if (isMissingRpcError(error.message || "")) {
+          // Fallback: non-atomic update (less safe)
+          const mat = ctx.pinMaterials.find((m) => m.id === materialId);
+          const current = Number(mat?.stock ?? 0);
+          const next = current + delta;
+          if (next < 0) {
+            return {
+              ok: false,
+              message: `${materialName}: tồn kho ${current}, thay đổi ${delta} (không đủ)`,
+            };
+          }
+          const { error: upErr } = await supabase
+            .from("pin_materials")
+            .update({ stock: next })
+            .eq("id", materialId);
+          if (upErr) return { ok: false, message: upErr.message || String(upErr) };
+          return { ok: true, nextStock: next };
+        }
+        return { ok: false, message: error.message || String(error) };
+      }
+      return { ok: true, nextStock: typeof data === "number" ? data : undefined };
+    } catch (e: unknown) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) };
+    }
+  };
+
   // Helper: upsert product to DB or state
   const persistProduct = async (product: PinProduct): Promise<boolean> => {
     console.log(`🔧 [persistProduct] Saving "${product.name}" stock=${product.stock}`);
@@ -240,8 +305,11 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         });
         return;
       }
+      const effectiveId = isValidUUID(order.id) ? order.id : uuidV4();
+      const normalizedOrder: ProductionOrder = effectiveId === order.id ? order : { ...order, id: effectiveId };
+
       const payload: DBProductionOrder = {
-        id: order.id,
+        id: effectiveId,
         creation_date: toPostgresDate(order.creationDate),
         product_name: order.productName,
         bom_id: order.bomId,
@@ -262,7 +330,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         });
         return;
       }
-      ctx.setProductionOrders((prev: ProductionOrder[]) => [order, ...prev]);
+      ctx.setProductionOrders((prev: ProductionOrder[]) => [normalizedOrder, ...prev]);
       ctx.addToast?.({
         title: "Đã tạo lệnh sản xuất",
         message: `${order.productName} - SL: ${order.quantityProduced}`,
@@ -364,6 +432,14 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       }
 
       // Online path - persist changes
+      if (!ctx.currentUser) {
+        ctx.addToast?.({
+          title: "Yêu cầu đăng nhập",
+          message: "Bạn phải đăng nhập để hoàn thành lệnh sản xuất.",
+          type: "warn",
+        });
+        return;
+      }
       const order = ctx.productionOrders.find((o) => o.id === orderId);
       if (!order) {
         ctx.addToast?.({
@@ -400,42 +476,62 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         return;
       }
 
-      // 1) Deduct materials with persistence via upsertPinMaterial
-      for (const bomItem of bom.materials || []) {
-        const material = ctx.pinMaterials.find((m) => m.id === bomItem.materialId);
-        if (!material) continue;
-        const required = Number(bomItem.quantity || 0) * producedQty;
-        const newStock = (material.stock || 0) - required;
-        if (newStock < 0) {
+      // 1) Pre-check availability from current in-memory snapshot
+      const requiredList = (bom.materials || [])
+        .map((bomItem) => {
+          const material = ctx.pinMaterials.find((m) => m.id === bomItem.materialId);
+          const required = Number(bomItem.quantity || 0) * producedQty;
+          return { material, required };
+        })
+        .filter((x) => x.material && x.required > 0) as Array<{ material: PinMaterial; required: number }>;
+
+      for (const { material, required } of requiredList) {
+        const currentStock = Number(material.stock ?? 0);
+        if (currentStock - required < 0) {
           ctx.addToast?.({
             title: "Không đủ nguyên liệu",
-            message: `Nguyên liệu "${material.name}" không đủ. Tồn kho: ${material.stock}, Cần: ${required}`,
+            message: `Nguyên liệu "${material.name}" không đủ. Tồn kho: ${currentStock}, Cần: ${required}`,
             type: "error",
           });
           return;
         }
+      }
 
-        // Persist material change directly (avoid ctx dependency)
-        try {
-          if (!IS_OFFLINE_MODE) {
-            await supabase.from("pin_materials").update({ stock: newStock }).eq("id", material.id);
+      // 2) Deduct materials via RPC; rollback if any step fails (best-effort)
+      const applied: Array<{ materialId: string; qty: number; materialName: string }> = [];
+      for (const { material, required } of requiredList) {
+        const res = await adjustMaterialStockSafe(material.id, -required, material.name);
+        if (!res.ok) {
+          // Rollback what was deducted so far
+          for (let i = applied.length - 1; i >= 0; i--) {
+            const a = applied[i];
+            await adjustMaterialStockSafe(a.materialId, a.qty, a.materialName);
           }
-        } catch {
-          // Ignore errors
+          ctx.addToast?.({
+            title: "Không thể trừ kho khi hoàn thành",
+            message: res.message,
+            type: "error",
+          });
+          return;
         }
-        // Update local state
-        ctx.setPinMaterials((prev: PinMaterial[]) =>
-          prev.map((m) => (m.id === material.id ? { ...m, stock: newStock } : m))
-        );
+        applied.push({ materialId: material.id, qty: required, materialName: material.name });
 
-        // Record stock history (export)
+        if (typeof res.nextStock === "number") {
+          const nextStock = res.nextStock;
+          ctx.setPinMaterials((prev: PinMaterial[]) =>
+            prev.map((m) => (m.id === material.id ? { ...m, stock: nextStock } : m))
+          );
+        }
+
+        // Record stock history (export) best-effort
         const historyPayload = {
           id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           material_id: material.id,
           transaction_type: "export",
           quantity_change: -required,
           quantity_before: material.stock,
-          quantity_after: newStock,
+          quantity_after:
+            typeof res.nextStock === "number" ? res.nextStock : Number(material.stock ?? 0) - required,
           reason: `Sản xuất: ${bom.productName} (${order.id})`,
           created_by: ctx.currentUser?.id,
           created_at: new Date().toISOString(),
@@ -447,12 +543,17 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         }
       }
 
-      // 2) Mark order as completed in DB
+      // 3) Mark order as completed in DB
       const { error: updateError } = await supabase
         .from("pin_production_orders")
         .update({ status: "Hoàn thành" })
         .eq("id", orderId);
       if (updateError) {
+        // Rollback deducted materials if we couldn't mark completed
+        for (let i = applied.length - 1; i >= 0; i--) {
+          const a = applied[i];
+          await adjustMaterialStockSafe(a.materialId, a.qty, a.materialName);
+        }
         ctx.addToast?.({
           title: "Lỗi hoàn thành lệnh sản xuất",
           message: updateError.message || String(updateError),
@@ -461,7 +562,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         return;
       }
 
-      // 3) Upsert finished product via existing context helper (handles normalize + RLS)
+      // 4) Upsert finished product via existing context helper (handles normalize + RLS)
       const existingProd = ctx.pinProducts.find((p) => p.sku === bom.productSku);
       const prodId = existingProd?.id || bom.id || `PINP-${Date.now()}`;
       const oldStock = existingProd?.stock || 0;
@@ -480,7 +581,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       } as PinProduct;
       const ok = await persistProduct(product);
 
-      // 4) Local state updates
+      // 5) Local state updates
       ctx.setProductionOrders((prev: ProductionOrder[]) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: "Hoàn thành" as const } : o))
       );
@@ -674,6 +775,15 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       await persistProduct(product);
     },
     removeProductAndReturnMaterials: async (product, quantityToRemove) => {
+      if (!ctx.currentUser && !IS_OFFLINE_MODE) {
+        ctx.addToast?.({
+          title: "Yêu cầu đăng nhập",
+          message: "Bạn phải đăng nhập để xoá/hoàn kho thành phẩm.",
+          type: "warn",
+        });
+        return;
+      }
+
       // Normalize quantity
       const qtyRequested = Math.max(1, Math.floor(Number(quantityToRemove) || 0));
       const qty = Math.min(qtyRequested, Math.max(0, Number(product.stock || 0)));
@@ -706,7 +816,42 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         });
         if (returnMap.size === 0) return;
 
-        // Apply to state and persist via upsertPinMaterial
+        // OFFLINE: just update local state
+        if (IS_OFFLINE_MODE) {
+          ctx.setPinMaterials((prev: PinMaterial[]) =>
+            prev.map((mat) =>
+              returnMap.has(mat.id)
+                ? {
+                  ...mat,
+                  stock: (mat.stock || 0) + (returnMap.get(mat.id) || 0),
+                }
+                : mat
+            )
+          );
+          return;
+        }
+
+        // ONLINE: apply via RPC for atomic increments; rollback on partial failure
+        const applied: Array<{ materialId: string; delta: number; materialName: string }> = [];
+        for (const [materialId, delta] of returnMap.entries()) {
+          const matName = ctx.pinMaterials.find((m) => m.id === materialId)?.name || materialId;
+          const res = await adjustMaterialStockSafe(materialId, delta, matName);
+          if (!res.ok) {
+            // best-effort rollback
+            for (const a of applied) {
+              await adjustMaterialStockSafe(a.materialId, -a.delta, a.materialName);
+            }
+            ctx.addToast?.({
+              title: "Lỗi hoàn kho NVL",
+              message: res.message,
+              type: "error",
+            });
+            throw new Error(res.message);
+          }
+          applied.push({ materialId, delta, materialName: matName });
+        }
+
+        // reflect successful increments locally
         ctx.setPinMaterials((prev: PinMaterial[]) =>
           prev.map((mat) =>
             returnMap.has(mat.id)
@@ -717,22 +862,6 @@ export function createProductionService(ctx: PinContextType): ProductionService 
               : mat
           )
         );
-        // Persist each material change (online only)
-        if (!IS_OFFLINE_MODE) {
-          for (const [materialId, delta] of returnMap.entries()) {
-            const mat = ctx.pinMaterials.find((m) => m.id === materialId);
-            if (mat) {
-              try {
-                await supabase
-                  .from("pin_materials")
-                  .update({ stock: (mat.stock || 0) + delta })
-                  .eq("id", materialId);
-              } catch {
-                // Ignore
-              }
-            }
-          }
-        }
       };
 
       if (IS_OFFLINE_MODE) {
@@ -749,7 +878,12 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       }
 
       // Online path
-      await returnMaterialsForQty(qty);
+      try {
+        await returnMaterialsForQty(qty);
+      } catch {
+        // Return already toasts; do not proceed with product/order changes
+        return;
+      }
       const remaining = Math.max(0, (product.stock || 0) - qty);
       if (remaining === 0) {
         // Cancel related completed orders to avoid re-sync, then delete product

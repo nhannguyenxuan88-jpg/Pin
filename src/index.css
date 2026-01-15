@@ -65,21 +65,13 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Hide ALL scrollbars globally while keeping scroll functionality */
-/* Applies to the whole app; use `.show-scrollbar` on a container to opt out */
-* {
-  -ms-overflow-style: none;
-  /* IE and Edge */
-  scrollbar-width: none;
-  /* Firefox */
+/* App background token for the fixed background layer in main.tsx */
+:root {
+  --pin-app-bg: #f8fafc;
 }
 
-*::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari, Opera */
-  width: 0;
-  height: 0;
-  background: transparent;
+.dark {
+  --pin-app-bg: #0f172a;
 }
 
 /* Utility to hide scrollbars while keeping scroll functionality */

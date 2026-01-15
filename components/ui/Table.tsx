@@ -76,6 +76,7 @@ export const TableRow: React.FC<TableRowProps> = ({
 export interface TableHeadProps {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
   sortable?: boolean;
   sorted?: "asc" | "desc" | null;
   onSort?: () => void;
@@ -85,6 +86,7 @@ export interface TableHeadProps {
 export const TableHead: React.FC<TableHeadProps> = ({
   children,
   className,
+  style,
   sortable = false,
   sorted = null,
   onSort,
@@ -114,6 +116,7 @@ export const TableHead: React.FC<TableHeadProps> = ({
         className
       )}
       onClick={sortable ? onSort : undefined}
+      style={style}
     >
       <div className={cn("flex items-center gap-2", justifyClasses[align])}>
         <span>{children}</span>

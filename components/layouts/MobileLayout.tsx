@@ -58,7 +58,15 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
       <MobileBottomNav />
 
       {/* More Menu (Sheet) */}
-      <MobileMoreMenu isOpen={isMoreMenuOpen} onClose={() => setIsMoreMenuOpen(false)} />
+      <MobileMoreMenu
+        isOpen={isMoreMenuOpen}
+        onClose={() => {
+          setIsMoreMenuOpen(false);
+          if (location.pathname === "/more") {
+            window.history.back();
+          }
+        }}
+      />
 
       {/* Tết Decorations */}
       <TetDecorations />

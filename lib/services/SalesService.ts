@@ -33,6 +33,18 @@ interface CartItemWithType extends PinCartItem {
   type?: "product" | "material";
 }
 
+function inferItemType(
+  ctx: PinContextType,
+  item: CartItemWithType
+): "product" | "material" {
+  if (item.type === "product" || item.type === "material") return item.type;
+  const id = item.productId;
+  if (!id) return "product";
+  if (ctx.pinProducts?.some((p: PinProduct) => p.id === id)) return "product";
+  if (ctx.pinMaterials?.some((m: PinMaterial) => m.id === id)) return "material";
+  return "product";
+}
+
 export function createSalesService(ctx: PinContextType): SalesService {
   return {
     handlePinSale: async (saleData, newCashTx) => {
@@ -64,6 +76,92 @@ export function createSalesService(ctx: PinContextType): SalesService {
       }
 
       try {
+        const adjustMaterialStockWithHistorySafe = async (args: {
+          materialId: string;
+          delta: number;
+          transactionType: "import" | "export" | "adjustment";
+          reason: string;
+          invoiceNumber?: string | null;
+          note?: string | null;
+        }) => {
+          const d = Number(args.delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_material_stock_with_history", {
+              p_material_id: args.materialId,
+              p_delta: d,
+              p_transaction_type: args.transactionType,
+              p_reason: args.reason,
+              p_invoice_number: args.invoiceNumber ?? null,
+              p_note: args.note ?? null,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
+        const adjustProductStockWithHistorySafe = async (args: {
+          productId: string;
+          delta: number;
+          transactionType: "import" | "export" | "adjustment";
+          reason: string;
+          invoiceNumber?: string | null;
+          note?: string | null;
+        }) => {
+          const d = Number(args.delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_product_stock_with_history", {
+              p_product_id: args.productId,
+              p_delta: d,
+              p_transaction_type: args.transactionType,
+              p_reason: args.reason,
+              p_invoice_number: args.invoiceNumber ?? null,
+              p_note: args.note ?? null,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
+        const adjustMaterialStockSafe = async (materialId: string, delta: number) => {
+          const d = Number(delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
+              p_material_id: materialId,
+              p_delta: d,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
+        const adjustProductStockSafe = async (productId: string, delta: number) => {
+          const d = Number(delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_product_stock", {
+              p_product_id: productId,
+              p_delta: d,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
         // Prepare DB payload for pin_sales (snake_case)
         const paymentStatus =
           newSaleBase.paymentStatus ||
@@ -174,56 +272,112 @@ export function createSalesService(ctx: PinContextType): SalesService {
           (newSaleBase.items || []).forEach((it: CartItemWithType) => {
             const q = Number(it.quantity || 0);
             const pid = it.productId;
-            const itemType = it.type || "product";
+            const itemType = inferItemType(ctx, it);
             if (pid && q > 0) {
-              if (itemType === "material")
+              if (itemType === "material") {
                 usageByMaterial.set(pid, (usageByMaterial.get(pid) || 0) + q);
-              else usageByProduct.set(pid, (usageByProduct.get(pid) || 0) + q);
+              } else {
+                usageByProduct.set(pid, (usageByProduct.get(pid) || 0) + q);
+              }
             }
           });
 
-          // Products
+          // Products: subtract stock
           for (const [productId, qty] of usageByProduct.entries()) {
             const prod = ctx.pinProducts.find((p: PinProduct) => p.id === productId);
             if (!prod) continue;
+
+            const invNo = savedSale.code || savedSale.id;
+            const note = `saleId=${savedSale.id}`;
+            const histNext = await adjustProductStockWithHistorySafe({
+              productId,
+              delta: -Number(qty || 0),
+              transactionType: "export",
+              reason: "Bán hàng",
+              invoiceNumber: invNo,
+              note,
+            });
+            if (typeof histNext === "number" && Number.isFinite(histNext)) {
+              ctx.setPinProducts((prev: PinProduct[]) =>
+                prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: histNext } : p))
+              );
+              continue;
+            }
+
+            const rpcNext = await adjustProductStockSafe(productId, -Number(qty || 0));
+            if (typeof rpcNext === "number" && Number.isFinite(rpcNext)) {
+              ctx.setPinProducts((prev: PinProduct[]) =>
+                prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: rpcNext } : p))
+              );
+              continue;
+            }
+
             const remaining = Math.max(0, (prod.stock || 0) - qty);
             const { error: upErr } = await supabase
               .from("pin_products")
               .update({ stock: remaining })
               .eq("id", productId);
-            if (!upErr) {
-              ctx.setPinProducts((prev: PinProduct[]) =>
-                prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: remaining } : p))
-              );
-            } else {
+            if (upErr) {
               ctx.addToast?.({
                 title: "Lỗi cập nhật tồn kho thành phẩm",
                 message: upErr.message || String(upErr),
                 type: "error",
               });
+              continue;
             }
+
+            ctx.setPinProducts((prev: PinProduct[]) =>
+              prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: remaining } : p))
+            );
           }
 
-          // Materials
+          // Materials: subtract stock
           for (const [materialId, qty] of usageByMaterial.entries()) {
             const mat = ctx.pinMaterials.find((m: PinMaterial) => m.id === materialId);
             if (!mat) continue;
+
+            const invNo = savedSale.code || savedSale.id;
+            const note = `saleId=${savedSale.id}`;
+            const histNext = await adjustMaterialStockWithHistorySafe({
+              materialId,
+              delta: -Number(qty || 0),
+              transactionType: "export",
+              reason: "Bán hàng",
+              invoiceNumber: invNo,
+              note,
+            });
+            if (typeof histNext === "number" && Number.isFinite(histNext)) {
+              ctx.setPinMaterials((prev: PinMaterial[]) =>
+                prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: histNext } : m))
+              );
+              continue;
+            }
+
+            const rpcNext = await adjustMaterialStockSafe(materialId, -Number(qty || 0));
+            if (typeof rpcNext === "number" && Number.isFinite(rpcNext)) {
+              ctx.setPinMaterials((prev: PinMaterial[]) =>
+                prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: rpcNext } : m))
+              );
+              continue;
+            }
+
             const remaining = Math.max(0, (mat.stock || 0) - qty);
             const { error: upErr } = await supabase
               .from("pin_materials")
               .update({ stock: remaining })
               .eq("id", materialId);
-            if (!upErr) {
-              ctx.setPinMaterials((prev: PinMaterial[]) =>
-                prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: remaining } : m))
-              );
-            } else {
+            if (upErr) {
               ctx.addToast?.({
-                title: "Lỗi cập nhật tồn kho nguyên liệu",
+                title: "Lỗi cập nhật tồn kho vật tư",
                 message: upErr.message || String(upErr),
                 type: "error",
               });
+              continue;
             }
+
+            ctx.setPinMaterials((prev: PinMaterial[]) =>
+              prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: remaining } : m))
+            );
           }
         } catch (e) {
           console.error("Exception khi trừ kho sau bán hàng:", e);
@@ -267,7 +421,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
         (sale.items || []).forEach((it: CartItemWithType) => {
           const pid = it.productId;
           const q = Number(it.quantity || 0);
-          const itemType = it.type || "product";
+          const itemType = inferItemType(ctx, it);
           if (pid && q > 0) {
             if (itemType === "material")
               usageByMaterial.set(pid, (usageByMaterial.get(pid) || 0) + q);
@@ -311,13 +465,99 @@ export function createSalesService(ctx: PinContextType): SalesService {
       }
 
       try {
+        const adjustMaterialStockWithHistorySafe = async (args: {
+          materialId: string;
+          delta: number;
+          transactionType: "import" | "export" | "adjustment";
+          reason: string;
+          invoiceNumber?: string | null;
+          note?: string | null;
+        }) => {
+          const d = Number(args.delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_material_stock_with_history", {
+              p_material_id: args.materialId,
+              p_delta: d,
+              p_transaction_type: args.transactionType,
+              p_reason: args.reason,
+              p_invoice_number: args.invoiceNumber ?? null,
+              p_note: args.note ?? null,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
+        const adjustProductStockWithHistorySafe = async (args: {
+          productId: string;
+          delta: number;
+          transactionType: "import" | "export" | "adjustment";
+          reason: string;
+          invoiceNumber?: string | null;
+          note?: string | null;
+        }) => {
+          const d = Number(args.delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_product_stock_with_history", {
+              p_product_id: args.productId,
+              p_delta: d,
+              p_transaction_type: args.transactionType,
+              p_reason: args.reason,
+              p_invoice_number: args.invoiceNumber ?? null,
+              p_note: args.note ?? null,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
+        const adjustMaterialStockSafe = async (materialId: string, delta: number) => {
+          const d = Number(delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
+              p_material_id: materialId,
+              p_delta: d,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
+        const adjustProductStockSafe = async (productId: string, delta: number) => {
+          const d = Number(delta);
+          if (!Number.isFinite(d) || d === 0) return null;
+          try {
+            const { data, error } = await supabase.rpc("pin_adjust_product_stock", {
+              p_product_id: productId,
+              p_delta: d,
+            });
+            if (error) throw error;
+            return typeof data === "number" ? data : Number(data);
+          } catch (e: any) {
+            if (String(e?.code || "") === "42883") return null;
+            throw e;
+          }
+        };
+
         // Return stock
         const usageByProduct = new Map<string, number>();
         const usageByMaterial = new Map<string, number>();
         (sale.items || []).forEach((it: CartItemWithType) => {
           const pid = it.productId;
           const q = Number(it.quantity || 0);
-          const itemType = it.type || "product";
+          const itemType = inferItemType(ctx, it);
           if (pid && q > 0) {
             if (itemType === "material")
               usageByMaterial.set(pid, (usageByMaterial.get(pid) || 0) + q);
@@ -328,15 +568,73 @@ export function createSalesService(ctx: PinContextType): SalesService {
         for (const [productId, qty] of usageByProduct.entries()) {
           const prod = ctx.pinProducts.find((p: PinProduct) => p.id === productId);
           if (!prod) continue;
+          const invNo = sale.code || sale.id;
+          const note = `saleId=${sale.id}`;
+
+          const histNext = await adjustProductStockWithHistorySafe({
+            productId,
+            delta: Number(qty || 0),
+            transactionType: "import",
+            reason: "Xoá hoá đơn (hoàn kho)",
+            invoiceNumber: invNo,
+            note,
+          });
+          if (typeof histNext === "number" && Number.isFinite(histNext)) {
+            ctx.setPinProducts((prev: PinProduct[]) =>
+              prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: histNext } : p))
+            );
+            continue;
+          }
+
+          const rpcNext = await adjustProductStockSafe(productId, Number(qty || 0));
+          if (typeof rpcNext === "number" && Number.isFinite(rpcNext)) {
+            ctx.setPinProducts((prev: PinProduct[]) =>
+              prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: rpcNext } : p))
+            );
+            continue;
+          }
+
           const remaining = (prod.stock || 0) + qty;
           await supabase.from("pin_products").update({ stock: remaining }).eq("id", productId);
+          ctx.setPinProducts((prev: PinProduct[]) =>
+            prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: remaining } : p))
+          );
         }
 
         for (const [materialId, qty] of usageByMaterial.entries()) {
           const mat = ctx.pinMaterials.find((m: PinMaterial) => m.id === materialId);
           if (!mat) continue;
+          const invNo = sale.code || sale.id;
+          const note = `saleId=${sale.id}`;
+
+          const histNext = await adjustMaterialStockWithHistorySafe({
+            materialId,
+            delta: Number(qty || 0),
+            transactionType: "import",
+            reason: "Xoá hoá đơn (hoàn kho)",
+            invoiceNumber: invNo,
+            note,
+          });
+          if (typeof histNext === "number" && Number.isFinite(histNext)) {
+            ctx.setPinMaterials((prev: PinMaterial[]) =>
+              prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: histNext } : m))
+            );
+            continue;
+          }
+
+          const rpcNext = await adjustMaterialStockSafe(materialId, Number(qty || 0));
+          if (typeof rpcNext === "number" && Number.isFinite(rpcNext)) {
+            ctx.setPinMaterials((prev: PinMaterial[]) =>
+              prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: rpcNext } : m))
+            );
+            continue;
+          }
+
           const remaining = (mat.stock || 0) + qty;
           await supabase.from("pin_materials").update({ stock: remaining }).eq("id", materialId);
+          ctx.setPinMaterials((prev: PinMaterial[]) =>
+            prev.map((m: PinMaterial) => (m.id === materialId ? { ...m, stock: remaining } : m))
+          );
         }
 
         // Delete cash transactions via centralized finance helper

@@ -75,17 +75,17 @@ export interface PinContextType {
   // Production
   productionOrders: ProductionOrder[];
   setProductionOrders: React.Dispatch<React.SetStateAction<ProductionOrder[]>>;
-  addProductionOrder: (order: ProductionOrder) => Promise<void>;
-  updateProductionOrderStatus: (orderId: string, status: string) => Promise<void>;
+  addProductionOrder: (order: ProductionOrder, bom: PinBOM) => Promise<void>;
+  updateProductionOrderStatus: (orderId: string, status: ProductionOrder["status"]) => Promise<void>;
   completeProductionOrder: (orderId: string) => Promise<void>;
   syncProductsFromCompletedOrders: () => Promise<void>;
-  resetProductionData: () => Promise<void>;
+  resetProductionData: (options?: Record<string, boolean>) => Promise<void>;
 
   // PIN Products
   pinProducts: PinProduct[];
   setPinProducts: React.Dispatch<React.SetStateAction<PinProduct[]>>;
-  updatePinProduct: (productId: string, updates: Partial<PinProduct>) => Promise<void>;
-  removePinProductAndReturnMaterials: (productId: string) => Promise<void>;
+  updatePinProduct: (product: PinProduct) => Promise<void>;
+  removePinProductAndReturnMaterials: (product: PinProduct, quantityToRemove: number) => Promise<void>;
 
   // Sales
   pinSales: PinSale[];

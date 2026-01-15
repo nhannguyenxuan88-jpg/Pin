@@ -27,7 +27,7 @@ const toDBFixedAsset = (asset: FixedAsset): DBFixedAsset => ({
 // Convert CapitalInvestment to DB format
 const toDBCapitalInvestment = (investment: CapitalInvestment): DBCapitalInvestment => ({
   amount: investment.amount,
-  description: investment.description || null,
+  description: investment.description || "",
   source: investment.source,
   date: investment.date,
   interest_rate: investment.interestRate ?? null,

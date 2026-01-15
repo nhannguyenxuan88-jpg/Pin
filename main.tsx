@@ -59,7 +59,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             bottom: 0,
             // Ensure this layer never covers content
             zIndex: -1,
-            background: "#0f172a",
+            background: "var(--pin-app-bg, #0f172a)",
             pointerEvents: "none",
           }}
           aria-hidden="true"

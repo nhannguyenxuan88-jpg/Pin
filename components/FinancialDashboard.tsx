@@ -46,14 +46,21 @@ const FinancialDashboard: React.FC = () => {
             : tx.type === "income"
               ? "operating"
               : "operating",
+      subcategory: tx.category ?? "general",
       description: tx.notes || "",
-      reference: tx.saleId || tx.workOrderId || "",
+      referenceId: tx.saleId || tx.workOrderId || undefined,
+      paymentMethod: "cash",
+      accountId: tx.paymentSourceId || undefined,
+      isRecurring: false,
+      tags: [],
+      created_at: tx.created_at ?? tx.date,
     }));
   }, [cashTransactions]);
 
   // Calculate capital structure from current data
   const capitalStructure: CapitalStructure[] = useMemo(() => {
     const currentDate = new Date();
+    const nowIso = currentDate.toISOString();
     const totalAssetValue = FinancialAnalyticsService.calculateTotalAssetValue(
       fixedAssets,
       currentDate
@@ -69,12 +76,24 @@ const FinancialDashboard: React.FC = () => {
 
     return [
       {
-        date: currentDate.toISOString(),
+        id: `capital-${nowIso}`,
+        date: nowIso,
+        equity: {
+          ownersEquity: Math.max(0, totalAssetValue + totalCash),
+          retainedEarnings: Math.max(0, totalRevenue),
+          additionalPaidInCapital: 0,
+          treasuryStock: 0,
+        },
+        debt: {
+          shortTermDebt: 0,
+          longTermDebt: 0,
+          accountsPayable: 0,
+          accruedExpenses: 0,
+        },
         totalAssets: totalAssetValue + Math.max(0, totalCash),
         totalLiabilities: 0, // Would need supplier debts data
         workingCapital: Math.max(0, totalCash),
-        cashBalance: totalCash,
-        inventoryValue: 0, // Would need inventory data
+        created_at: nowIso,
       },
     ];
   }, [fixedAssets, cashTransactions, pinSales]);

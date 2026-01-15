@@ -173,7 +173,7 @@ export const useDataSync = () => {
       )
       .forEach((order) => {
         if (order.committedMaterials) {
-          order.committedMaterials.forEach((cm) => {
+          order.committedMaterials.forEach((cm: any) => {
             const material = pinMaterials.find((m) => m.id === cm.materialId);
             if (!material) {
               inconsistencies.push(

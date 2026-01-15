@@ -31,7 +31,7 @@ export function useInventoryAlerts(
   parts: Part[],
   options: UseInventoryAlertsOptions = {}
 ): InventoryAlert[] {
-  const { expiringSoonDays = 30 } = options;
+  const { expiringSoonDays = 30, lowStockThreshold = 0 } = options;
 
   return useMemo(() => {
     const alerts: InventoryAlert[] = [];
@@ -40,8 +40,9 @@ export function useInventoryAlerts(
     expiryThreshold.setDate(today.getDate() + expiringSoonDays);
 
     parts.forEach((part) => {
-      const stock = part.stock || 0;
-      const minStock = part.min_stock || 0;
+      const stockByBranch = part.stock || {};
+      const stock = Object.values(stockByBranch).reduce((sum, v) => sum + (v || 0), 0);
+      const minStock = lowStockThreshold;
 
       // Check out of stock
       if (stock === 0) {
@@ -71,8 +72,8 @@ export function useInventoryAlerts(
       }
 
       // Check expiry date
-      if (part.expiry_date) {
-        const expiryDate = new Date(part.expiry_date);
+      if (part.expiryDate) {
+        const expiryDate = new Date(part.expiryDate);
         const daysUntilExpiry = Math.floor(
           (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -88,7 +89,7 @@ export function useInventoryAlerts(
             message: `Đã hết hạn: ${part.name} (hết hạn ${Math.abs(
               daysUntilExpiry
             )} ngày trước)`,
-            expiryDate: part.expiry_date,
+            expiryDate: part.expiryDate,
             daysUntilExpiry,
             currentStock: stock,
           });
@@ -101,7 +102,7 @@ export function useInventoryAlerts(
             type: "expiring_soon",
             severity: daysUntilExpiry <= 7 ? "critical" : "warning",
             message: `Sắp hết hạn: ${part.name} (còn ${daysUntilExpiry} ngày)`,
-            expiryDate: part.expiry_date,
+            expiryDate: part.expiryDate,
             daysUntilExpiry,
             currentStock: stock,
           });
