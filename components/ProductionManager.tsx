@@ -231,7 +231,7 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
             placeholder="Tìm theo tên SP hoặc mã lệnh..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72 p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-slate-100 text-sm"
+            className="w-full sm:w-72 input-base text-sm"
           />
         </div>
 

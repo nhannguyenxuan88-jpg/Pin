@@ -323,6 +323,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [bomSearchTerm, setBomSearchTerm] = useState("");
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
 
   // Filter orders based on search
@@ -336,6 +337,15 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
         order.userName?.toLowerCase().includes(term)
     );
   }, [orders, searchTerm]);
+
+  // Filter BOMs based on search
+  const filteredBOMs = useMemo(() => {
+    if (!bomSearchTerm.trim()) return boms;
+    const term = bomSearchTerm.toLowerCase();
+    return boms.filter((bom) =>
+      bom.productName.toLowerCase().includes(term)
+    );
+  }, [boms, bomSearchTerm]);
 
   // Group orders by status
   const ordersByStatus = useMemo(() => {
@@ -504,6 +514,8 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                   <input
                     type="text"
                     placeholder="Tìm kiếm BOM..."
+                    value={bomSearchTerm}
+                    onChange={(e) => setBomSearchTerm(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
                   />
                 </div>
@@ -511,16 +523,16 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
                   {/* Danh sách BOM (1) - Hiển thị item đầu tiên */}
                   <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                    Danh sách BOM ({boms.length})
+                    Danh sách BOM ({filteredBOMs.length})
                   </div>
 
-                  {boms.length === 0 ? (
+                  {filteredBOMs.length === 0 ? (
                     <div className="text-center py-8 text-slate-400 dark:text-slate-500">
                       <BeakerIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Chưa có BOM</p>
+                      <p className="text-sm">{bomSearchTerm ? "Không tìm thấy BOM phù hợp" : "Chưa có BOM"}</p>
                     </div>
                   ) : (
-                    boms.map((bom) => {
+                    filteredBOMs.map((bom) => {
                       const totalCost = bom.materials.reduce((sum, mat) => {
                         const material = materials.find((m) => m.id === mat.materialId);
                         return sum + (material?.purchasePrice || 0) * mat.quantity;

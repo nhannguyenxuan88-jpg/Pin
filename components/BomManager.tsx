@@ -147,7 +147,7 @@ const ProductionOrderModal: React.FC<{
               <select
                 value={selectedBomId || ""}
                 onChange={(e) => setSelectedBomId(e.target.value)}
-                className="mt-1 w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                className="mt-1 w-full select-base text-sm"
               >
                 <option value="">-- Chọn công thức --</option>
                 {boms.map((b) => (
@@ -166,7 +166,7 @@ const ProductionOrderModal: React.FC<{
                 value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
                 min="1"
-                className="mt-1 w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                className="mt-1 w-full input-base text-sm"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ const ProductionOrderModal: React.FC<{
                           description: e.target.value,
                         }))
                       }
-                      className="flex-1 p-1 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                      className="flex-1 input-base text-sm"
                     />
                     <input
                       type="number"
@@ -249,11 +249,11 @@ const ProductionOrderModal: React.FC<{
                           amount: Number(e.target.value),
                         }))
                       }
-                      className="w-28 p-1 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                      className="w-28 input-base text-sm"
                     />
                     <button
                       onClick={handleAddCost}
-                      className="bg-sky-600 text-white text-sm px-3 py-1 rounded"
+                      className="btn-primary text-sm px-3 py-1"
                     >
                       Thêm
                     </button>
@@ -287,14 +287,14 @@ const ProductionOrderModal: React.FC<{
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200 font-semibold py-2 px-4 rounded-lg"
+              className="btn-secondary"
             >
               Hủy
             </button>
             <button
               onClick={handleSave}
               disabled={!isStockSufficient || !selectedBom}
-              className="bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg disabled:bg-sky-300 disabled:cursor-not-allowed"
+              className="btn-primary disabled:bg-sky-300 disabled:cursor-not-allowed"
             >
               Lưu Lệnh
             </button>

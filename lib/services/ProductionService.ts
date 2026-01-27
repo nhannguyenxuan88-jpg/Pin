@@ -66,8 +66,8 @@ interface DBPinProduct {
   sku: string;
   stock: number;
   cost_price: number;
-  retail_price?: number | null;
-  wholesale_price?: number | null;
+  retail_price: number;
+  wholesale_price: number;
 }
 
 interface DBPinBOM {
@@ -161,8 +161,8 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       sku: product.sku,
       stock: Number(product.stock ?? 0),
       cost_price: Number(product.costPrice ?? 0),
-      retail_price: product.retailPrice ?? product.sellingPrice ?? null,
-      wholesale_price: product.wholesalePrice ?? null,
+      retail_price: product.retailPrice ?? product.sellingPrice ?? 0,
+      wholesale_price: product.wholesalePrice ?? 0,
     };
     console.log(`   - Upserting to DB:`, payload);
     const { error } = await supabase.from("pin_products").upsert(payload);
@@ -578,6 +578,8 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         stock: newStock,
         costPrice: isFinite(newCost) ? newCost : oldCost,
         sellingPrice: existingProd?.sellingPrice || 0,
+        retailPrice: existingProd?.retailPrice || existingProd?.sellingPrice || 0,
+        wholesalePrice: existingProd?.wholesalePrice || 0,
       } as PinProduct;
       const ok = await persistProduct(product);
 

@@ -580,148 +580,144 @@ const PinRepairManagerNew: React.FC = () => {
 
   return (
     <div className="space-y-3 md:space-y-4 pb-20 md:pb-0">
-      {/* Page Header - Compact on mobile */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-        <div>
-          <h1 className="text-lg md:text-xl font-bold text-pin-gray-900 dark:text-pin-dark-900 flex items-center gap-2">
-            🔧 Quản lý Sửa chữa
-          </h1>
-          <p className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">
-            Quản lý phiếu sửa chữa và bảo hành
-          </p>
-        </div>
-      </div>
-
-      {/* Row 1: Stats Cards - 3 cols on mobile, 5 on desktop */}
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 md:gap-3">
-        <button
-          onClick={() => setStatusFilter("all")}
-          className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${statusFilter === "all"
-            ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-900/20"
-            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-blue-300"
-            }`}
-        >
-          <div className="text-xl md:text-3xl font-bold text-pin-blue-600 dark:text-pin-blue-400">
-            {stats.total}
-          </div>
-          <div className="text-[9px] md:text-xs text-pin-gray-600 dark:text-pin-dark-600">Tổng</div>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("pending")}
-          className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${statusFilter === "pending"
-            ? "border-pin-amber-500 bg-pin-amber-50 dark:bg-pin-amber-900/20"
-            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-amber-300"
-            }`}
-        >
-          <div className="text-xl md:text-3xl font-bold text-pin-amber-600 dark:text-pin-amber-400">
-            {stats.pending}
-          </div>
-          <div className="text-[9px] md:text-xs text-pin-gray-600 dark:text-pin-dark-600">Chờ</div>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("inProgress")}
-          className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all ${statusFilter === "inProgress"
-            ? "border-pin-cyan-500 bg-pin-cyan-50 dark:bg-pin-cyan-900/20"
-            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-cyan-300"
-            }`}
-        >
-          <div className="text-xl md:text-3xl font-bold text-pin-cyan-600 dark:text-pin-cyan-400">
-            {stats.inProgress}
-          </div>
-          <div className="text-[9px] md:text-xs text-pin-gray-600 dark:text-pin-dark-600">
-            Đang sửa
-          </div>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("completed")}
-          className={`p-2 md:p-3 rounded-lg md:rounded-xl border-2 transition-all col-span-1 ${statusFilter === "completed"
-            ? "border-pin-green-500 bg-pin-green-50 dark:bg-pin-green-900/20"
-            : "border-pin-gray-200 dark:border-pin-dark-400 hover:border-pin-green-300"
-            }`}
-        >
-          <div className="text-xl md:text-3xl font-bold text-pin-green-600 dark:text-pin-green-400">
-            {stats.completed}
-          </div>
-          <div className="text-[9px] md:text-xs text-pin-gray-600 dark:text-pin-dark-600">Xong</div>
-        </button>
-
-        <div className="p-2 md:p-3 rounded-lg md:rounded-xl border-2 border-pin-emerald-200 dark:border-pin-emerald-700 bg-gradient-to-br from-pin-emerald-50 to-pin-green-50 dark:from-pin-emerald-900/20 dark:to-pin-green-900/20 col-span-2 md:col-span-1">
-          <div className="text-sm md:text-xl font-bold text-pin-emerald-600 dark:text-pin-emerald-400 truncate">
-            {formatCurrency(stats.totalRevenue)}
-          </div>
-          <div className="text-[9px] md:text-xs text-pin-gray-600 dark:text-pin-dark-600">
-            Doanh thu
-          </div>
-        </div>
-      </div>
-
-      {/* Row 2: Search + Date Filter + Create Button + Profit */}
-      <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-        {/* Search */}
-        <div className="flex-1 min-w-0">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400">🔍</span>
-            <input
-              type="text"
-              placeholder="Tìm theo tên, SĐT, thiết bị, mã phiếu..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-pin-dark-100 border-2 border-pin-gray-200 dark:border-pin-dark-400 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pin-blue-500 focus:border-pin-blue-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-pin-gray-400 hover:text-pin-gray-600"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Date Filter */}
-        <div className="flex gap-1 bg-pin-gray-100 dark:bg-pin-dark-200 rounded-xl p-1">
-          {[
-            { value: "all", label: "Tất cả" },
-            { value: "today", label: "Hôm nay" },
-            { value: "week", label: "Tuần" },
-            { value: "month", label: "Tháng" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setDateFilter(opt.value as DateFilter)}
-              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${dateFilter === opt.value
-                ? "bg-white dark:bg-pin-dark-100 text-pin-blue-600 shadow-sm"
-                : "text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-blue-600"
-                }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Create Button */}
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<PlusIcon className="w-5 h-5" />}
-          onClick={() => handleOpenModal()}
-          className="flex-shrink-0 whitespace-nowrap shadow-lg shadow-pin-blue-500/30"
-        >
-          <span className="hidden sm:inline">Tạo phiếu mới</span>
-          <span className="sm:hidden">Tạo</span>
-        </Button>
-
-        {/* Profit Card */}
-        <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-pin-purple-200 dark:border-pin-purple-700 bg-gradient-to-r from-pin-purple-50 to-pin-pink-50 dark:from-pin-purple-900/20 dark:to-pin-pink-900/20">
+      {/* Header + Filters */}
+      <div className="rounded-2xl border border-pin-gray-200 dark:border-pin-dark-400 bg-white dark:bg-pin-dark-200 p-3 md:p-4 shadow-sm space-y-3 md:space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div>
-            <div className="text-xs text-pin-gray-500">Lợi nhuận ước tính</div>
-            <div className="text-lg font-bold text-pin-purple-600 dark:text-pin-purple-400">
-              {formatCurrency(stats.totalProfit)}
+            <h1 className="text-lg md:text-2xl font-bold text-pin-gray-900 dark:text-pin-dark-900 flex items-center gap-2">
+              🔧 Quản lý Sửa chữa
+            </h1>
+            <p className="text-[11px] md:text-sm text-pin-gray-500 dark:text-pin-dark-500">
+              Theo dõi phiếu sửa chữa, tiến độ và thanh toán
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
+              <div className="px-2.5 py-1.5 rounded-lg border border-pin-emerald-200 dark:border-pin-emerald-700 bg-pin-emerald-50/70 dark:bg-pin-emerald-900/20">
+                <div className="text-[10px] text-pin-gray-500">Doanh thu</div>
+                <div className="text-sm font-semibold text-pin-emerald-600 dark:text-pin-emerald-400">
+                  {formatCurrency(stats.totalRevenue)}
+                </div>
+              </div>
+              <div className="px-2.5 py-1.5 rounded-lg border border-pin-purple-200 dark:border-pin-purple-700 bg-pin-purple-50/70 dark:bg-pin-purple-900/20">
+                <div className="text-[10px] text-pin-gray-500">Lợi nhuận</div>
+                <div className="text-sm font-semibold text-pin-purple-600 dark:text-pin-purple-400">
+                  {formatCurrency(stats.totalProfit)}
+                </div>
+              </div>
             </div>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<PlusIcon className="w-5 h-5" />}
+              onClick={() => handleOpenModal()}
+              className="flex-shrink-0 whitespace-nowrap shadow-lg shadow-pin-blue-500/30"
+            >
+              <span className="hidden sm:inline">Tạo phiếu mới</span>
+              <span className="sm:hidden">Tạo</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2 md:gap-3">
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "all"
+              ? "border-pin-blue-300 ring-2 ring-pin-blue-200/40"
+              : "border-pin-gray-200 dark:border-pin-dark-400"
+              }`}
+          >
+            <div className="text-base md:text-lg font-semibold text-pin-blue-600 dark:text-pin-blue-400">
+              {stats.total}
+            </div>
+            <div className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">Tổng phiếu</div>
+          </button>
+
+          <button
+            onClick={() => setStatusFilter("pending")}
+            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "pending"
+              ? "border-pin-amber-300 ring-2 ring-pin-amber-200/40"
+              : "border-pin-gray-200 dark:border-pin-dark-400"
+              }`}
+          >
+            <div className="text-base md:text-lg font-semibold text-pin-amber-600 dark:text-pin-amber-400">
+              {stats.pending}
+            </div>
+            <div className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">Chờ xử lý</div>
+          </button>
+
+          <button
+            onClick={() => setStatusFilter("inProgress")}
+            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "inProgress"
+              ? "border-pin-cyan-300 ring-2 ring-pin-cyan-200/40"
+              : "border-pin-gray-200 dark:border-pin-dark-400"
+              }`}
+          >
+            <div className="text-base md:text-lg font-semibold text-pin-cyan-600 dark:text-pin-cyan-400">
+              {stats.inProgress}
+            </div>
+            <div className="text-[11px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">
+              Đang sửa
+            </div>
+          </button>
+
+          <button
+            onClick={() => setStatusFilter("completed")}
+            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "completed"
+              ? "border-pin-green-300 ring-2 ring-pin-green-200/40"
+              : "border-pin-gray-200 dark:border-pin-dark-400"
+              }`}
+          >
+            <div className="text-base md:text-lg font-semibold text-pin-green-600 dark:text-pin-green-400">
+              {stats.completed}
+            </div>
+            <div className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">Hoàn thành</div>
+          </button>
+
+        </div>
+
+        {/* Search + Date Filter */}
+        <div className="flex flex-col lg:flex-row gap-2 md:gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400">🔍</span>
+              <input
+                type="text"
+                placeholder="Tìm theo tên, SĐT, thiết bị, mã phiếu..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full input-base pl-9 pr-10 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-pin-gray-400 hover:text-pin-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="inline-flex flex-wrap gap-1 rounded-xl border border-pin-gray-200 dark:border-pin-dark-400 bg-pin-gray-50 dark:bg-pin-dark-200 p-1">
+            {[
+              { value: "all", label: "Tất cả" },
+              { value: "today", label: "Hôm nay" },
+              { value: "week", label: "Tuần" },
+              { value: "month", label: "Tháng" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setDateFilter(opt.value as DateFilter)}
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${dateFilter === opt.value
+                  ? "bg-white dark:bg-pin-dark-100 text-pin-blue-600 shadow-sm"
+                  : "text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-blue-600"
+                  }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -747,13 +743,7 @@ const PinRepairManagerNew: React.FC = () => {
           )}
         </div>
 
-        {/* Mobile profit display */}
-        <div className="lg:hidden text-right">
-          <div className="text-xs text-pin-gray-500">Lợi nhuận</div>
-          <div className="text-sm font-bold text-pin-purple-600 dark:text-pin-purple-400">
-            {formatCurrency(stats.totalProfit)}
-          </div>
-        </div>
+        {/* Summary moved to header */}
       </div>
 
       {/* Orders Table */}
