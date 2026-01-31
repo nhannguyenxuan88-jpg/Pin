@@ -68,12 +68,12 @@ const AdvancedAnalyticsDashboard: React.FC = () => {
     timeRange === "6months" ? "month" : "day"
   );
   const financialMetrics = analyticsService.getFinancialMetrics(startDate, endDate);
-  const categoryBreakdown = analyticsService.getCategoryBreakdown();
+  const categoryBreakdown = analyticsService.getCategoryBreakdown(startDate, endDate);
 
   // New metrics
   // New metrics with strict safe-guards
   const profitAnalysis = typeof analyticsService.getProfitAnalysis === 'function'
-    ? analyticsService.getProfitAnalysis()
+    ? analyticsService.getProfitAnalysis(10, startDate, endDate)
     : { topProfitProducts: [], averageMargin: 0 };
 
   const inventoryAnalysis = typeof analyticsService.getInventoryAnalysis === 'function'
@@ -89,11 +89,11 @@ const AdvancedAnalyticsDashboard: React.FC = () => {
     : { totalReceivables: 0, totalPayables: 0, overdueCount: 0 };
 
   const topCustomers = typeof analyticsService.getTopCustomers === 'function'
-    ? analyticsService.getTopCustomers(10)
+    ? analyticsService.getTopCustomers(10, startDate, endDate)
     : [];
 
   const topProducts = typeof analyticsService.getTopProducts === 'function'
-    ? analyticsService.getTopProducts(10)
+    ? analyticsService.getTopProducts(10, startDate, endDate)
     : [];
 
   const formatCurrency = (value: number) => {

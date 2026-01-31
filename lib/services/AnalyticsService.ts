@@ -92,11 +92,11 @@ export interface AnalyticsService {
   ) => TimeSeriesData[];
 
   // Product analytics
-  getTopProducts: (limit?: number) => ProductPerformance[];
+  getTopProducts: (limit?: number, startDate?: Date, endDate?: Date) => ProductPerformance[];
   getProductTrends: (productId: string) => TimeSeriesData[];
 
   // Customer analytics
-  getTopCustomers: (limit?: number) => CustomerAnalytics[];
+  getTopCustomers: (limit?: number, startDate?: Date, endDate?: Date) => CustomerAnalytics[];
   getCustomerLifetimeValue: (customerId: string) => number;
 
   // Comparative analysis
@@ -120,7 +120,7 @@ export interface AnalyticsService {
   getTrendDirection: () => "up" | "down" | "stable";
 
   // Category analysis
-  getCategoryBreakdown: () => CategoryAnalytics[];
+  getCategoryBreakdown: (startDate?: Date, endDate?: Date) => CategoryAnalytics[];
 
   // Financial metrics
   getFinancialMetrics: (startDate?: Date, endDate?: Date) => {
@@ -134,7 +134,7 @@ export interface AnalyticsService {
 
   // New Advanced Metrics
   getInventoryAnalysis: () => InventoryAnalysis;
-  getProfitAnalysis: (limit?: number) => ProfitAnalysis;
+  getProfitAnalysis: (limit?: number, startDate?: Date, endDate?: Date) => ProfitAnalysis;
   getRetentionMetrics: () => RetentionMetrics;
   getDebtOverview: () => DebtOverview;
 }
@@ -210,10 +210,16 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
       });
     },
 
-    getTopProducts: (limit = 10) => {
-      const sales = getSales();
+    getTopProducts: (limit = 10, startDate?: Date, endDate?: Date) => {
+      let sales = getSales();
+      
+      // Lọc theo khoảng thời gian nếu được cung cấp
+      if (startDate && endDate) {
+        sales = filterSalesByDateRange(sales, startDate, endDate);
+      }
+      
       const products = getProducts();
-      const productMap = new Map<string, ProductPerformance>();
+      const productMap = new Map<string, ProductPerformance & { totalCost: number }>();
 
       sales.forEach((sale) => {
         sale.items.forEach((item) => {
@@ -228,10 +234,18 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
             totalOrders: 0,
             averagePrice: 0,
             profitMargin: 0,
+            totalCost: 0,
           };
 
-          // Updated calculation using item.sellingPrice
-          existing.totalRevenue += item.sellingPrice * item.quantity;
+          // Tính doanh thu và giá vốn từ item
+          const itemRevenue = item.sellingPrice * item.quantity;
+          const itemCostPrice = item.costPrice !== undefined && item.costPrice > 0
+            ? item.costPrice
+            : product.costPrice || 0;
+          const itemCost = itemCostPrice * item.quantity;
+          
+          existing.totalRevenue += itemRevenue;
+          existing.totalCost += itemCost;
           existing.totalQuantity += item.quantity;
           existing.totalOrders += 1;
 
@@ -240,15 +254,16 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
       });
 
       const result = Array.from(productMap.values()).map((p) => {
-        const product = products.find((prod) => prod.sku === p.sku);
+        const profit = p.totalRevenue - p.totalCost;
         return {
-          ...p,
-          averagePrice: p.totalRevenue / p.totalQuantity,
-          profitMargin: product
-            ? ((product.retailPrice - product.costPrice) /
-              product.retailPrice) *
-            100
-            : 0,
+          sku: p.sku,
+          name: p.name,
+          totalRevenue: p.totalRevenue,
+          totalQuantity: p.totalQuantity,
+          totalOrders: p.totalOrders,
+          averagePrice: p.totalQuantity > 0 ? p.totalRevenue / p.totalQuantity : 0,
+          // Tính biên lợi nhuận dựa trên doanh thu và giá vốn thực tế
+          profitMargin: p.totalRevenue > 0 ? (profit / p.totalRevenue) * 100 : 0,
         };
       });
 
@@ -303,8 +318,14 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
       });
     },
 
-    getTopCustomers: (limit = 10) => {
-      const sales = getSales();
+    getTopCustomers: (limit = 10, startDate?: Date, endDate?: Date) => {
+      let sales = getSales();
+      
+      // Lọc theo khoảng thời gian nếu được cung cấp
+      if (startDate && endDate) {
+        sales = filterSalesByDateRange(sales, startDate, endDate);
+      }
+      
       const customerMap = new Map<string, CustomerAnalytics>();
 
       sales.forEach((sale) => {
@@ -500,8 +521,14 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
       return "stable";
     },
 
-    getCategoryBreakdown: () => {
-      const sales = getSales();
+    getCategoryBreakdown: (startDate?: Date, endDate?: Date) => {
+      let sales = getSales();
+      
+      // Lọc theo khoảng thời gian nếu được cung cấp
+      if (startDate && endDate) {
+        sales = filterSalesByDateRange(sales, startDate, endDate);
+      }
+      
       const products = getProducts();
       const categoryMap = new Map<string, CategoryAnalytics>();
 
@@ -593,8 +620,14 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
       };
     },
 
-    getProfitAnalysis: (limit = 10) => {
-      const sales = getSales();
+    getProfitAnalysis: (limit = 10, startDate?: Date, endDate?: Date) => {
+      let sales = getSales();
+      
+      // Lọc theo khoảng thời gian nếu được cung cấp
+      if (startDate && endDate) {
+        sales = filterSalesByDateRange(sales, startDate, endDate);
+      }
+      
       const products = getProducts();
       const productMap = new Map<string, ProductPerformance & { totalProfit: number }>();
 
