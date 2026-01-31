@@ -67,7 +67,7 @@ const AdvancedAnalyticsDashboard: React.FC = () => {
     endDate,
     timeRange === "6months" ? "month" : "day"
   );
-  const financialMetrics = analyticsService.getFinancialMetrics();
+  const financialMetrics = analyticsService.getFinancialMetrics(startDate, endDate);
   const categoryBreakdown = analyticsService.getCategoryBreakdown();
 
   // New metrics
@@ -181,7 +181,7 @@ const AdvancedAnalyticsDashboard: React.FC = () => {
                 variant="success"
                 compact
                 trend={{
-                  value: financialMetrics.profitMargin,
+                  value: Math.round(financialMetrics.profitMargin * 10) / 10,
                   label: "biên lợi nhuận",
                 }}
               />

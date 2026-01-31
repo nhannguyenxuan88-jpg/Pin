@@ -123,7 +123,7 @@ export interface AnalyticsService {
   getCategoryBreakdown: () => CategoryAnalytics[];
 
   // Financial metrics
-  getFinancialMetrics: () => {
+  getFinancialMetrics: (startDate?: Date, endDate?: Date) => {
     totalRevenue: number;
     totalCost: number;
     grossProfit: number;
@@ -163,8 +163,12 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
   const calculateCost = (sales: PinSale[]): number => {
     return sales.reduce((sum, sale) => {
       const saleCost = sale.items.reduce((itemSum, item) => {
-        const product = getProducts().find((p) => p.id === item.productId);
-        return itemSum + (product?.costPrice || 0) * item.quantity;
+        // Ưu tiên sử dụng giá vốn đã lưu trong item (snapshot tại thời điểm bán)
+        // Nếu không có, fallback về giá vốn hiện tại của sản phẩm
+        const itemCostPrice = item.costPrice !== undefined && item.costPrice > 0
+          ? item.costPrice
+          : getProducts().find((p) => p.id === item.productId)?.costPrice || 0;
+        return itemSum + itemCostPrice * item.quantity;
       }, 0);
       return sum + saleCost;
     }, 0);
@@ -532,8 +536,14 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
       }));
     },
 
-    getFinancialMetrics: () => {
-      const sales = getSales();
+    getFinancialMetrics: (startDate?: Date, endDate?: Date) => {
+      let sales = getSales();
+      
+      // Lọc theo khoảng thời gian nếu được cung cấp
+      if (startDate && endDate) {
+        sales = filterSalesByDateRange(sales, startDate, endDate);
+      }
+      
       const totalRevenue = calculateRevenue(sales);
       const totalCost = calculateCost(sales);
 
@@ -593,7 +603,11 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
           const product = products.find((p) => p.id === item.productId);
           if (!product) return;
 
-          const profit = (item.sellingPrice - product.costPrice) * item.quantity;
+          // Ưu tiên sử dụng giá vốn đã lưu trong item (snapshot tại thời điểm bán)
+          const itemCostPrice = item.costPrice !== undefined && item.costPrice > 0
+            ? item.costPrice
+            : product.costPrice;
+          const profit = (item.sellingPrice - itemCostPrice) * item.quantity;
           const revenue = item.sellingPrice * item.quantity;
 
           const existing = productMap.get(product.id) || {
