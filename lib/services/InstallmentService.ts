@@ -297,17 +297,6 @@ export class InstallmentService {
     // Số tiền còn lại = tổng phải trả - đã trả
     const remainingAmount = totalInstallmentAmount - totalPaid;
 
-    console.log("📊 Tính toán trả góp:", {
-      saleId,
-      periodNumber,
-      paidAmount,
-      totalInstallmentAmount,
-      totalPaid,
-      remainingAmount,
-      numberOfPayments: plan.payments.length,
-      paidPayments: updatedPayments.filter((p) => p.status === "paid").length,
-    });
-
     // Kiểm tra đã thanh toán hết chưa
     const allPaid = updatedPayments.every((p) => p.status === "paid");
 

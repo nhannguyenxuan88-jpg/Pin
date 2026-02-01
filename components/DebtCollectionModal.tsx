@@ -92,7 +92,10 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }
     (pinRepairOrders || []).forEach((order: PinRepairOrder) => {
       const status = order.paymentStatus || "unpaid";
       if (status === "unpaid" || status === "partial") {
-        const paidAmt = order.partialPaymentAmount || order.depositAmount || 0;
+        // Fix: Cộng cả deposit và partial payment
+        const depositAmt = order.depositAmount || 0;
+        const partialAmt = order.partialPaymentAmount || 0;
+        const paidAmt = depositAmt + partialAmt;
         const remaining = order.total - paidAmt;
         if (remaining > 0) {
           debts.push({

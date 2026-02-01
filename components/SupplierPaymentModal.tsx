@@ -43,29 +43,33 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
       return;
     }
 
-    const supplier = (suppliers as any[]).find((s: any) => s.id === selectedSupplierId);
-    const tx: CashTransaction = {
-      id: crypto.randomUUID(),
-      type: "expense",
-      date: new Date().toISOString(),
-      amount: -Math.abs(Number(amount)), // Đảm bảo số âm cho chi
-      contact: {
-        id: selectedSupplierId,
-        name: supplier?.name || supplierQuery,
-      },
-      notes: notes || `Thanh toán NCC: ${supplier?.name || supplierQuery} #app:pincorp`,
-      paymentSourceId: paymentMethod,
-      branchId: currentBranchId,
-      category: "supplier_payment",
-    };
+    try {
+      const supplier = (suppliers as any[]).find((s: any) => s.id === selectedSupplierId);
+      const tx: CashTransaction = {
+        id: crypto.randomUUID(),
+        type: "expense",
+        date: new Date().toISOString(),
+        amount: -Math.abs(Number(amount)), // Đảm bảo số âm cho chi
+        contact: {
+          id: selectedSupplierId,
+          name: supplier?.name || supplierQuery,
+        },
+        notes: notes || `Thanh toán NCC: ${supplier?.name || supplierQuery} #app:pincorp`,
+        paymentSourceId: paymentMethod,
+        branchId: currentBranchId,
+        category: "supplier_payment",
+      };
 
-    await addCashTransaction(tx);
-    showToast("Thành công", `Đã ghi nhận chi trả nợ ${new Intl.NumberFormat("vi-VN").format(Number(amount))} đồng cho ${supplier?.name || supplierQuery}`, "success");
-    setSupplierQuery("");
-    setSelectedSupplierId("");
-    setAmount("");
-    setNotes("");
-    onClose();
+      await addCashTransaction(tx);
+      showToast("Thành công", `Đã ghi nhận chi trả nợ ${new Intl.NumberFormat("vi-VN").format(Number(amount))} đồng cho ${supplier?.name || supplierQuery}`, "success");
+      setSupplierQuery("");
+      setSelectedSupplierId("");
+      setAmount("");
+      setNotes("");
+      onClose();
+    } catch (error) {
+      showToast("Lỗi", `Có lỗi xảy ra: ${(error as Error).message}`, "error");
+    }
   };
 
   // Calculate remaining debt after payment

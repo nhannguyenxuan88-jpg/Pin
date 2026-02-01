@@ -530,54 +530,62 @@ export default function Receivables() {
   const executeCollectAllSelected = async () => {
     const now = new Date().toISOString();
 
-    if (activeTab === "customers") {
-      // Collect from customers
-      for (const row of customerFiltered.filter((r) => selectedIds.includes(r.id))) {
-        const amount = row.debt;
-        if (amount <= 0) continue;
-        const tx: CashTransaction = {
-          id: `CT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: "income",
-          date: now,
-          amount,
-          contact: {
-            id: row.customerPhone || row.customerName,
-            name: row.customerName,
-          },
-          notes: `Thu nợ cho ${row.kind === "workorder" ? "phiếu sửa chữa" : "đơn hàng"
-            } #${row.id} #app:pincorp`,
-          paymentSourceId: "cash",
-          branchId: currentBranchId,
-          category: row.kind === "workorder" ? "service_income" : "sale_income",
-          ...(row.kind === "workorder" ? { workOrderId: row.id } : { saleId: row.id }),
-        };
-        await addCashTransaction(tx);
+    try {
+      if (activeTab === "customers") {
+        // Collect from customers
+        let successCount = 0;
+        for (const row of customerFiltered.filter((r) => selectedIds.includes(r.id))) {
+          const amount = row.debt;
+          if (amount <= 0) continue;
+          const tx: CashTransaction = {
+            id: crypto.randomUUID(),
+            type: "income",
+            date: now,
+            amount,
+            contact: {
+              id: row.customerPhone || row.customerName,
+              name: row.customerName,
+            },
+            notes: `Thu nợ cho ${row.kind === "workorder" ? "phiếu sửa chữa" : "đơn hàng"
+              } #${row.id} #app:pincorp`,
+            paymentSourceId: "cash",
+            branchId: currentBranchId,
+            category: row.kind === "workorder" ? "service_income" : "sale_income",
+            ...(row.kind === "workorder" ? { workOrderId: row.id } : { saleId: row.id }),
+          };
+          await addCashTransaction(tx);
+          successCount++;
+        }
+        setSelected({});
+        showToast("Thành công", `Đã ghi nhận thu nợ cho ${successCount} đơn đã chọn.`, "success");
+      } else {
+        // Pay suppliers
+        let successCount = 0;
+        for (const row of supplierFiltered.filter((r) => selectedIds.includes(r.id))) {
+          const amount = row.debt;
+          if (amount <= 0) continue;
+          const tx: CashTransaction = {
+            id: crypto.randomUUID(),
+            type: "expense",
+            date: now,
+            amount: -Math.abs(amount), // Đảm bảo số âm cho chi
+            contact: {
+              id: row.id,
+              name: row.customerName,
+            },
+            notes: `Thanh toán công nợ NCC ${row.customerName} #app:pincorp`,
+            paymentSourceId: "cash",
+            branchId: currentBranchId,
+            category: "supplier_payment", // Fix: dùng đúng category
+          };
+          await addCashTransaction(tx);
+          successCount++;
+        }
+        setSelected({});
+        showToast("Thành công", `Đã ghi nhận thanh toán cho ${successCount} nhà cung cấp đã chọn.`, "success");
       }
-      setSelected({});
-      showToast("Thành công", "Đã ghi nhận thu nợ cho các đơn đã chọn.", "success");
-    } else {
-      // Pay suppliers
-      for (const row of supplierFiltered.filter((r) => selectedIds.includes(r.id))) {
-        const amount = row.debt;
-        if (amount <= 0) continue;
-        const tx: CashTransaction = {
-          id: `CT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: "expense",
-          date: now,
-          amount,
-          contact: {
-            id: row.id,
-            name: row.customerName,
-          },
-          notes: `Thanh toán công nợ NCC ${row.customerName} #app:pincorp`,
-          paymentSourceId: "cash",
-          branchId: currentBranchId,
-          category: "inventory_purchase",
-        };
-        await addCashTransaction(tx);
-      }
-      setSelected({});
-      showToast("Thành công", "Đã ghi nhận thanh toán cho các nhà cung cấp đã chọn.", "success");
+    } catch (error) {
+      showToast("Lỗi", `Có lỗi xảy ra: ${(error as Error).message}`, "error");
     }
   };
 
@@ -595,49 +603,55 @@ export default function Receivables() {
       return;
     }
 
-    const result = await InstallmentService.recordPayment(
-      selectedInstallment.saleId,
-      nextPayment.periodNumber,
-      paymentAmount
-    );
+    try {
+      const result = await InstallmentService.recordPayment(
+        selectedInstallment.saleId,
+        nextPayment.periodNumber,
+        paymentAmount
+      );
 
-    if (result) {
-      // Record cash transaction
-      const tx: CashTransaction = {
-        id: `CT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        type: "income",
-        date: new Date().toISOString(),
-        amount: paymentAmount,
-        contact: {
-          id: selectedInstallment.customerId,
-          name: selectedInstallment.customerName,
-        },
-        notes: `Thu tiền trả góp kỳ ${nextPayment.periodNumber}/${selectedInstallment.terms} - Đơn hàng ${selectedInstallment.saleId}`,
-        paymentSourceId: "cash",
-        branchId: currentBranchId,
-        category: "sale_income",
-        saleId: selectedInstallment.saleId,
-      };
-      await addCashTransaction(tx);
+      if (result) {
+        // Record cash transaction
+        const tx: CashTransaction = {
+          id: crypto.randomUUID(),
+          type: "income",
+          date: new Date().toISOString(),
+          amount: paymentAmount,
+          contact: {
+            id: selectedInstallment.customerId,
+            name: selectedInstallment.customerName,
+          },
+          notes: `Thu tiền trả góp kỳ ${nextPayment.periodNumber}/${selectedInstallment.terms} - Đơn hàng ${selectedInstallment.saleId}`,
+          paymentSourceId: paymentMethod, // Fix: dùng paymentMethod thay vì hardcoded "cash"
+          branchId: currentBranchId,
+          category: "sale_income",
+          saleId: selectedInstallment.saleId,
+        };
+        await addCashTransaction(tx);
 
-      // Reload installments
-      const plans = await InstallmentService.getAllInstallmentPlans();
-      setInstallmentPlans(plans);
+        // Reload installments
+        const plans = await InstallmentService.getAllInstallmentPlans();
+        setInstallmentPlans(plans);
 
-      // Save receipt data for printing
-      setInstallmentReceiptData({
-        installmentInfo: selectedInstallment,
-        paidAmount: paymentAmount,
-        paymentDate: new Date().toISOString(),
-        paymentMethod: paymentMethod,
-        periodNumber: nextPayment.periodNumber,
-        remainingBalance: selectedInstallment.remainingBalance - paymentAmount,
-      });
-      setShowInstallmentReceipt(true);
+        // Save receipt data for printing
+        setInstallmentReceiptData({
+          installmentInfo: selectedInstallment,
+          paidAmount: paymentAmount,
+          paymentDate: new Date().toISOString(),
+          paymentMethod: paymentMethod,
+          periodNumber: nextPayment.periodNumber,
+          remainingBalance: selectedInstallment.remainingBalance - paymentAmount,
+        });
+        setShowInstallmentReceipt(true);
 
-      setShowInstallmentPayModal(false);
-      setSelectedInstallment(null);
-      setPaymentAmount(0);
+        setShowInstallmentPayModal(false);
+        setSelectedInstallment(null);
+        setPaymentAmount(0);
+      } else {
+        showToast("Lỗi", "Không thể ghi nhận thanh toán", "error");
+      }
+    } catch (error) {
+      showToast("Lỗi", `Có lỗi xảy ra: ${(error as Error).message}`, "error");
     }
   };
 
@@ -663,34 +677,40 @@ export default function Receivables() {
   const executeEarlySettlement = async (discountedAmount: number) => {
     if (!selectedInstallment) return;
 
-    const result = await InstallmentService.settleEarly(selectedInstallment.saleId);
+    try {
+      const result = await InstallmentService.settleEarly(selectedInstallment.saleId);
 
-    if (result) {
-      // Record cash transaction
-      const tx: CashTransaction = {
-        id: `CT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        type: "income",
-        date: new Date().toISOString(),
-        amount: discountedAmount,
-        contact: {
-          id: selectedInstallment.customerId,
-          name: selectedInstallment.customerName,
-        },
-        notes: `Tất toán sớm trả góp - Đơn hàng ${selectedInstallment.saleId}`,
-        paymentSourceId: "cash",
-        branchId: currentBranchId,
-        category: "sale_income",
-        saleId: selectedInstallment.saleId,
-      };
-      await addCashTransaction(tx);
+      if (result) {
+        // Record cash transaction
+        const tx: CashTransaction = {
+          id: crypto.randomUUID(),
+          type: "income",
+          date: new Date().toISOString(),
+          amount: discountedAmount,
+          contact: {
+            id: selectedInstallment.customerId,
+            name: selectedInstallment.customerName,
+          },
+          notes: `Tất toán sớm trả góp - Đơn hàng ${selectedInstallment.saleId}`,
+          paymentSourceId: paymentMethod, // Fix: dùng paymentMethod thay vì hardcoded "cash"
+          branchId: currentBranchId,
+          category: "sale_income",
+          saleId: selectedInstallment.saleId,
+        };
+        await addCashTransaction(tx);
 
-      // Reload installments
-      const plans = await InstallmentService.getAllInstallmentPlans();
-      setInstallmentPlans(plans);
+        // Reload installments
+        const plans = await InstallmentService.getAllInstallmentPlans();
+        setInstallmentPlans(plans);
 
-      setShowEarlySettleModal(false);
-      setSelectedInstallment(null);
-      showToast("Thành công", "Đã tất toán sớm thành công!", "success");
+        setShowEarlySettleModal(false);
+        setSelectedInstallment(null);
+        showToast("Thành công", "Đã tất toán sớm thành công!", "success");
+      } else {
+        showToast("Lỗi", "Không thể tất toán sớm", "error");
+      }
+    } catch (error) {
+      showToast("Lỗi", `Có lỗi xảy ra: ${(error as Error).message}`, "error");
     }
   };
 
@@ -1068,7 +1088,7 @@ export default function Receivables() {
                 tone={activeTab === "customers" ? "primary" : "muted"}
                 className="mr-1"
               />
-              Công nợKH ({customerRows.length})
+              Công nợ KH ({customerRows.length})
             </button>
             <button
               onClick={() => {
@@ -1086,7 +1106,7 @@ export default function Receivables() {
                 tone={activeTab === "suppliers" ? "primary" : "muted"}
                 className="mr-1"
               />
-              Công nợNCC ({supplierRows.length})
+              Công nợ NCC ({supplierRows.length})
             </button>
             <button
               onClick={() => {
