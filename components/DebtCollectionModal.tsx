@@ -21,6 +21,12 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }
   const pinRepairOrders = ctx.pinRepairOrders || [];
   const updatePinSale = ctx.updatePinSale;
   const upsertPinRepairOrder = ctx.upsertPinRepairOrder;
+  const addToast = ctx.addToast;
+
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    addToast?.({ id: crypto.randomUUID(), message: `${title}: ${message}`, type });
+  };
 
   const [selectedDebtId, setSelectedDebtId] = useState("");
   const [amount, setAmount] = useState("");
@@ -111,26 +117,26 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }
 
   const handleSubmit = async () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập");
+      showToast("Lỗi", "Vui lòng đăng nhập", "error");
       return;
     }
     if (!selectedDebtId || !amount || Number(amount) <= 0) {
-      alert("Vui lòng chọn đơn nợ và nhập số tiền thanh toán");
+      showToast("Thiếu thông tin", "Vui lòng chọn đơn nợ và nhập số tiền thanh toán", "warn");
       return;
     }
 
     const payAmount = Number(amount);
     if (!selectedDebt) {
-      alert("Không tìm thấy thông tin nợ");
+      showToast("Lỗi", "Không tìm thấy thông tin nợ", "error");
       return;
     }
 
     // Kiểm tra số tiền không vượt quá số nợ còn lại
     if (payAmount > selectedDebt.remaining) {
-      alert(
-        `Số tiền thanh toán không được vượt quá số nợ còn lại (${formatCurrency(
-          selectedDebt.remaining
-        )})`
+      showToast(
+        "Số tiền không hợp lệ",
+        `Số tiền thanh toán không được vượt quá số nợ còn lại (${formatCurrency(selectedDebt.remaining)})`,
+        "warn"
       );
       return;
     }
@@ -176,7 +182,7 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }
         if (repair) {
           // Đảm bảo có đầy đủ các field required trước khi update
           if (!repair.deviceName) {
-            alert("Lỗi: Phiếu sửa chữa thiếu thông tin thiết bị. Vui lòng kiểm tra lại.");
+            showToast("Lỗi dữ liệu", "Phiếu sửa chữa thiếu thông tin thiết bị. Vui lòng kiểm tra lại.", "error");
             return;
           }
           await upsertPinRepairOrder({
@@ -197,12 +203,12 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }
         }
       }
 
-      alert(
+      showToast(
+        "Thành công",
         isFullyPaid
           ? `Đã thanh toán đủ ${formatCurrency(payAmount)}. Đơn đã hoàn tất!`
-          : `Đã thu ${formatCurrency(payAmount)}. Còn nợ ${formatCurrency(
-              selectedDebt.total - newPaidAmount
-            )}`
+          : `Đã thu ${formatCurrency(payAmount)}. Còn nợ ${formatCurrency(selectedDebt.total - newPaidAmount)}`,
+        "success"
       );
 
       // Save receipt data for printing
@@ -220,7 +226,7 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId }
       setAmount("");
       setNotes("");
     } catch (error) {
-      alert("Lỗi khi ghi nhận thu nợ: " + (error as Error).message);
+      showToast("Lỗi", "Lỗi khi ghi nhận thu nợ: " + (error as Error).message, "error");
     }
   };
 

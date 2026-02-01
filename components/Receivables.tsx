@@ -60,8 +60,29 @@ interface InstallmentRow {
 const fmt = (val: number) => val.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
 
 export default function Receivables() {
-  const { pinSales, cashTransactions, suppliers, currentUser, addCashTransaction } =
+  const { pinSales, cashTransactions, suppliers, currentUser, addCashTransaction, addToast } =
     usePinContext();
+
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    addToast?.({ id: crypto.randomUUID(), message: `${title}: ${message}`, type });
+  };
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} });
+  };
 
   const ctx = usePinContext();
   const workOrders = ctx.pinRepairOrders || [];
@@ -490,16 +511,23 @@ export default function Receivables() {
 
   const handleCollectAllSelected = async () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để thực hiện thao tác");
+      showToast("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác", "error");
       return;
     }
     if (selectedDebt <= 0) return;
-    if (
-      !window.confirm(`Xác nhận thu đủ cho ${selectedIds.length} đơn, tổng ${fmt(selectedDebt)} đ?`)
-    ) {
-      return;
-    }
 
+    // Use confirm dialog instead of window.confirm
+    showConfirmDialog(
+      "Xác nhận thu nợ",
+      `Xác nhận thu đủ cho ${selectedIds.length} đơn, tổng ${fmt(selectedDebt)} đ?`,
+      async () => {
+        closeConfirmDialog();
+        await executeCollectAllSelected();
+      }
+    );
+  };
+
+  const executeCollectAllSelected = async () => {
     const now = new Date().toISOString();
 
     if (activeTab === "customers") {
@@ -526,7 +554,7 @@ export default function Receivables() {
         await addCashTransaction(tx);
       }
       setSelected({});
-      alert("Đã ghi nhận thu nợ cho các đơn đã chọn.");
+      showToast("Thành công", "Đã ghi nhận thu nợ cho các đơn đã chọn.", "success");
     } else {
       // Pay suppliers
       for (const row of supplierFiltered.filter((r) => selectedIds.includes(r.id))) {
@@ -549,7 +577,7 @@ export default function Receivables() {
         await addCashTransaction(tx);
       }
       setSelected({});
-      alert("Đã ghi nhận thanh toán cho các nhà cung cấp đã chọn.");
+      showToast("Thành công", "Đã ghi nhận thanh toán cho các nhà cung cấp đã chọn.", "success");
     }
   };
 
@@ -563,7 +591,7 @@ export default function Receivables() {
     );
 
     if (!nextPayment) {
-      alert("Không tìm thấy kỳ thanh toán cần trả");
+      showToast("Lỗi", "Không tìm thấy kỳ thanh toán cần trả", "error");
       return;
     }
 
@@ -622,13 +650,18 @@ export default function Receivables() {
       selectedInstallment.terms - selectedInstallment.paidTerms
     );
 
-    if (
-      !window.confirm(
-        `Xác nhận tất toán sớm?\n\nSố tiền còn lại: ${fmt(selectedInstallment.remainingBalance)}đ\nGiảm giá tất toán sớm: ${fmt(selectedInstallment.remainingBalance - discountedAmount)}đ\nSố tiền cần thanh toán: ${fmt(discountedAmount)}đ`
-      )
-    ) {
-      return;
-    }
+    showConfirmDialog(
+      "Xác nhận tất toán sớm",
+      `Số tiền còn lại: ${fmt(selectedInstallment.remainingBalance)}đ\nGiảm giá tất toán sớm: ${fmt(selectedInstallment.remainingBalance - discountedAmount)}đ\nSố tiền cần thanh toán: ${fmt(discountedAmount)}đ`,
+      async () => {
+        closeConfirmDialog();
+        await executeEarlySettlement(discountedAmount);
+      }
+    );
+  };
+
+  const executeEarlySettlement = async (discountedAmount: number) => {
+    if (!selectedInstallment) return;
 
     const result = await InstallmentService.settleEarly(selectedInstallment.saleId);
 
@@ -657,7 +690,7 @@ export default function Receivables() {
 
       setShowEarlySettleModal(false);
       setSelectedInstallment(null);
-      alert("Đã tất toán sớm thành công!");
+      showToast("Thành công", "Đã tất toán sớm thành công!", "success");
     }
   };
 
@@ -1735,6 +1768,38 @@ export default function Receivables() {
                 className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
               >
                 🖨️ In phiếu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-xl">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                {confirmDialog.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
+                {confirmDialog.message}
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Xác nhận
               </button>
             </div>
           </div>

@@ -78,4 +78,39 @@ export function generateProductSKU(existingProducts: Array<{ sku: string }> = []
   return `TP-${dateStr}-${sequence}`;
 }
 
-export default { formatSKU, generateSKUFromName, generateProductSKU };
+/**
+ * Generate Material SKU with format: NL-ddmmyyyy-số
+ * @param existingMaterials Array of existing materials to check for duplicate SKUs
+ * @param additionalSkus Additional SKUs to avoid (e.g., from unsaved items in batch)
+ * @returns Generated SKU in format NL-ddmmyyyy-001, NL-ddmmyyyy-002, etc.
+ */
+export function generateMaterialSKU(
+  existingMaterials: Array<{ sku?: string }> = [],
+  additionalSkus: string[] = []
+): string {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const yyyy = today.getFullYear();
+  const dateStr = `${dd}${mm}${yyyy}`;
+
+  // Collect all existing SKUs
+  const allSkus = new Set([
+    ...existingMaterials.map((m) => m.sku).filter(Boolean),
+    ...additionalSkus.filter(Boolean),
+  ]);
+
+  // Count materials with same date prefix to determine sequence
+  const todayPrefix = `NL-${dateStr}`;
+  let sequence = 1;
+  
+  // Find the next available sequence number
+  while (allSkus.has(`${todayPrefix}-${String(sequence).padStart(3, "0")}`)) {
+    sequence++;
+    if (sequence > 999) break; // Safety limit
+  }
+
+  return `${todayPrefix}-${String(sequence).padStart(3, "0")}`;
+}
+
+export default { formatSKU, generateSKUFromName, generateProductSKU, generateMaterialSKU };

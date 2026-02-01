@@ -14,6 +14,12 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
   const currentBranchId = (ctx as any).currentBranchId;
   const addCashTransaction = ctx.addCashTransaction;
   const suppliers = ctx.suppliers || [];
+  const addToast = ctx.addToast;
+
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    addToast?.({ id: crypto.randomUUID(), message: `${title}: ${message}`, type });
+  };
 
   const [supplierQuery, setSupplierQuery] = useState("");
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
@@ -21,15 +27,19 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
 
+  // Get selected supplier with proper debt info
+  const selectedSupplier = (suppliers as any[]).find((s: any) => s.id === selectedSupplierId);
+  const supplierDebt = selectedSupplier?.debt || 0;
+
   if (!open) return null;
 
   const handleSubmit = async () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập");
+      showToast("Lỗi", "Vui lòng đăng nhập", "error");
       return;
     }
     if (!selectedSupplierId || !amount || Number(amount) <= 0) {
-      alert("Vui lòng nhập đầy đủ thông tin");
+      showToast("Thiếu thông tin", "Vui lòng nhập đầy đủ thông tin", "warn");
       return;
     }
 
@@ -50,7 +60,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
     };
 
     await addCashTransaction(tx);
-    alert("Đã ghi nhận chi trả nợ");
+    showToast("Thành công", `Đã ghi nhận chi trả nợ ${new Intl.NumberFormat("vi-VN").format(Number(amount))} đồng cho ${supplier?.name || supplierQuery}`, "success");
     setSupplierQuery("");
     setSelectedSupplierId("");
     setAmount("");
@@ -58,7 +68,9 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
     onClose();
   };
 
-  const remainingDebt = amount ? Math.max(0, Number(amount) - 0) : 0;
+  // Calculate remaining debt after payment
+  const paidAmount = Number(amount) || 0;
+  const remainingDebt = Math.max(0, supplierDebt - paidAmount);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -95,7 +107,9 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm text-slate-300">Nhập số tiền thanh toán</label>
-              <span className="text-sm text-sky-400">0 ₫</span>
+              <span className="text-sm text-sky-400">
+                Nợ hiện tại: {new Intl.NumberFormat("vi-VN").format(supplierDebt)} đồng
+              </span>
             </div>
             <input
               type="number"
@@ -112,10 +126,13 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
             </div>
             <button
               onClick={() => {
-                // Set to full debt amount if available
-                setAmount("0");
+                // Set to full debt amount from selected supplier
+                if (supplierDebt > 0) {
+                  setAmount(String(supplierDebt));
+                }
               }}
-              className="mt-2 text-sm text-sky-400 hover:text-sky-300"
+              disabled={!selectedSupplierId || supplierDebt <= 0}
+              className="mt-2 text-sm text-sky-400 hover:text-sky-300 disabled:text-slate-500 disabled:cursor-not-allowed"
             >
               Điền số còn nợ
             </button>

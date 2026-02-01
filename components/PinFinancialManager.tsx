@@ -79,6 +79,22 @@ const PinFinancialManager: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<CashTransaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Confirm dialog state (replaces browser confirm())
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  };
+
   // Show all apps toggle
   const [showAllApps, setShowAllApps] = useState<boolean>(() => {
     const saved = localStorage.getItem("pinFinanceShowAllApps");
@@ -361,30 +377,33 @@ const PinFinancialManager: React.FC = () => {
 
   // Handler: Delete Transaction
   const handleDeleteTransaction = async (transactionId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa giao dịch này?")) {
-      return;
-    }
+    showConfirmDialog(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa giao dịch này?",
+      async () => {
+        closeConfirmDialog();
+        try {
+          if (deleteCashTransactions) {
+            await deleteCashTransactions({ id: transactionId });
+          } else {
+            const { error } = await supabase.from("cashtransactions").delete().eq("id", transactionId);
+            if (error) throw error;
+          }
 
-    try {
-      if (deleteCashTransactions) {
-        await deleteCashTransactions({ id: transactionId });
-      } else {
-        const { error } = await supabase.from("cashtransactions").delete().eq("id", transactionId);
-        if (error) throw error;
+          addToast({
+            id: Date.now().toString(),
+            message: "Đã xóa giao dịch thành công",
+            type: "success",
+          });
+        } catch (error) {
+          addToast({
+            id: Date.now().toString(),
+            message: "Lỗi khi xóa giao dịch",
+            type: "error",
+          });
+        }
       }
-
-      addToast({
-        id: Date.now().toString(),
-        message: "Đã xóa giao dịch thành công",
-        type: "success",
-      });
-    } catch (error) {
-      addToast({
-        id: Date.now().toString(),
-        message: "Lỗi khi xóa giao dịch",
-        type: "error",
-      });
-    }
+    );
   };
 
   // Reset transaction form
@@ -463,31 +482,34 @@ const PinFinancialManager: React.FC = () => {
 
   // Handler: Delete Asset
   const handleDeleteAsset = async (assetId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa tài sản này?")) {
-      return;
-    }
+    showConfirmDialog(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa tài sản này?",
+      async () => {
+        closeConfirmDialog();
+        try {
+          if (deletePinFixedAsset) {
+            await deletePinFixedAsset(assetId);
+          } else {
+            const { error } = await supabase.from("pin_fixed_assets").delete().eq("id", assetId);
+            if (error) throw error;
+            setFixedAssets((prev: any[]) => prev.filter((a: any) => a.id !== assetId));
+          }
 
-    try {
-      if (deletePinFixedAsset) {
-        await deletePinFixedAsset(assetId);
-      } else {
-        const { error } = await supabase.from("pin_fixed_assets").delete().eq("id", assetId);
-        if (error) throw error;
-        setFixedAssets((prev: any[]) => prev.filter((a: any) => a.id !== assetId));
+          addToast({
+            id: Date.now().toString(),
+            message: "Đã xóa tài sản thành công",
+            type: "success",
+          });
+        } catch (error) {
+          addToast({
+            id: Date.now().toString(),
+            message: "Lỗi khi xóa tài sản",
+            type: "error",
+          });
+        }
       }
-
-      addToast({
-        id: Date.now().toString(),
-        message: "Đã xóa tài sản thành công",
-        type: "success",
-      });
-    } catch (error) {
-      addToast({
-        id: Date.now().toString(),
-        message: "Lỗi khi xóa tài sản",
-        type: "error",
-      });
-    }
+    );
   };
 
   // Reset asset form
@@ -562,26 +584,28 @@ const PinFinancialManager: React.FC = () => {
 
   // Handler: Delete Investment
   const handleDeleteInvestment = async (investmentId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa khoản đầu tư này?")) {
-      return;
-    }
+    showConfirmDialog(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa khoản đầu tư này?",
+      async () => {
+        closeConfirmDialog();
+        try {
+          await deletePinCapitalInvestment(investmentId);
 
-    try {
-      await deletePinCapitalInvestment(investmentId);
-
-      addToast({
-        id: Date.now().toString(),
-        message: "Đã xóa khoản đầu tư thành công",
-        type: "success",
-      });
-    } catch (error) {
-      console.error("Error deleting investment:", error);
-      addToast({
-        id: Date.now().toString(),
-        message: "Lỗi khi xóa khoản đầu tư",
-        type: "error",
-      });
-    }
+          addToast({
+            id: Date.now().toString(),
+            message: "Đã xóa khoản đầu tư thành công",
+            type: "success",
+          });
+        } catch (error) {
+          addToast({
+            id: Date.now().toString(),
+            message: "Lỗi khi xóa khoản đầu tư",
+            type: "error",
+          });
+        }
+      }
+    );
   };
 
   // Reset capital form
@@ -2365,6 +2389,34 @@ const PinFinancialManager: React.FC = () => {
                 className="px-4 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors font-medium"
               >
                 {editingInvestment ? "Cập nhật" : "Ghi nhận"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-md">
+            <div className="px-6 py-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">{confirmDialog.title}</h3>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-gray-300">{confirmDialog.message}</p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2.5 text-gray-300 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors font-medium"
+              >
+                Xác nhận
               </button>
             </div>
           </div>

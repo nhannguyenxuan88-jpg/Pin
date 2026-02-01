@@ -1,7 +1,8 @@
 // Utility functions for MaterialManager
 
-import type { PinMaterial } from "../../types";
 import type { MaterialItem } from "./types";
+// Re-export generateMaterialSKU from centralized location
+export { generateMaterialSKU } from "../../lib/sku";
 
 /**
  * Format currency in Vietnamese format
@@ -16,27 +17,6 @@ export const formatCurrency = (amount: number): string =>
  */
 export const formatNumber = (num: number): string =>
   new Intl.NumberFormat("vi-VN").format(num);
-
-/**
- * Generate SKU theo format: NL-ddmmyyyy-số
- */
-export const generateMaterialSKU = (
-  existingMaterials: PinMaterial[] = []
-): string => {
-  const today = new Date();
-  const dd = String(today.getDate()).padStart(2, "0");
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const yyyy = today.getFullYear();
-  const dateStr = `${dd}${mm}${yyyy}`;
-
-  const todayPrefix = `NL-${dateStr}`;
-  const countToday = existingMaterials.filter((m) =>
-    m.sku?.startsWith(todayPrefix)
-  ).length;
-
-  const sequence = String(countToday + 1).padStart(3, "0");
-  return `NL-${dateStr}-${sequence}`;
-};
 
 /**
  * Generate unique ID for materials

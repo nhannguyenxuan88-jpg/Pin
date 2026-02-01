@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type {
   PinMaterial,
   Supplier,
@@ -22,6 +22,7 @@ import { supabase } from "../supabaseClient";
 import { UnitsService } from "../lib/services/UnitsService";
 import { CategoryService } from "../lib/services/CategoryService";
 import { useIsMobile } from "../lib/hooks/useMediaQuery";
+import { generateMaterialSKU } from "../lib/sku";
 
 const formatCurrency = (amount: number) => {
   if (isNaN(amount)) return "0";
@@ -30,35 +31,6 @@ const formatCurrency = (amount: number) => {
 
 const generateUniqueId = (prefix = "") => {
   return `${prefix}${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
-
-// Generate SKU theo format: NL-XXXXXXXX (8 ký tự ngẫu nhiên)
-const generateMaterialSKU = (
-  existingMaterials: PinMaterial[] = [],
-  additionalSkus: string[] = []
-) => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const generateRandomCode = () => {
-    let result = "";
-    for (let i = 0; i < 8; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `NL-${result}`;
-  };
-
-  const allSkus = new Set([
-    ...existingMaterials.map((m) => m.sku).filter(Boolean),
-    ...additionalSkus.filter(Boolean),
-  ]);
-
-  let newSku = generateRandomCode();
-  let attempts = 0;
-  while (allSkus.has(newSku) && attempts < 100) {
-    newSku = generateRandomCode();
-    attempts++;
-  }
-
-  return newSku;
 };
 
 interface ReceiptItem {
@@ -85,7 +57,9 @@ const SupplierModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSave: (supplier: Supplier) => void;
-}> = ({ isOpen, onClose, onSave }) => {
+  onToast?: (title: string, message: string, type?: "success" | "error" | "warn") => void;
+}> = ({ isOpen, onClose, onSave, onToast }) => {
+  const showToast = onToast || ((title, message) => alert(`${title}: ${message}`));
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -100,7 +74,7 @@ const SupplierModal: React.FC<{
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên nhà cung cấp");
+      showToast("Thông báo", "Vui lòng nhập tên nhà cung cấp", "warn");
       return;
     }
 
@@ -232,7 +206,9 @@ const ProductModal: React.FC<{
   onSave: (product: PinMaterial) => void;
   existingMaterials?: PinMaterial[];
   additionalSkus?: string[];
-}> = ({ isOpen, onClose, onSave, existingMaterials = [], additionalSkus = [] }) => {
+  onToast?: (title: string, message: string, type?: "success" | "error" | "warn") => void;
+}> = ({ isOpen, onClose, onSave, existingMaterials = [], additionalSkus = [], onToast }) => {
+  const showToast = onToast || ((title, message) => alert(`${title}: ${message}`));
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -299,7 +275,7 @@ const ProductModal: React.FC<{
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên sản phẩm");
+      showToast("Thông báo", "Vui lòng nhập tên sản phẩm", "warn");
       return;
     }
 
@@ -584,7 +560,7 @@ const ProductModal: React.FC<{
               <button
                 onClick={async () => {
                   if (!quickCategoryName.trim()) {
-                    alert("Vui lòng nhập tên danh mục");
+                    showToast("Thông báo", "Vui lòng nhập tên danh mục", "warn");
                     return;
                   }
                   try {
@@ -597,10 +573,10 @@ const ProductModal: React.FC<{
                     setFormData((prev) => ({ ...prev, category_id: newCategory.id }));
                     setShowQuickCategoryModal(false);
                     setQuickCategoryName("");
-                    alert(`✅ Đã tạo danh mục "${newCategory.name}" thành công!`);
+                    showToast("Thành công", `Đã tạo danh mục "${newCategory.name}" thành công!`, "success");
                   } catch (error) {
                     console.error("Error creating category:", error);
-                    alert("Lỗi khi tạo danh mục: " + (error as any).message);
+                    showToast("Lỗi", "Lỗi khi tạo danh mục: " + (error as any).message, "error");
                   }
                 }}
                 disabled={!quickCategoryName.trim()}
@@ -629,7 +605,13 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
     upsertPinMaterial,
     addCashTransaction,
     upsertSupplier,
+    addToast,
   } = usePinContext();
+
+  // Helper function to show toast notifications
+  const showToast = useCallback((title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    addToast({ title, message, type });
+  }, [addToast]);
 
   // ===== STATE MANAGEMENT =====
   // Modals
@@ -799,7 +781,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         await upsertSupplier(supplier);
       } catch (error) {
         console.error("Error saving supplier:", error);
-        alert("Lỗi lưu nhà cung cấp: " + (error as Error).message);
+        showToast("Lỗi", "Lỗi lưu nhà cung cấp: " + (error as Error).message, "error");
         return;
       }
     }
@@ -852,22 +834,22 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
   const handleFinalizeReceipt = async () => {
     // Validation
     if (!selectedSupplierId) {
-      alert("Vui lòng chọn nhà cung cấp");
+      showToast("Thông báo", "Vui lòng chọn nhà cung cấp", "warn");
       return;
     }
 
     if (receiptItems.length === 0) {
-      alert("Vui lòng thêm ít nhất một sản phẩm");
+      showToast("Thông báo", "Vui lòng thêm ít nhất một sản phẩm", "warn");
       return;
     }
 
     if (!paymentMethod) {
-      alert("Vui lòng chọn phương thức thanh toán");
+      showToast("Thông báo", "Vui lòng chọn phương thức thanh toán", "warn");
       return;
     }
 
     if (receiptItems.some((item) => item.purchasePrice <= 0)) {
-      alert("Vui lòng nhập giá nhập cho tất cả sản phẩm");
+      showToast("Thông báo", "Vui lòng nhập giá nhập cho tất cả sản phẩm", "warn");
       return;
     }
 
@@ -968,7 +950,6 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             created_at: new Date().toISOString(),
           };
           newHistoryRecords.push(historyRecord);
-          console.log("Created history record:", historyRecord);
         }
       });
 
@@ -995,8 +976,6 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       // Insert each new material one by one with proper error handling
       for (const { item, localId, material } of newMaterialsToInsert) {
         try {
-          console.log(`Inserting material: ${material.name} (SKU: ${material.sku})`);
-
           const { data: insertedData, error: insertError } = await supabase
             .from("pin_materials")
             .insert({
@@ -1041,15 +1020,9 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                 if (historyIdx >= 0) {
                   newHistoryRecords[historyIdx].materialId = existingData.id;
                 }
-                console.log(
-                  `Updated existing material ${material.name} (duplicate SKU) with +stock: ${material.stock}`
-                );
               }
             }
           } else if (insertedData?.id) {
-            console.log(
-              `Successfully inserted material ${material.name} with ID: ${insertedData.id}`
-            );
             // Update history records with real UUID from database
             const historyIdx = newHistoryRecords.findIndex((h) => h.materialId === localId);
             if (historyIdx >= 0) {
@@ -1108,19 +1081,15 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         user_name: record.userName,
       }));
 
-      console.log("Saving history records:", dbRecords);
-
       try {
-        const { data: historyData, error: historyError } = await supabase
+        const { error: historyError } = await supabase
           .from("pin_material_history")
           .insert(dbRecords)
           .select();
 
         if (historyError) {
           console.error("Error saving history to Supabase:", historyError);
-          alert(`Lỗi lưu lịch sử: ${historyError.message}`);
-        } else {
-          console.log("History saved successfully:", historyData);
+          showToast("Lỗi", `Lỗi lưu lịch sử: ${historyError.message}`, "error");
         }
       } catch (err) {
         console.error("Exception saving history:", err);
@@ -1166,13 +1135,11 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
           const { error: debtError } = await supabase.from("pin_supplier_debts").insert(debtRecord);
           if (debtError) {
             console.error("Error saving supplier debt:", debtError);
-            alert(`Lưu công nợ NCC thất bại: ${debtError.message}`);
-          } else {
-            console.log("✅ Đã lưu công nợ NCC:", debtRecord);
+            showToast("Lỗi", `Lưu công nợ NCC thất bại: ${debtError.message}`, "error");
           }
         } catch (err) {
           console.error("Error saving supplier debt:", err);
-          alert("Lỗi khi lưu công nợ NCC: " + (err as Error).message);
+          showToast("Lỗi", "Lỗi khi lưu công nợ NCC: " + (err as Error).message, "error");
         }
       }
 
@@ -1201,7 +1168,6 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             created_at: row.created_at || row.createdat || undefined,
           }));
           setMaterials(mappedMaterials);
-          console.log("✅ Đã đồng bộ kho tự động:", mappedMaterials.length, "vật liệu");
         }
 
         // Refresh material history
@@ -1228,13 +1194,12 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             created_at: row.created_at,
           }));
           setPinMaterialHistory(mappedHistory);
-          console.log("✅ Đã đồng bộ lịch sử nhập kho tự động:", mappedHistory.length, "bản ghi");
         }
       } catch (refreshErr) {
         console.error("Error refreshing data:", refreshErr);
       }
 
-      alert("✅ Nhập hàng thành công! Dữ liệu đã được đồng bộ tự động.");
+      showToast("Thành công", "Nhập hàng thành công! Dữ liệu đã được đồng bộ tự động.", "success");
 
       // Reset form
       setReceiptItems([]);
@@ -1252,7 +1217,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         navigate("/materials");
       }, 1000);
     } catch (error) {
-      alert("Lỗi khi nhập hàng: " + (error as Error).message);
+      showToast("Lỗi", "Lỗi khi nhập hàng: " + (error as Error).message, "error");
     }
   };
 
@@ -2044,6 +2009,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         isOpen={showSupplierModal}
         onClose={() => setShowSupplierModal(false)}
         onSave={handleSaveNewSupplier}
+        onToast={showToast}
       />
       <ProductModal
         isOpen={showProductModal}
@@ -2051,6 +2017,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
         onSave={handleSaveNewProduct}
         existingMaterials={materials || []}
         additionalSkus={receiptItems.map((item) => item.sku)}
+        onToast={showToast}
       />
     </div>
   );

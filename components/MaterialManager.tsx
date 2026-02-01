@@ -9,40 +9,10 @@ import { Icon, type IconName } from "./common/Icon";
 import PinImportHistory from "./PinImportHistory";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
 import PurchaseOrderManager from "./PurchaseOrderManager";
+import { generateMaterialSKU } from "../lib/sku";
+
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
-
-// Generate SKU theo format: NL-XXXXXXXX (8 ký tự ngẫu nhiên, dễ quản lý)
-const generateMaterialSKU = (
-  existingMaterials: PinMaterial[] = [],
-  additionalSkus: string[] = []
-) => {
-  // Tạo 8 ký tự ngẫu nhiên (chữ hoa + số)
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const generateRandomCode = () => {
-    let result = "";
-    for (let i = 0; i < 8; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `NL-${result}`;
-  };
-
-  // Collect all existing SKUs
-  const allSkus = new Set([
-    ...existingMaterials.map((m) => m.sku).filter(Boolean),
-    ...additionalSkus.filter(Boolean),
-  ]);
-
-  // Generate unique SKU (retry if collision)
-  let newSku = generateRandomCode();
-  let attempts = 0;
-  while (allSkus.has(newSku) && attempts < 100) {
-    newSku = generateRandomCode();
-    attempts++;
-  }
-
-  return newSku;
-};
 
 const generateId = () => `M${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
 
@@ -157,6 +127,9 @@ interface PricePoint {
   invoice_number?: string;
 }
 
+// Toast notification type for sub-components
+type ToastFn = (title: string, message: string, type?: "success" | "error" | "warn") => void;
+
 // Simple Material Form Component
 const MaterialForm: React.FC<{
   isOpen: boolean;
@@ -166,7 +139,11 @@ const MaterialForm: React.FC<{
   existingMaterials?: PinMaterial[];
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
-}> = ({ isOpen, material, onClose, onSubmit, existingMaterials = [], suppliers, setSuppliers }) => {
+  onToast?: ToastFn;
+}> = ({ isOpen, material, onClose, onSubmit, existingMaterials = [], suppliers, setSuppliers, onToast }) => {
+  // Fallback toast handler using alert if onToast not provided
+  const showToast: ToastFn = onToast || ((title, message) => alert(`${title}: ${message}`));
+  
   const [formData, setFormData] = useState({
     supplier: "",
     supplierPhone: "",
@@ -326,17 +303,20 @@ const MaterialForm: React.FC<{
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProductDropdownOpen]);
 
-  // Save form data to localStorage and prevent page reload when form has data
+  // Track whether form has unsaved data
+  const hasFormData = useMemo(() => {
+    return isOpen && (
+      formData.supplier.trim() !== "" ||
+      formData.supplierPhone.trim() !== "" ||
+      materials.some((m) => m.name.trim() !== "" || m.purchasePrice > 0 || m.quantity > 1)
+    );
+  }, [isOpen, formData, materials]);
+
+  // Save form data to localStorage when data changes
   useEffect(() => {
     if (!isOpen) return;
 
-    const hasData =
-      formData.supplier.trim() !== "" ||
-      formData.supplierPhone.trim() !== "" ||
-      materials.some((m) => m.name.trim() !== "" || m.purchasePrice > 0 || m.quantity > 1);
-
-    // Save to localStorage if there's data
-    if (hasData) {
+    if (hasFormData) {
       localStorage.setItem(
         "materialFormDraft",
         JSON.stringify({
@@ -346,19 +326,21 @@ const MaterialForm: React.FC<{
         })
       );
     }
+  }, [isOpen, hasFormData, formData, materials]);
+
+  // Prevent page reload when form has data - separated to avoid memory leak
+  useEffect(() => {
+    if (!hasFormData) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasData) {
-        e.preventDefault();
-        e.returnValue = "";
-        return "";
-      }
-      return undefined;
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isOpen, formData, materials]);
+  }, [hasFormData]);
 
   // Tính tổng tiền tất cả sản phẩm
   const grandTotal = materials.reduce((sum: number, item: MaterialItem) => sum + item.totalCost, 0);
@@ -401,7 +383,7 @@ const MaterialForm: React.FC<{
       (m: MaterialItem) => m.name.trim() && m.purchasePrice > 0 && m.quantity > 0
     );
     if (validMaterials.length === 0) {
-      alert("Vui lòng nhập ít nhất một sản phẩm hợp lệ!");
+      showToast("Thông báo", "Vui lòng nhập ít nhất một sản phẩm hợp lệ!", "warn");
       return;
     }
 
@@ -454,7 +436,7 @@ const MaterialForm: React.FC<{
       onClose();
     } catch (error) {
       console.error("Submit error:", error);
-      alert("Lỗi khi lưu: " + (error as any)?.message);
+      showToast("Lỗi", "Lỗi khi lưu: " + (error as any)?.message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -1131,7 +1113,7 @@ const MaterialForm: React.FC<{
                     setShowSupplierModal(false);
 
                     // Thông báo thành công
-                    alert("Đã thêm nhà cung cấp thành công!");
+                    showToast("Thành công", "Đã thêm nhà cung cấp thành công!", "success");
                   }
                 }}
                 disabled={!newSupplierName.trim()}
@@ -1650,7 +1632,11 @@ const MaterialEditModal: React.FC<{
   onClose: () => void;
   onSave: (updatedMaterial: PinMaterial) => Promise<void>;
   suppliers: Supplier[];
-}> = ({ isOpen, material, onClose, onSave, suppliers }) => {
+  onToast?: ToastFn;
+}> = ({ isOpen, material, onClose, onSave, suppliers, onToast }) => {
+  // Fallback toast handler
+  const showToast: ToastFn = onToast || ((title, message) => alert(`${title}: ${message}`));
+
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -1697,7 +1683,7 @@ const MaterialEditModal: React.FC<{
     if (!material || isSubmitting) return;
 
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên vật liệu!");
+      showToast("Thông báo", "Vui lòng nhập tên vật liệu!", "warn");
       return;
     }
 
@@ -1724,7 +1710,7 @@ const MaterialEditModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("Error saving material:", error);
-      alert("Lỗi khi lưu vật liệu: " + (error as any)?.message);
+      showToast("Lỗi", "Lỗi khi lưu vật liệu: " + (error as any)?.message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -1966,7 +1952,11 @@ const StockAdjustmentModal: React.FC<{
   material: PinMaterial | null;
   onClose: () => void;
   onSubmit: (adjustment: StockAdjustment) => Promise<void>;
-}> = ({ isOpen, material, onClose, onSubmit }) => {
+  onToast?: ToastFn;
+}> = ({ isOpen, material, onClose, onSubmit, onToast }) => {
+  // Fallback toast handler
+  const showToast: ToastFn = onToast || ((title, message) => alert(`${title}: ${message}`));
+
   const [actualStock, setActualStock] = useState<number>(0);
   const [reason, setReason] = useState<string>("");
   const [note, setNote] = useState<string>("");
@@ -1985,7 +1975,7 @@ const StockAdjustmentModal: React.FC<{
     if (!material || isSubmitting) return;
 
     if (!reason.trim()) {
-      alert("Vui lòng nhập lý do điều chỉnh!");
+      showToast("Thông báo", "Vui lòng nhập lý do điều chỉnh!", "warn");
       return;
     }
 
@@ -2001,7 +1991,7 @@ const StockAdjustmentModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("Stock adjustment error:", error);
-      alert("Lỗi khi điều chỉnh tồn kho: " + (error as any)?.message);
+      showToast("Lỗi", "Lỗi khi điều chỉnh tồn kho: " + (error as any)?.message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -2886,12 +2876,17 @@ const MaterialManager: React.FC<{
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
 }> = ({ materials, setMaterials, productionOrders = [], suppliers, setSuppliers }) => {
   // Get pinMaterialHistory from context to update it
-  const { pinMaterialHistory, setPinMaterialHistory, reloadPinMaterialHistory, currentUser } =
+  const { pinMaterialHistory, setPinMaterialHistory, reloadPinMaterialHistory, currentUser, addToast } =
     usePinContext();
 
   const navigate = useNavigate();
 
-  console.log("MaterialManager render. currentUser:", currentUser); // ✅ Use centralized material stock management
+  // Helper function to show toast notifications
+  const showToast = useCallback((title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    addToast({ title, message, type });
+  }, [addToast]);
+
+  // ✅ Use centralized material stock management
   const {
     enhancedMaterials,
     calculateCommittedQuantities,
@@ -3050,8 +3045,6 @@ const MaterialManager: React.FC<{
     setError(null);
 
     try {
-      console.log("🔄 Loading materials...");
-
       // Use currentUser from context
       if (!currentUser) {
         // Fallback to supabase auth if context is not ready (though context should be ready)
@@ -3064,8 +3057,6 @@ const MaterialManager: React.FC<{
           setLoading(false);
           return;
         }
-        // If we have sbUser, we can proceed, but ideally we want currentUser
-        console.log("⚠️ Using Supabase user as fallback");
       }
 
       const user = currentUser || (await supabase.auth.getUser()).data.user;
@@ -3075,8 +3066,6 @@ const MaterialManager: React.FC<{
         setLoading(false);
         return;
       }
-
-      console.log("👤 Current user:", user.email || user.id);
 
       // Fetch materials
       const { data, error: fetchError } = await supabase
@@ -3089,8 +3078,6 @@ const MaterialManager: React.FC<{
         setError("Lỗi tải dữ liệu: " + fetchError.message);
         return;
       }
-
-      console.log("✅ Loaded materials:", data?.length || 0);
 
       const formattedMaterials = (data || []).map((item: any) => ({
         id: item.id,
@@ -3118,8 +3105,6 @@ const MaterialManager: React.FC<{
 
   // Save import transaction function
   const saveMaterial = async (formData: any) => {
-    console.log("🔄 Processing import transaction:", formData.name);
-
     try {
       // Get current user from context
       if (!currentUser) {
@@ -3298,8 +3283,7 @@ const MaterialManager: React.FC<{
       }
 
       if (historyError) {
-        console.log("⚠️ History log error (table might not exist):", historyError);
-        // Không dừng quá trình nếu bảng history chưa có
+        // Không dừng quá trình nếu bảng history chưa có - silent fail
       } else if (insertedHistory) {
         // ✅ Update context with inserted row (đảm bảo có id UUID và các cột thực tế)
         const newHistory: PinMaterialHistory = {
@@ -3322,10 +3306,7 @@ const MaterialManager: React.FC<{
           created_at: insertedHistory.created_at || undefined,
         };
         setPinMaterialHistory((prev: PinMaterialHistory[]) => [newHistory, ...prev]);
-        console.log("✅ History updated in context (inserted)");
       }
-
-      console.log("✅ Import transaction successful");
 
       // Reload data to ensure consistency
       await loadMaterials();
@@ -3435,7 +3416,7 @@ const MaterialManager: React.FC<{
       }
     } catch (err) {
       console.error("Delete error:", err);
-      alert("Lỗi khi xóa: " + (err as any)?.message);
+      showToast("Lỗi", "Lỗi khi xóa: " + (err as any)?.message, "error");
     }
   };
 
@@ -3505,16 +3486,16 @@ const MaterialManager: React.FC<{
       await loadMaterials();
       setSelectedItems(new Set());
       setShowBulkActions(false);
-      alert(`Đã xóa ${selectedItems.size} vật tư thành công!`);
+      showToast("Thành công", `Đã xóa ${selectedItems.size} vật tư thành công!`, "success");
     } catch (err) {
       console.error("Bulk delete error:", err);
-      alert("Lỗi khi xóa: " + (err as any)?.message);
+      showToast("Lỗi", "Lỗi khi xóa: " + (err as any)?.message, "error");
     }
   };
 
   const handleBulkUpdateSupplier = async () => {
     if (!bulkSupplier.trim()) {
-      alert("Vui lòng nhập tên nhà cung cấp!");
+      showToast("Thông báo", "Vui lòng nhập tên nhà cung cấp!", "warn");
       return;
     }
 
@@ -3534,10 +3515,10 @@ const MaterialManager: React.FC<{
       setShowBulkActions(false);
       setBulkSupplier("");
       setBulkSupplierPhone("");
-      alert(`Đã cập nhật nhà cung cấp cho ${selectedItems.size} vật tư!`);
+      showToast("Thành công", `Đã cập nhật nhà cung cấp cho ${selectedItems.size} vật tư!`, "success");
     } catch (err) {
       console.error("Bulk update error:", err);
-      alert("Lỗi khi cập nhật: " + (err as any)?.message);
+      showToast("Lỗi", "Lỗi khi cập nhật: " + (err as any)?.message, "error");
     }
   };
 
@@ -3754,7 +3735,7 @@ const MaterialManager: React.FC<{
 
       // Reload materials
       await loadMaterials();
-      alert("Điều chỉnh tồn kho thành công!");
+      showToast("Thành công", "Điều chỉnh tồn kho thành công!", "success");
     } catch (error) {
       console.error("Stock adjustment error:", error);
       throw error;
@@ -3884,7 +3865,6 @@ const MaterialManager: React.FC<{
 
           if (!insertError) {
             createdCount++;
-            console.log(`✅ Tạo mới: ${data.name} (${data.quantity} cái)`);
           } else {
             console.error(`❌ Lỗi tạo ${data.name}:`, insertError);
           }
@@ -3913,14 +3893,10 @@ const MaterialManager: React.FC<{
       }
 
       await loadMaterials();
-      alert(
-        `✅ Đồng bộ hoàn tất!\n\n` +
-        `📦 Tạo mới: ${createdCount} vật liệu\n` +
-        `🏢 Cập nhật NCC: ${updatedCount} vật liệu`
-      );
+      showToast("Đồng bộ hoàn tất", `📦 Tạo mới: ${createdCount} vật liệu | 🏢 Cập nhật NCC: ${updatedCount} vật liệu`, "success");
     } catch (err) {
       console.error("Sync error:", err);
-      alert("Lỗi đồng bộ: " + (err as any)?.message);
+      showToast("Lỗi", "Lỗi đồng bộ: " + (err as any)?.message, "error");
     } finally {
       setLoading(false);
     }
@@ -4220,10 +4196,6 @@ const MaterialManager: React.FC<{
       </div>
       {/* Content based on active view */}
       <div className="flex-1 overflow-hidden px-1 md:px-0">
-        {(() => {
-          console.log("🔍 MaterialManager activeView:", activeView);
-          return null;
-        })()}
         {activeView === "history" ? (
           <PinImportHistory />
         ) : activeView === "orders" ? (
@@ -4852,6 +4824,7 @@ const MaterialManager: React.FC<{
               existingMaterials={materials}
               suppliers={suppliers}
               setSuppliers={setSuppliers}
+              onToast={showToast}
             />
 
             {/* Material Detail Modal */}
@@ -4906,13 +4879,14 @@ const MaterialManager: React.FC<{
                     materials.map((m) => (m.id === updatedMaterial.id ? updatedMaterial : m))
                   );
 
-                  alert("Đã cập nhật vật liệu thành công!");
+                  showToast("Thành công", "Đã cập nhật vật liệu thành công!", "success");
                 } catch (err) {
                   console.error("Error updating material:", err);
                   throw err;
                 }
               }}
               suppliers={suppliers}
+              onToast={showToast}
             />
 
             {/* Stock Adjustment Modal */}
@@ -4924,6 +4898,7 @@ const MaterialManager: React.FC<{
                 setSelectedMaterialForAdjustment(null);
               }}
               onSubmit={handleStockAdjustment}
+              onToast={showToast}
             />
 
             {/* Stock Forecast Modal */}

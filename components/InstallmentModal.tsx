@@ -12,6 +12,8 @@ interface InstallmentModalProps {
   initialDownPayment?: number;
   initialTerms?: number;
   initialInterestRate?: number;
+  // Toast callback
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
 }
 
 const formatCurrency = (amount: number) =>
@@ -26,7 +28,15 @@ export default function InstallmentModal({
   initialDownPayment,
   initialTerms,
   initialInterestRate,
+  onToast,
 }: InstallmentModalProps) {
+  // Toast helper with fallback
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "warn") => {
+    if (onToast) {
+      onToast(title, message, type);
+    }
+  };
+
   const [downPayment, setDownPayment] = useState(0);
   const [numberOfInstallments, setNumberOfInstallments] = useState(3);
   const [interestRate, setInterestRate] = useState(0);
@@ -49,11 +59,11 @@ export default function InstallmentModal({
 
   const handleConfirm = () => {
     if (downPayment < 0 || downPayment >= total) {
-      alert("Số tiền đặt cọc phải từ 0 đến dưới tổng tiền!");
+      showToast("Số tiền không hợp lệ", "Số tiền đặt cọc phải từ 0 đến dưới tổng tiền!", "warn");
       return;
     }
     if (numberOfInstallments < 1 || numberOfInstallments > 24) {
-      alert("Số kỳ trả góp phải từ 1 đến 24 tháng!");
+      showToast("Số kỳ không hợp lệ", "Số kỳ trả góp phải từ 1 đến 24 tháng!", "warn");
       return;
     }
 
