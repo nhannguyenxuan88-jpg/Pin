@@ -36,6 +36,7 @@ const ProductDeletionModal: React.FC<ProductDeletionModalProps> = ({
 }) => {
   const { getProductDeletionPreview } = useProductDeletion();
   const ctx = usePinContext();
+  const { addToast } = ctx;
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<DeletionOptions>({
     returnMaterials: true,
@@ -93,7 +94,11 @@ const ProductDeletionModal: React.FC<ProductDeletionModalProps> = ({
       await onConfirm(product, { ...options, quantity });
       onClose();
     } catch (error) {
-      console.error("Error deleting product:", error);
+      addToast?.({
+        id: crypto.randomUUID(),
+        message: "Lỗi khi xóa sản phẩm: " + (error as Error).message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }

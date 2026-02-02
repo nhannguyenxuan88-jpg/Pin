@@ -125,26 +125,25 @@ export function useProductDeletion() {
     );
     const qty = Math.max(1, Math.min(requestedQty, Number(product.stock || 0)));
 
-    // Handle active orders first if needed
-    if (impact.activeOrders.length > 0) {
-      if (options.cancelActiveOrders) {
-        for (const order of impact.activeOrders) {
-          await ctx.updateProductionOrderStatus(order.id, "Đã hủy");
-        }
-      } else if (options.completeActiveOrders) {
-        for (const order of impact.activeOrders) {
-          await ctx.updateProductionOrderStatus(order.id, "Hoàn thành");
-        }
-      } else if (!options.forceDelete) {
-        return {
-          success: false,
-          message:
-            "Không thể xóa sản phẩm do còn đơn hàng sản xuất đang hoạt động",
-        };
-      }
-    }
-
     try {
+      // Handle active orders first if needed
+      if (impact.activeOrders.length > 0) {
+        if (options.cancelActiveOrders) {
+          for (const order of impact.activeOrders) {
+            await ctx.updateProductionOrderStatus(order.id, "Đã hủy");
+          }
+        } else if (options.completeActiveOrders) {
+          for (const order of impact.activeOrders) {
+            await ctx.updateProductionOrderStatus(order.id, "Hoàn thành");
+          }
+        } else if (!options.forceDelete) {
+          return {
+            success: false,
+            message:
+              "Không thể xóa sản phẩm do còn đơn hàng sản xuất đang hoạt động",
+          };
+        }
+      }
       // Delete related BOMs if requested
       if (options.deleteBOMs && impact.relatedBOMs.length > 0) {
         for (const bom of impact.relatedBOMs) {
@@ -181,7 +180,9 @@ export function useProductDeletion() {
                   )
                 );
               }
-            } catch {}
+            } catch (orderError) {
+              // Tiếp tục với đơn hàng tiếp theo nếu có lỗi
+            }
           }
 
           if (IS_OFFLINE_MODE) {

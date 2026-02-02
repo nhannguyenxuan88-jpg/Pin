@@ -296,6 +296,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                 type: "error",
               });
             }
+          } catch (error) {
+            addToast?.({
+              title: "Lỗi",
+              message: "Lỗi khi xóa sản phẩm: " + (error as Error).message,
+              type: "error",
+            });
           } finally {
             setDeletionModalProduct(null);
           }
