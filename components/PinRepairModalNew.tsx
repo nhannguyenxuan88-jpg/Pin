@@ -45,7 +45,28 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
   initialOrder,
   currentUser,
 }) => {
-  const { pinMaterials, pinCustomers, upsertPinCustomer } = usePinContext();
+  const { pinMaterials, pinCustomers, upsertPinCustomer, addToast } = usePinContext();
+
+  // Toast helper
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+    addToast?.({ id: crypto.randomUUID(), message, type });
+  };
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog(null);
+  };
 
   const [formData, setFormData] = useState<Partial<PinRepairOrder>>({
     customerName: "",
@@ -183,7 +204,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
             parsedOutsourcingItems = JSON.parse(parts[1]);
           }
         } catch (e) {
-          console.warn("Failed to parse outsourcing items from notes");
+          // Failed to parse outsourcing items from notes - ignore
         }
       }
 
@@ -245,11 +266,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
   const handleAddNewCustomer = async () => {
     if (!newCustomerData.name.trim()) {
-      alert("Vui lòng nhập tên khách hàng");
+      showToast("Vui lòng nhập tên khách hàng", "warning");
       return;
     }
     if (!newCustomerData.phone.trim()) {
-      alert("Vui lòng nhập số điện thoại");
+      showToast("Vui lòng nhập số điện thoại", "warning");
       return;
     }
 
@@ -275,8 +296,9 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
       setNewCustomerData({ name: "", phone: "", email: "", address: "" });
       setShowAddCustomerModal(false);
+      showToast("Đã thêm khách hàng mới", "success");
     } catch (error) {
-      alert("Lỗi khi thêm khách hàng: " + (error as Error).message);
+      showToast("Lỗi khi thêm khách hàng: " + (error as Error).message, "error");
     }
   };
 
@@ -301,15 +323,25 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     }
   };
 
+  // Pending material for confirm dialog
+  const [pendingMaterial, setPendingMaterial] = useState<{
+    materialName: string;
+    quantity: number;
+    price: number;
+    materialId: string;
+    inStock: number;
+    shortage?: number;
+  } | null>(null);
+
   const handleAddMaterial = () => {
     const materialName = materialSearch.trim() || materialInput.materialName.trim();
 
     if (!materialName) {
-      alert("Vui lòng nhập tên vật liệu");
+      showToast("Vui lòng nhập tên vật liệu", "warning");
       return;
     }
     if (materialInput.quantity <= 0) {
-      alert("Số lượng phải lớn hơn 0");
+      showToast("Số lượng phải lớn hơn 0", "warning");
       return;
     }
 
@@ -320,7 +352,6 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
     let inStock = 0;
     let shortage = 0;
-    let isNewMaterial = !material; // Vật liệu chưa có trong kho
 
     if (material) {
       const currentStock = material.stock || 0;
@@ -333,39 +364,67 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
       if (materialInput.quantity > availableStock) {
         shortage = materialInput.quantity - availableStock;
-        // Không chặn, chỉ cảnh báo
-        const proceed = confirm(
-          `⚠️ THIẾU HÀNG!\n\n` +
-          `Vật liệu: ${materialName}\n` +
-          `Cần: ${materialInput.quantity}\n` +
-          `Tồn kho: ${currentStock}\n` +
-          `Đã dùng trong phiếu: ${alreadyUsed}\n` +
-          `Còn lại: ${availableStock}\n` +
-          `Thiếu: ${shortage}\n\n` +
-          `Bạn vẫn muốn thêm vào báo giá?`
+        // Show confirm dialog
+        setPendingMaterial({
+          materialName,
+          quantity: materialInput.quantity,
+          price: materialInput.price || material?.retailPrice || 0,
+          materialId: material?.id || generateUniqueId("MAT-NEW"),
+          inStock,
+          shortage,
+        });
+        showConfirmDialog(
+          "Thiếu hàng",
+          `Vật liệu: ${materialName}\nCần: ${materialInput.quantity}\nTồn kho: ${currentStock}\nĐã dùng: ${alreadyUsed}\nCòn lại: ${availableStock}\nThiếu: ${shortage}\n\nBạn vẫn muốn thêm vào báo giá?`,
+          () => confirmAddMaterial()
         );
-        if (!proceed) return;
+        return;
       }
     } else {
       // Vật liệu mới chưa có trong kho
       shortage = materialInput.quantity;
-      const proceed = confirm(
-        `⚠️ VẬT LIỆU MỚI!\n\n` +
-        `"${materialName}" chưa có trong kho.\n` +
-        `Số lượng cần: ${materialInput.quantity}\n\n` +
-        `Bạn cần đặt hàng NCC.\n` +
-        `Vẫn muốn thêm vào báo giá?`
+      setPendingMaterial({
+        materialName,
+        quantity: materialInput.quantity,
+        price: materialInput.price || 0,
+        materialId: generateUniqueId("MAT-NEW"),
+        inStock: 0,
+        shortage,
+      });
+      showConfirmDialog(
+        "Vật liệu mới",
+        `"${materialName}" chưa có trong kho.\nSố lượng cần: ${materialInput.quantity}\n\nBạn cần đặt hàng NCC.\nVẫn muốn thêm vào báo giá?`,
+        () => confirmAddMaterial()
       );
-      if (!proceed) return;
+      return;
     }
 
+    // No confirm needed - add directly
+    addMaterialToForm(materialName, materialInput.quantity, materialInput.price || material?.retailPrice || 0, material?.id || generateUniqueId("MAT-NEW"), inStock, undefined);
+  };
+
+  const confirmAddMaterial = () => {
+    if (pendingMaterial) {
+      addMaterialToForm(
+        pendingMaterial.materialName,
+        pendingMaterial.quantity,
+        pendingMaterial.price,
+        pendingMaterial.materialId,
+        pendingMaterial.inStock,
+        pendingMaterial.shortage
+      );
+      setPendingMaterial(null);
+    }
+  };
+
+  const addMaterialToForm = (materialName: string, quantity: number, price: number, materialId: string, inStock: number, shortage?: number) => {
     const newMaterial: PinRepairMaterial = {
-      materialId: material?.id || generateUniqueId("MAT-NEW"),
+      materialId,
       materialName,
-      quantity: materialInput.quantity,
-      price: materialInput.price || material?.retailPrice || 0,
-      inStock: inStock,
-      shortage: shortage > 0 ? shortage : undefined,
+      quantity,
+      price,
+      inStock,
+      shortage: shortage && shortage > 0 ? shortage : undefined,
     };
 
     setFormData((prev) => ({
@@ -385,22 +444,18 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     }));
   };
 
+  // Pending outsourcing for confirm dialog
+  const [pendingOutsourcing, setPendingOutsourcing] = useState<OutsourcingItem | null>(null);
+
   // === Gia công ngoài / Đặt hàng handlers ===
   const handleAddOutsourcing = () => {
     if (!outsourcingInput.description.trim()) {
-      alert("Vui lòng nhập mô tả công việc gia công");
+      showToast("Vui lòng nhập mô tả công việc gia công", "warning");
       return;
     }
     if (outsourcingInput.quantity <= 0) {
-      alert("Số lượng phải lớn hơn 0");
+      showToast("Số lượng phải lớn hơn 0", "warning");
       return;
-    }
-
-    if (outsourcingInput.costPrice <= 0) {
-      const confirmZero = confirm(
-        "⚠️ Cảnh báo lợi nhuận:\nGiá nhập (Giá vốn) đang là 0.\n\nViệc này sẽ khiến Lợi nhuận = Doanh thu (lãi 100%).\nBạn có chắc chắn muốn tiếp tục?"
-      );
-      if (!confirmZero) return;
     }
 
     const newItem: OutsourcingItem = {
@@ -412,9 +467,30 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       total: outsourcingInput.quantity * outsourcingInput.sellingPrice,
     };
 
+    if (outsourcingInput.costPrice <= 0) {
+      setPendingOutsourcing(newItem);
+      showConfirmDialog(
+        "Cảnh báo lợi nhuận",
+        "Giá nhập (Giá vốn) đang là 0.\n\nViệc này sẽ khiến Lợi nhuận = Doanh thu (lãi 100%).\nBạn có chắc chắn muốn tiếp tục?",
+        () => confirmAddOutsourcing()
+      );
+      return;
+    }
+
+    addOutsourcingToForm(newItem);
+  };
+
+  const confirmAddOutsourcing = () => {
+    if (pendingOutsourcing) {
+      addOutsourcingToForm(pendingOutsourcing);
+      setPendingOutsourcing(null);
+    }
+  };
+
+  const addOutsourcingToForm = (item: OutsourcingItem) => {
     setFormData((prev) => ({
       ...prev,
-      outsourcingItems: [...(prev.outsourcingItems || []), newItem],
+      outsourcingItems: [...(prev.outsourcingItems || []), item],
     }));
 
     setOutsourcingInput({
@@ -455,27 +531,26 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
     // CRITICAL: Prevent double-submit
     if (isSubmitting) {
-      console.warn("⚠️ Đang xử lý, vui lòng chờ...");
       return;
     }
 
     if (!currentUser) {
-      alert("Vui lòng đăng nhập");
+      showToast("Vui lòng đăng nhập", "warning");
       return;
     }
 
     if (!formData.customerName?.trim()) {
-      alert("Vui lòng nhập tên khách hàng");
+      showToast("Vui lòng nhập tên khách hàng", "warning");
       return;
     }
 
     if (!formData.customerPhone?.trim()) {
-      alert("Vui lòng nhập số điện thoại");
+      showToast("Vui lòng nhập số điện thoại", "warning");
       return;
     }
 
     if (!formData.issueDescription?.trim()) {
-      alert("Vui lòng mô tả sự cố");
+      showToast("Vui lòng mô tả sự cố", "warning");
       return;
     }
 
@@ -503,7 +578,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       const total = calculateTotal();
 
       if (total <= 0) {
-        alert("Vui lòng nhập ít nhất: vật liệu, gia công ngoài, hoặc phí công");
+        showToast("Vui lòng nhập ít nhất: vật liệu, gia công ngoài, hoặc phí công", "warning");
         setIsSubmitting(false);
         return;
       }
@@ -514,7 +589,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         depositAmt > 0 || formData.paymentStatus === "paid" || formData.paymentStatus === "partial";
 
       if (needsPaymentMethod && !formData.paymentMethod) {
-        alert("Vui lòng chọn phương thức thanh toán");
+        showToast("Vui lòng chọn phương thức thanh toán", "warning");
         setIsSubmitting(false);
         return;
       }
@@ -522,12 +597,12 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       if (formData.paymentStatus === "partial") {
         const amt = Number(formData.partialPaymentAmount || 0);
         if (amt <= 0) {
-          alert("Vui lòng nhập số tiền thanh toán cho hình thức thanh toán một phần.");
+          showToast("Vui lòng nhập số tiền thanh toán cho hình thức thanh toán một phần.", "warning");
           setIsSubmitting(false);
           return;
         }
         if (amt >= total) {
-          alert("Số tiền thanh toán một phần phải nhỏ hơn tổng số tiền.");
+          showToast("Số tiền thanh toán một phần phải nhỏ hơn tổng số tiền.", "warning");
           setIsSubmitting(false);
           return;
         }
@@ -561,24 +636,26 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
       // Warn when marking as "Trả máy" (Complete) -> Inventory Deduction
       if (orderToSave.status === "Trả máy" && (!initialOrder?.materialsDeducted)) {
-        const confirmDeduct = confirm(
-          "⚠️ XÁC NHẬN HOÀN TẤT & TRỪ KHO\n\n" +
-          "Khi chuyển sang 'Trả máy', hệ thống sẽ:\n" +
-          "1. 📉 TRỪ TỒN KHO vật tư đã sử dụng\n" +
-          "2. 💰 Ghi nhận DOANH THU & LỢI NHUẬN\n" +
-          "3. 📝 Tạo phiếu thu (nếu thanh toán)\n\n" +
-          "Bạn có chắc chắn muốn thực hiện?"
+        setIsSubmitting(false);
+        showConfirmDialog(
+          "Xác nhận hoàn tất & trừ kho",
+          "Khi chuyển sang 'Trả máy', hệ thống sẽ:\n1. Trừ tồn kho vật tư đã sử dụng\n2. Ghi nhận doanh thu & lợi nhuận\n3. Tạo phiếu thu (nếu thanh toán)\n\nBạn có chắc chắn?",
+          async () => {
+            try {
+              await onSave(orderToSave);
+              onClose();
+            } catch (error) {
+              showToast("Lỗi: " + (error as Error).message, "error");
+            }
+          }
         );
-        if (!confirmDeduct) {
-          setIsSubmitting(false);
-          return;
-        }
+        return;
       }
 
       await onSave(orderToSave);
       onClose();
     } catch (error) {
-      alert("Lỗi: " + (error as Error).message);
+      showToast("Lỗi: " + (error as Error).message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -1965,6 +2042,37 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
           </div>
         )
       }
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog?.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              {confirmDialog.title}
+            </h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-6 whitespace-pre-line">
+              {confirmDialog.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  closeConfirmDialog();
+                }}
+                className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

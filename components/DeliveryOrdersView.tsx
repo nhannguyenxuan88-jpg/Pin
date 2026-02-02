@@ -8,9 +8,14 @@ import { Icon } from "./common/Icon";
 import type { PinSale } from "../types";
 
 export default function DeliveryOrdersView() {
-    const { pinSales, currentUser } = usePinContext();
+    const { pinSales, currentUser, addToast } = usePinContext();
     const [activeTab, setActiveTab] = useState<DeliveryStatus | "all">("all");
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Toast helper
+    const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+        addToast?.({ id: crypto.randomUUID(), message, type });
+    };
 
     // Filter sales that have delivery method = 'delivery'
     const deliveryOrders = useMemo(() => {
@@ -54,8 +59,7 @@ export default function DeliveryOrdersView() {
 
     const handleUpdateStatus = async (saleId: string, newStatus: DeliveryStatus) => {
         // TODO: Implement status update logic
-        console.log("Update status:", saleId, newStatus);
-        alert(`Chức năng cập nhật trạng thái đang được phát triển.\nĐơn: ${saleId}\nTrạng thái mới: ${newStatus}`);
+        showToast(`Chức năng cập nhật trạng thái đang được phát triển. Đơn: ${saleId}`, "info");
     };
 
     const columns = [

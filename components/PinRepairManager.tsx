@@ -29,8 +29,13 @@ interface UserProfile {
 }
 
 const PinRepairManagerNew: React.FC = () => {
-  const { pinRepairOrders, upsertPinRepairOrder, deletePinRepairOrder, currentUser } =
+  const { pinRepairOrders, upsertPinRepairOrder, deletePinRepairOrder, currentUser, addToast } =
     usePinContext();
+
+  // Toast helper
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+    addToast?.({ id: crypto.randomUUID(), message, type });
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PinRepairOrder | null>(null);
@@ -47,8 +52,12 @@ const PinRepairManagerNew: React.FC = () => {
   React.useEffect(() => {
     const fetchProfiles = async () => {
       if (!currentUser) return;
-      const { data, error } = await supabase.from("profiles").select("id, name, email");
-      if (!error && data) setProfiles(data as UserProfile[]);
+      try {
+        const { data, error } = await supabase.from("profiles").select("id, name, email");
+        if (!error && data) setProfiles(data as UserProfile[]);
+      } catch (e) {
+        // Silently fail - profiles are optional for display
+      }
     };
     fetchProfiles();
   }, [currentUser]);
@@ -190,7 +199,12 @@ const PinRepairManagerNew: React.FC = () => {
 
   const handleDeleteConfirm = async () => {
     if (orderToDelete) {
-      await deletePinRepairOrder(orderToDelete);
+      try {
+        await deletePinRepairOrder(orderToDelete);
+        showToast("Đã xóa phiếu sửa chữa thành công", "success");
+      } catch (e) {
+        showToast("Lỗi khi xóa phiếu sửa chữa", "error");
+      }
       setDeleteConfirmOpen(false);
       setOrderToDelete(null);
     }
@@ -198,7 +212,10 @@ const PinRepairManagerNew: React.FC = () => {
 
   const handlePrint = (order: PinRepairOrder) => {
     const w = window.open("", "_blank");
-    if (!w) return alert("Vui lòng cho phép pop-up để in phiếu");
+    if (!w) {
+      showToast("Vui lòng cho phép pop-up để in phiếu", "warning");
+      return;
+    }
 
     const materialsHtml = (order.materialsUsed || [])
       .map(
