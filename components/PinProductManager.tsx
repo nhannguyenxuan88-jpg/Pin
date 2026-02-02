@@ -72,7 +72,8 @@ const EditPriceModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSave: (product: PinProduct) => void;
-}> = ({ product, isOpen, onClose, onSave }) => {
+  onToast?: (message: string, type: "success" | "error" | "warning" | "info") => void;
+}> = ({ product, isOpen, onClose, onSave, onToast }) => {
   const [retailPrice, setRetailPrice] = useState(0);
   const [wholesalePrice, setWholesalePrice] = useState(0);
   const { currentUser } = usePinContext();
@@ -89,7 +90,7 @@ const EditPriceModal: React.FC<{
 
   const handleSave = () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để thực hiện thao tác");
+      onToast?.("Vui lòng đăng nhập để thực hiện thao tác", "warning");
       return;
     }
     if (product) {
@@ -225,6 +226,27 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
     productionOrders,
     addToast,
   } = usePinContext();
+
+  // Toast helper
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+    addToast?.({ id: crypto.randomUUID(), message, type });
+  };
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog(null);
+  };
   const { deleteProductWithOptions } = useProductDeletion();
   const [deleteQtyMap, setDeleteQtyMap] = useState<Record<string, number>>({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -288,6 +310,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
         }}
         onSave={updateProduct}
         product={editingProduct}
+        onToast={showToast}
       />
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 animate-fadeIn">
         <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -405,7 +428,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <button
                       onClick={() => {
                         if (!currentUser) {
-                          alert("Vui lòng đăng nhập");
+                          showToast("Vui lòng đăng nhập", "warning");
                           return;
                         }
                         setEditingProduct(product);
@@ -419,7 +442,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <button
                       onClick={() => {
                         if (!currentUser) {
-                          alert("Vui lòng đăng nhập");
+                          showToast("Vui lòng đăng nhập", "warning");
                           return;
                         }
                         setDeletionModalProduct(product);
@@ -584,12 +607,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           }
                           onClick={() => {
                             if (!currentUser) {
-                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
                               return;
                             }
                             const qty = deleteQtyMap[product.id] ?? product.stock;
                             if (!qty || qty <= 0) {
-                              alert("Vui lòng nhập số lượng > 0 để xóa");
+                              showToast("Vui lòng nhập số lượng > 0 để xóa", "warning");
                               return;
                             }
 
@@ -607,15 +630,9 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                             );
 
                             if (activeOrders.length > 0) {
-                              alert(
-                                `⚠️ KHÔNG THỂ XÓA SẢN PHẨM!\n\n` +
-                                  `Sản phẩm "${product.name}" có ${activeOrders.length} đơn hàng sản xuất đang hoạt động:\n` +
-                                  `${activeOrders
-                                    .map(
-                                      (order: ProductionOrder) => `• ${order.id} (${order.status})`
-                                    )
-                                    .join("\n")}\n\n` +
-                                  `Vui lòng hoàn thành hoặc hủy các đơn hàng này trước khi xóa sản phẩm.`
+                              showToast(
+                                `Không thể xóa sản phẩm "${product.name}" - có ${activeOrders.length} đơn hàng sản xuất đang hoạt động. Vui lòng hoàn thành hoặc hủy các đơn hàng này trước.`,
+                                "error"
                               );
                               return;
                             }
@@ -627,21 +644,22 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                                 (order.status === "Hoàn thành" || order.status === "Đã hủy")
                             );
 
-                            let warningMessage = `Xóa ${qty} đơn vị thành phẩm "${product.name}"?\n`;
-                            warningMessage += `Hệ thống sẽ hoàn kho NVL theo BOM và số lượng bạn đã chọn.\n\n`;
+                            let warningMessage = `Xóa ${qty} đơn vị thành phẩm "${product.name}"? Hệ thống sẽ hoàn kho NVL theo BOM và số lượng bạn đã chọn.`;
 
                             if (relatedBOMs.length > 0) {
-                              warningMessage += `⚠️ CẢNH BÁO: Sẽ ảnh hưởng đến ${relatedBOMs.length} công thức sản xuất (BOM)\n`;
+                              warningMessage += ` ⚠️ Sẽ ảnh hưởng đến ${relatedBOMs.length} công thức sản xuất (BOM).`;
                             }
                             if (completedOrders.length > 0) {
-                              warningMessage += `⚠️ CẢNH BÁO: Có ${completedOrders.length} đơn hàng đã hoàn thành liên quan\n`;
+                              warningMessage += ` ⚠️ Có ${completedOrders.length} đơn hàng đã hoàn thành liên quan.`;
                             }
 
-                            warningMessage += `\nBạn có chắc chắn muốn tiếp tục?`;
-
-                            if (window.confirm(warningMessage)) {
-                              removePinProductAndReturnMaterials(product, qty);
-                            }
+                            const productToDelete = product;
+                            const qtyToDelete = qty;
+                            showConfirmDialog(
+                              "Xác nhận xóa sản phẩm",
+                              warningMessage,
+                              () => removePinProductAndReturnMaterials(productToDelete, qtyToDelete)
+                            );
                           }}
                         />
                       </div>
@@ -654,7 +672,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           variant="warning"
                           onClick={() => {
                             if (!currentUser) {
-                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
                               return;
                             }
                             setDeletionModalProduct(product);
@@ -668,7 +686,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           disabled={!currentUser}
                           onClick={() => {
                             if (!currentUser) {
-                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
                               return;
                             }
                             setEditingProduct(product);
@@ -683,11 +701,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           disabled={!currentUser}
                           onClick={() => {
                             if (!currentUser) {
-                              alert("Vui lòng đăng nhập để thực hiện thao tác");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
                               return;
                             }
-                            alert(
-                              "Tính năng sửa thông tin sản phẩm sẽ được phát triển trong phiên bản tiếp theo."
+                            showToast(
+                              "Tính năng sửa thông tin sản phẩm sẽ được phát triển trong phiên bản tiếp theo.",
+                              "info"
                             );
                           }}
                         />
@@ -713,6 +732,37 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
           itemsPerPage={ITEMS_PER_PAGE}
           totalItems={filteredProducts.length}
         />
+      )}
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              {confirmDialog.title}
+            </h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-6 whitespace-pre-line">
+              {confirmDialog.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  closeConfirmDialog();
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

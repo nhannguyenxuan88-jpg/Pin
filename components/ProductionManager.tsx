@@ -15,6 +15,7 @@ interface ProductionManagerProps {
   currentUser?: { id?: string } | null;
   materials?: PinMaterial[];
   boms?: PinBOM[];
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -26,12 +27,34 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
   currentUser,
   materials = [],
   boms = [],
+  onToast,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [detailOrder, setDetailOrder] = useState<ProductionOrder | null>(null);
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
   const [resumeChecked, setResumeChecked] = useState(false);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} });
+  };
+
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    onToast?.(title, message, type);
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -78,36 +101,40 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
       return;
     }
 
-    const proceed = window.confirm(
-      `Phát hiện thao tác hoàn thành Lệnh #${pendingOrder.id} đang dở dang.\n\nBạn có muốn tiếp tục hoàn thành không?`
+    // Show confirm dialog for recovery
+    showConfirmDialog(
+      "Tiếp tục hoàn thành",
+      `Phát hiện thao tác hoàn thành Lệnh #${pendingOrder.id} đang dở dang.\n\nBạn có muốn tiếp tục hoàn thành không?`,
+      async () => {
+        closeConfirmDialog();
+        // Resume without showing the second confirmation dialog
+        const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+          e.preventDefault();
+          e.returnValue = "Đang lưu dữ liệu sản xuất. Vui lòng chờ để tránh mất dữ liệu.";
+          return e.returnValue;
+        };
+        try {
+          setCompletingOrderId(pendingOrder.id);
+          window.addEventListener("beforeunload", beforeUnloadHandler);
+          await completeOrder?.(pendingOrder.id);
+          localStorage.removeItem("pending-production-completion");
+        } catch (e) {
+          showToast("Lỗi", "Lỗi khi tiếp tục hoàn thành lệnh sản xuất", "error");
+        } finally {
+          setCompletingOrderId(null);
+          window.removeEventListener("beforeunload", beforeUnloadHandler);
+          setResumeChecked(true);
+        }
+      }
     );
-    if (!proceed) {
-      localStorage.removeItem("pending-production-completion");
-      setResumeChecked(true);
-      return;
-    }
 
-    // Resume without showing the second confirmation dialog
-    const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "Đang lưu dữ liệu sản xuất. Vui lòng chờ để tránh mất dữ liệu.";
-      return e.returnValue;
-    };
-    (async () => {
-      try {
-        setCompletingOrderId(pendingOrder.id);
-        window.addEventListener("beforeunload", beforeUnloadHandler);
-        await completeOrder?.(pendingOrder.id);
-        // Clear token on success
+    // Handle cancel case - set resumeChecked when dialog closes without confirm
+    return () => {
+      if (!resumeChecked) {
         localStorage.removeItem("pending-production-completion");
-      } catch (e) {
-        console.error("Lỗi khi tiếp tục hoàn thành lệnh sản xuất:", e);
-      } finally {
-        setCompletingOrderId(null);
-        window.removeEventListener("beforeunload", beforeUnloadHandler);
         setResumeChecked(true);
       }
-    })();
+    };
   }, [orders, currentUser, resumeChecked, completeOrder]);
 
   const filteredOrders = useMemo(() => {
@@ -151,7 +178,7 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
 
   const handleCancelOrder = (order: ProductionOrder) => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để thực hiện thao tác.");
+      showToast("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
       return;
     }
     const message =
@@ -159,27 +186,26 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
         ? `Bạn có chắc chắn muốn tháo dỡ Lệnh sản xuất #${order.id} không? Thành phẩm sẽ bị trừ và nguyên vật liệu sẽ được hoàn trả về kho.`
         : `Bạn có chắc chắn muốn hủy Lệnh sản xuất #${order.id} không? Nguyên vật liệu đã sử dụng sẽ được hoàn trả về kho.`;
 
-    if (window.confirm(message)) {
-      updateOrder(order.id, "Đã hủy");
-    }
+    showConfirmDialog(
+      order.status === "Hoàn thành" ? "Tháo dỡ lệnh" : "Hủy lệnh",
+      message,
+      () => {
+        closeConfirmDialog();
+        updateOrder(order.id, "Đã hủy");
+      }
+    );
   };
 
   const handleCompleteOrder = async (order: ProductionOrder) => {
-    console.log("🔧 [DEBUG] handleCompleteOrder called for order:", order.id);
-
     if (!currentUser) {
-      console.log("🔧 [DEBUG] No currentUser");
-      alert("Vui lòng đăng nhập để thực hiện thao tác.");
+      showToast("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
       return;
     }
 
     if (!completeOrder) {
-      console.log("🔧 [DEBUG] No completeOrder function provided");
-      alert("Chức năng hoàn thành lệnh sản xuất chưa được kích hoạt.");
+      showToast("Lỗi", "Chức năng hoàn thành lệnh sản xuất chưa được kích hoạt.", "warn");
       return;
     }
-
-    console.log("🔧 [DEBUG] All checks passed, showing confirmation...");
 
     const message =
       `Hoàn thành lệnh sản xuất #${order.id}?\n\n` +
@@ -188,37 +214,35 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
       `• Tồn kho thành phẩm sẽ được tăng lên\n\n` +
       `Bạn có chắc chắn muốn tiếp tục?`;
 
-    if (window.confirm(message)) {
-      console.log("🔧 [DEBUG] User confirmed, calling completeOrder...");
-      // Guard against accidental reload/close while saving
-      const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
-        e.preventDefault();
-        // Some browsers ignore custom text
-        e.returnValue = "Đang lưu dữ liệu sản xuất. Vui lòng chờ để tránh mất dữ liệu.";
-        return e.returnValue;
-      };
-      try {
-        setCompletingOrderId(order.id);
-        window.addEventListener("beforeunload", beforeUnloadHandler);
-        // Persist a minimal resume token in case the tab is closed/refreshed mid-flight
-        localStorage.setItem(
-          "pending-production-completion",
-          JSON.stringify({ orderId: order.id, startedAt: Date.now() })
-        );
-        await completeOrder(order.id);
-        console.log("🔧 [DEBUG] completeOrder finished successfully");
-        // Clear the resume token on success
-        localStorage.removeItem("pending-production-completion");
-      } catch (error) {
-        console.error("🔧 [DEBUG] Error in completeOrder:", error);
-        alert("Có lỗi xảy ra khi hoàn thành lệnh sản xuất. Vui lòng thử lại.");
-      } finally {
-        setCompletingOrderId(null);
-        window.removeEventListener("beforeunload", beforeUnloadHandler);
+    showConfirmDialog(
+      "Hoàn thành lệnh sản xuất",
+      message,
+      async () => {
+        closeConfirmDialog();
+        // Guard against accidental reload/close while saving
+        const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+          e.preventDefault();
+          e.returnValue = "Đang lưu dữ liệu sản xuất. Vui lòng chờ để tránh mất dữ liệu.";
+          return e.returnValue;
+        };
+        try {
+          setCompletingOrderId(order.id);
+          window.addEventListener("beforeunload", beforeUnloadHandler);
+          localStorage.setItem(
+            "pending-production-completion",
+            JSON.stringify({ orderId: order.id, startedAt: Date.now() })
+          );
+          await completeOrder(order.id);
+          localStorage.removeItem("pending-production-completion");
+          showToast("Thành công", `Đã hoàn thành lệnh sản xuất #${order.id}`, "success");
+        } catch (error) {
+          showToast("Lỗi", "Có lỗi xảy ra khi hoàn thành lệnh sản xuất. Vui lòng thử lại.", "error");
+        } finally {
+          setCompletingOrderId(null);
+          window.removeEventListener("beforeunload", beforeUnloadHandler);
+        }
       }
-    } else {
-      console.log("🔧 [DEBUG] User cancelled");
-    }
+    );
   };
 
   return (
@@ -307,7 +331,7 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                       value={order.status}
                       onChange={(e) => {
                         if (!currentUser) {
-                          alert("Vui lòng đăng nhập để thực hiện thao tác.");
+                          showToast("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
                           return;
                         }
                         updateOrder(order.id, e.target.value as ProductionOrder["status"]);
@@ -569,6 +593,38 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                 className="bg-slate-200 dark:bg-slate-700 px-4 py-2 rounded-lg"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-xl">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                {confirmDialog.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
+                {confirmDialog.message}
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Xác nhận
               </button>
             </div>
           </div>

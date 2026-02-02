@@ -58,7 +58,12 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
   }, [showBOMModal, showCreateOrderModal]);
 
   // Use context upsert/delete to persist BOMs to DB
-  const { upsertPinBOM, deletePinBOM } = usePinContext();
+  const { upsertPinBOM, deletePinBOM, addToast } = usePinContext();
+
+  // Toast helper
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+    addToast?.({ id: crypto.randomUUID(), message, type });
+  };
 
   const handleSaveBOM = async (bom: PinBOM) => {
     try {
@@ -74,10 +79,9 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
         }
       });
 
-      console.log("BOM saved successfully:", bom.productName);
+      showToast(`Lưu BOM "${bom.productName}" thành công`, "success");
     } catch (error) {
-      console.error("Error saving BOM:", error);
-      alert("Có lỗi khi lưu BOM. Vui lòng thử lại.");
+      showToast("Có lỗi khi lưu BOM. Vui lòng thử lại.", "error");
     }
   };
 
@@ -88,10 +92,9 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
       // Update local state
       setBoms((prev) => prev.filter((b) => b.id !== bomId));
 
-      console.log("BOM deleted successfully:", bomId);
+      showToast("Xóa BOM thành công", "success");
     } catch (error) {
-      console.error("Error deleting BOM:", error);
-      alert("Có lỗi khi xóa BOM. Vui lòng thử lại.");
+      showToast("Có lỗi khi xóa BOM. Vui lòng thử lại.", "error");
     }
   };
 
@@ -171,6 +174,7 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
                   : "create-only"
           }
           selectedBomId={editingBomId || selectedBomIdForOrder}
+          onToast={showToast}
         />
       )}
     </>

@@ -33,7 +33,13 @@ const ProductionOrderModal: React.FC<{
   boms: PinBOM[];
   materials: PinMaterial[];
   currentUser: User;
-}> = ({ order, isOpen, onClose, onSave, boms, materials, currentUser }) => {
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
+}> = ({ order, isOpen, onClose, onSave, boms, materials, currentUser, onToast }) => {
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "warn") => {
+    onToast?.(title, message, type);
+  };
+
   const [selectedBomId, setSelectedBomId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [additionalCosts, setAdditionalCosts] = useState<AdditionalCost[]>([]);
@@ -86,7 +92,7 @@ const ProductionOrderModal: React.FC<{
 
   const handleAddCost = () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để thực hiện thao tác.");
+      showToast("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
       return;
     }
     if (newCost.description.trim() && newCost.amount > 0) {
@@ -101,11 +107,11 @@ const ProductionOrderModal: React.FC<{
 
   const handleSave = () => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để thực hiện thao tác.");
+      showToast("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
       return;
     }
     if (!selectedBom) {
-      alert("Vui lòng chọn một công thức sản phẩm.");
+      showToast("Thiếu thông tin", "Vui lòng chọn một công thức sản phẩm.", "warn");
       return;
     }
     const newOrder: ProductionOrder = {
@@ -314,8 +320,15 @@ const BomModal: React.FC<{
   onSaveAndContinue: (bom: PinBOM) => void;
   materials: PinMaterial[];
   existingBoms: PinBOM[];
-}> = ({ bom, isOpen, onClose, onSave, onSaveAndContinue, materials, existingBoms }) => {
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
+}> = ({ bom, isOpen, onClose, onSave, onSaveAndContinue, materials, existingBoms, onToast }) => {
   const { currentUser } = usePinContext();
+
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "warn") => {
+    onToast?.(title, message, type);
+  };
+
   const [formData, setFormData] = useState<Partial<PinBOM>>({});
   const [materialSearch, setMaterialSearch] = useState("");
   const [isMaterialListOpen, setIsMaterialListOpen] = useState(false);
@@ -408,7 +421,7 @@ const BomModal: React.FC<{
 
   const buildFinalBom = (): PinBOM | null => {
     if (!formData.productName || !formData.materials || formData.materials.length === 0) {
-      alert("Vui lòng nhập Tên sản phẩm và thêm ít nhất một nguyên vật liệu.");
+      showToast("Thiếu thông tin", "Vui lòng nhập Tên sản phẩm và thêm ít nhất một nguyên vật liệu.", "warn");
       return null;
     }
     return {
@@ -627,7 +640,28 @@ const ITEMS_PER_PAGE = 10;
 const BomManager: React.FC<BomManagerProps> = (props) => {
   const { boms, materials } = props;
   // Use context upsert/delete to persist BOMs to DB
-  const { upsertPinBOM, deletePinBOM } = usePinContext();
+  const { upsertPinBOM, deletePinBOM, addToast } = usePinContext();
+
+  // Toast helper
+  const showToast = (title: string, message: string, type: "success" | "error" | "warn" = "success") => {
+    addToast?.({ id: crypto.randomUUID(), message: `${title}: ${message}`, type });
+  };
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ open: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} });
+  };
 
   // States for BOM management
   const [activeTab, setActiveTab] = useState<"boms" | "history">("boms");
@@ -660,9 +694,16 @@ const BomManager: React.FC<BomManagerProps> = (props) => {
   };
 
   const handleDeleteBom = (bomId: string) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa công thức này?")) {
-      deletePinBOM(bomId);
-    }
+    const bomToDelete = boms.find(b => b.id === bomId);
+    showConfirmDialog(
+      "Xóa công thức",
+      `Bạn có chắc chắn muốn xóa công thức "${bomToDelete?.productName || ''}"?`,
+      () => {
+        closeConfirmDialog();
+        deletePinBOM(bomId);
+        showToast("Thành công", "Xóa công thức thành công", "success");
+      }
+    );
   };
 
   const filteredBoms = useMemo(
@@ -695,6 +736,7 @@ const BomManager: React.FC<BomManagerProps> = (props) => {
         bom={editingBom}
         materials={materials}
         existingBoms={boms}
+        onToast={(title, message, type) => showToast(title, message, type)}
       />
       <ProductionOrderModal
         isOpen={isProductionModalOpen}
@@ -704,6 +746,7 @@ const BomManager: React.FC<BomManagerProps> = (props) => {
         boms={props.boms}
         materials={props.materials}
         currentUser={props.currentUser}
+        onToast={(title, message, type) => showToast(title, message, type)}
       />
 
       <div className="flex items-center justify-between gap-2 md:gap-4 flex-shrink-0 sticky top-0 z-20 pb-3 md:pb-4 bg-slate-100/80 dark:bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
@@ -932,7 +975,40 @@ const BomManager: React.FC<BomManagerProps> = (props) => {
           currentUser={props.currentUser}
           materials={props.materials}
           boms={props.boms}
+          onToast={(title, message, type) => showToast(title, message, type)}
         />
+      )}
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-xl">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                {confirmDialog.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
+                {confirmDialog.message}
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
