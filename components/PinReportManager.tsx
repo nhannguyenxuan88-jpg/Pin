@@ -68,7 +68,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
   // State
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory>("revenue");
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
-  const [selectedYear] = useState(today.getFullYear());
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -109,18 +109,18 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
         start = new Date(selectedYear, selectedMonth - 1, 1);
         // If selected month is current month or future, limit end to today
         const monthEnd = new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
-        end = monthEnd > now ? new Date(now.setHours(23, 59, 59, 999)) : monthEnd;
+        end = monthEnd > now ? new Date(new Date(now).setHours(23, 59, 59, 999)) : monthEnd;
         break;
       case "quarter":
         const quarter = Math.floor((selectedMonth - 1) / 3);
         start = new Date(selectedYear, quarter * 3, 1);
         const quarterEnd = new Date(selectedYear, (quarter + 1) * 3, 0, 23, 59, 59, 999);
-        end = quarterEnd > now ? new Date(now.setHours(23, 59, 59, 999)) : quarterEnd;
+        end = quarterEnd > now ? new Date(new Date(now).setHours(23, 59, 59, 999)) : quarterEnd;
         break;
       case "year":
         start = new Date(selectedYear, 0, 1);
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
-        end = yearEnd > now ? new Date(now.setHours(23, 59, 59, 999)) : yearEnd;
+        end = yearEnd > now ? new Date(new Date(now).setHours(23, 59, 59, 999)) : yearEnd;
         break;
       case "custom":
         start = customStartDate ? new Date(customStartDate) : new Date(now.getFullYear(), now.getMonth(), 1);
@@ -456,20 +456,55 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
 
         {/* Month Selector - only show when "Tháng" is selected */}
         {periodFilter === "month" && (
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-            {months.map((month, idx) => (
-              <button
-                key={month}
-                onClick={() => setSelectedMonth(idx + 1)}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-all whitespace-nowrap ${selectedMonth === idx + 1
-                  ? "bg-slate-600 text-white"
-                  : "text-slate-400 hover:bg-slate-700 hover:text-white"
-                  }`}
-              >
-                {month}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            {/* Year selector */}
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-1.5 text-xs font-medium rounded bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-cyan-500"
+            >
+              {[...Array(5)].map((_, i) => {
+                const year = today.getFullYear() - 2 + i;
+                return (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+              {months.map((month, idx) => (
+                <button
+                  key={month}
+                  onClick={() => setSelectedMonth(idx + 1)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded transition-all whitespace-nowrap ${selectedMonth === idx + 1
+                    ? "bg-slate-600 text-white"
+                    : "text-slate-400 hover:bg-slate-700 hover:text-white"
+                    }`}
+                >
+                  {month}
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+
+        {/* Year selector for quarter/year views */}
+        {(periodFilter === "quarter" || periodFilter === "year") && (
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="px-3 py-1.5 text-xs font-medium rounded bg-slate-700 text-white border border-slate-600 focus:outline-none focus:border-cyan-500"
+          >
+            {[...Array(5)].map((_, i) => {
+              const year = today.getFullYear() - 2 + i;
+              return (
+                <option key={year} value={year}>
+                  Năm {year}
+                </option>
+              );
+            })}
+          </select>
         )}
 
         {/* Action Buttons */}

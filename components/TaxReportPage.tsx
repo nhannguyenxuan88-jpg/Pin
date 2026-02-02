@@ -30,7 +30,11 @@ export const TaxReportPage: React.FC = () => {
   useEffect(() => {
     const stored = localStorage.getItem("businessSettings");
     if (stored) {
-      setBusinessSettings(JSON.parse(stored));
+      try {
+        setBusinessSettings(JSON.parse(stored));
+      } catch (e) {
+        // Invalid JSON in localStorage, ignore
+      }
     }
   }, []);
 
@@ -94,14 +98,16 @@ export const TaxReportPage: React.FC = () => {
       const vatAmount = (amount * vatRate) / (100 + vatRate);
       const baseAmount = amount - vatAmount;
 
+      const totalQuantity = sale.items.reduce((sum, it) => sum + it.quantity, 0);
+
       return {
         invoiceNumber: sale.code || sale.id?.slice(0, 8) || "N/A",
         invoiceDate: new Date(sale.date).toISOString().slice(0, 10),
         customerName: sale.customer?.name || "Khách lẻ",
         customerTaxCode: undefined,
         description: sale.items.map((it) => it.name).join(", "),
-        quantity: sale.items.reduce((sum, it) => sum + it.quantity, 0),
-        unitPrice: baseAmount / sale.items.reduce((sum, it) => sum + it.quantity, 0),
+        quantity: totalQuantity,
+        unitPrice: totalQuantity > 0 ? baseAmount / totalQuantity : 0,
         amount: baseAmount,
         vatRate: vatRate,
         vatAmount: vatAmount,

@@ -287,7 +287,7 @@ const AdvancedAnalyticsDashboard: React.FC = () => {
                               <div
                                 className="bg-blue-500 h-full rounded-full"
                                 style={{
-                                  width: `${(product.totalRevenue / topProducts[0].totalRevenue) * 100}%`
+                                  width: `${topProducts[0]?.totalRevenue > 0 ? (product.totalRevenue / topProducts[0].totalRevenue) * 100 : 0}%`
                                 }}
                               />
                             </div>
@@ -493,7 +493,12 @@ const AdvancedAnalyticsDashboard: React.FC = () => {
                     <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                       <div
                         className="bg-green-500 h-full rounded-full"
-                        style={{ width: `${(p.profitMargin * p.totalRevenue / 100) / (profitAnalysis.topProfitProducts[0].profitMargin * profitAnalysis.topProfitProducts[0].totalRevenue / 100) * 100}%` }}
+                        style={{ width: `${(() => {
+                          const topProfit = profitAnalysis.topProfitProducts[0];
+                          const topValue = topProfit ? (topProfit.profitMargin * topProfit.totalRevenue / 100) : 0;
+                          const currentValue = p.profitMargin * p.totalRevenue / 100;
+                          return topValue > 0 ? (currentValue / topValue) * 100 : 0;
+                        })()}%` }}
                       />
                     </div>
                     <div className="mt-1 flex justify-between text-[10px] text-slate-400">

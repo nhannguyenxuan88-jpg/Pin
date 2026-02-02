@@ -34,6 +34,7 @@ interface ProductionOrderCardProps {
   isDragging?: boolean;
   isCompleting?: boolean;
   productSku?: string;
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
 }
 
 const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
@@ -44,6 +45,7 @@ const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
   isDragging = false,
   isCompleting = false,
   productSku,
+  onToast,
 }) => {
   const getStatusInfo = (status: ProductionOrder["status"]) => {
     switch (status) {
@@ -82,7 +84,7 @@ const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
 
   const handleQuickMove = (newStatus: ProductionOrder["status"]) => {
     if (!currentUser) {
-      alert("Vui lòng đăng nhập để thực hiện thao tác.");
+      onToast?.("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
       return;
     }
     onMove(order.id, newStatus);
@@ -206,6 +208,7 @@ interface KanbanColumnProps {
   textColor: string;
   completingOrderId: string | null;
   boms?: PinBOM[];
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -220,6 +223,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   textColor,
   completingOrderId,
   boms = [],
+  onToast,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -284,6 +288,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   currentUser={currentUser}
                   isCompleting={completingOrderId === order.id}
                   productSku={bom?.productSku}
+                  onToast={onToast}
                 />
               </div>
             );
@@ -306,6 +311,7 @@ interface ProductionDashboardProps {
   onEditBOM?: (bomId: string) => void;
   onDeleteBOM?: (bomId: string) => void;
   completeOrder?: (orderId: string) => Promise<void>;
+  onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
 }
 
 const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
@@ -320,6 +326,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
   onEditBOM,
   onDeleteBOM,
   completeOrder,
+  onToast,
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -622,6 +629,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                 textColor="text-white"
                 completingOrderId={completingOrderId}
                 boms={boms}
+                onToast={onToast}
               />
 
               <KanbanColumn
@@ -636,6 +644,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                 textColor="text-white"
                 completingOrderId={completingOrderId}
                 boms={boms}
+                onToast={onToast}
               />
             </div>
           </div>
