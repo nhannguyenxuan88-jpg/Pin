@@ -108,7 +108,8 @@ const NewPinCustomerModal: React.FC<{
   onClose: () => void;
   onSave: (customer: PinCustomer) => void;
   initialName?: string;
-}> = ({ isOpen, onClose, onSave, initialName = "" }) => {
+  onToast?: (message: string, type: "success" | "error" | "warning" | "info") => void;
+}> = ({ isOpen, onClose, onSave, initialName = "", onToast }) => {
   const [formData, setFormData] = useState<Omit<PinCustomer, "id">>({
     name: initialName,
     phone: "",
@@ -134,7 +135,7 @@ const NewPinCustomerModal: React.FC<{
       ...formData,
     };
     if (!currentUser) {
-      alert("Bạn phải đăng nhập để thực hiện thao tác.");
+      onToast?.("Bạn phải đăng nhập để thực hiện thao tác.", "warning");
       return;
     }
     onSave(finalCustomer);
@@ -259,7 +260,29 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [salesCategory, setSalesCategory] = useState<"products" | "materials" | "all">("all");
-  const { currentUser, pinSales, deletePinSale, updatePinSale, pinMaterials } = usePinContext();
+  const { currentUser, pinSales, deletePinSale, updatePinSale, pinMaterials, addToast } = usePinContext();
+
+  // Toast helper
+  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+    addToast?.({ id: crypto.randomUUID(), message, type });
+  };
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog(null);
+  };
+
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<"VND" | "%">("VND");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
@@ -582,7 +605,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     try {
       await upsertPinCustomer(newCustomer);
     } catch (e) {
-      console.error("Error upserting pin customer:", e);
+      showToast("Lỗi khi lưu khách hàng. Vui lòng thử lại.", "error");
     }
     setCustomers((prev) => [newCustomer, ...prev]);
     handleSelectCustomer(newCustomer);
@@ -591,11 +614,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
   const finalizeSale = () => {
     if (!currentUser) {
-      alert("Bạn phải đăng nhập để thực hiện thanh toán.");
+      showToast("Bạn phải đăng nhập để thực hiện thanh toán.", "warning");
       return;
     }
     if (cartItems.length === 0 || !paymentMethod) {
-      alert("Vui lòng thêm sản phẩm vào giỏ và chọn phương thức thanh toán.");
+      showToast("Vui lòng thêm sản phẩm vào giỏ và chọn phương thức thanh toán.", "warning");
       return;
     }
 
@@ -603,30 +626,37 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     if (paymentMode === "partial") {
       const amt = Number(paidAmount || 0);
       if (!(amt > 0 && amt < total)) {
-        alert("Số tiền thanh toán một phần phải lớn hơn 0 và nhỏ hơn Tổng cộng.");
+        showToast("Số tiền thanh toán một phần phải lớn hơn 0 và nhỏ hơn Tổng cộng.", "warning");
         return;
       }
     }
     if (paymentMode === "debt") {
       // Optional: encourage selecting a customer for debts
       if (!selectedCustomer) {
-        if (!confirm("Bạn chưa chọn khách hàng. Ghi nợ cho 'Khách vãng lai'?")) {
-          return;
-        }
+        showConfirmDialog(
+          "Xác nhận ghi nợ",
+          "Bạn chưa chọn khách hàng. Ghi nợ cho 'Khách vãng lai'?",
+          () => proceedWithSale()
+        );
+        return;
       }
     }
     if (paymentMode === "installment") {
       if (!selectedCustomer) {
-        alert("Vui lòng chọn khách hàng để trả góp!");
+        showToast("Vui lòng chọn khách hàng để trả góp!", "warning");
         return;
       }
       if (!installmentPlan) {
-        alert("Vui lòng thiết lập kế hoạch trả góp!");
+        showToast("Vui lòng thiết lập kế hoạch trả góp!", "warning");
         setShowInstallmentModal(true);
         return;
       }
     }
 
+    proceedWithSale();
+  };
+
+  const proceedWithSale = () => {
     const customerDetails = selectedCustomer
       ? {
         id: selectedCustomer.id,
@@ -802,6 +832,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         onClose={() => setIsNewCustomerModalOpen(false)}
         onSave={handleSaveNewCustomer}
         initialName={customerSearch}
+        onToast={showToast}
       />
       {/* Invoice Preview Modal for Print */}
       {isReceiptVisible && lastSaleData && (
@@ -1550,7 +1581,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       <button
                         onClick={() => {
                           if (!selectedCustomer) {
-                            alert("Vui lòng chọn khách hàng trước khi trả góp!");
+                            showToast("Vui lòng chọn khách hàng trước khi trả góp!", "warning");
                             return;
                           }
                           setPaymentMode("installment");
@@ -1940,27 +1971,9 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             paymentStatus === "partial" ||
                             paymentStatus === "debt"
                           ) {
-                            console.log("📊 Payment Detail Debug:", {
-                              saleId: s.id,
-                              code: s.code,
-                              paymentStatus,
-                              storedPaymentStatus: s.paymentStatus,
-                              isInstallment: s.isInstallment,
-                              paidAmount: s.paidAmount,
-                              total: s.total,
-                              hasInstallmentPlan: !!s.installmentPlan,
-                              hasLinkedPlan: !!linkedPlan,
-                              hasActualPlan: !!actualInstallmentPlan,
-                              installmentPlansCount: installmentPlans.length,
-                              actualPlan: actualInstallmentPlan,
-                            });
-
                             // Nếu là trả góp nhưng không có plan, tạo một plan giả từ thông tin có sẵn
                             let finalInstallmentPlan = actualInstallmentPlan;
                             if (paymentStatus === "installment" && !actualInstallmentPlan) {
-                              console.warn(
-                                "⚠️ Installment detected but no plan found. Creating fallback plan."
-                              );
                               // Tạo plan giả dựa trên thông tin từ đơn hàng
                               const downPayment = s.paidAmount || 0;
                               const baseRemainingAmount = s.total - downPayment;
@@ -2069,14 +2082,18 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       <PencilSquareIcon className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={async () => {
+                      onClick={() => {
                         if (!currentUser) {
-                          alert("Vui lòng đăng nhập");
+                          showToast("Vui lòng đăng nhập", "warning");
                           return;
                         }
-                        if (window.confirm("Xoá hoá đơn này?")) {
-                          await deletePinSale(s.id);
-                        }
+                        showConfirmDialog(
+                          "Xác nhận xóa",
+                          "Xoá hoá đơn này?",
+                          async () => {
+                            await deletePinSale(s.id);
+                          }
+                        );
                       }}
                       disabled={!currentUser}
                       className={`p-1.5 rounded ${currentUser ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" : "text-red-300 cursor-not-allowed"}`}
@@ -2203,27 +2220,9 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                               paymentStatus === "partial" ||
                               paymentStatus === "debt"
                             ) {
-                              console.log("📊 Payment Detail Debug (Desktop):", {
-                                saleId: s.id,
-                                code: s.code,
-                                paymentStatus,
-                                storedPaymentStatus: s.paymentStatus,
-                                isInstallment: s.isInstallment,
-                                paidAmount: s.paidAmount,
-                                total: s.total,
-                                hasInstallmentPlan: !!s.installmentPlan,
-                                hasLinkedPlan: !!linkedPlan,
-                                hasActualPlan: !!actualInstallmentPlan,
-                                installmentPlansCount: installmentPlans.length,
-                                actualPlan: actualInstallmentPlan,
-                              });
-
                               // Nếu là trả góp nhưng không có plan, tạo một plan giả từ thông tin có sẵn
                               let finalInstallmentPlan = actualInstallmentPlan;
                               if (paymentStatus === "installment" && !actualInstallmentPlan) {
-                                console.warn(
-                                  "⚠️ Installment detected but no plan found (Desktop). Creating fallback plan."
-                                );
                                 const downPayment = s.paidAmount || 0;
                                 const baseRemainingAmount = s.total - downPayment;
                                 const numberOfInstallments = 9;
@@ -2329,14 +2328,18 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           <PencilSquareIcon className="w-5 h-5" />
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={() => {
                             if (!currentUser) {
-                              alert("Vui lòng đăng nhập");
+                              showToast("Vui lòng đăng nhập", "warning");
                               return;
                             }
-                            if (window.confirm("Xoá hoá đơn này? Tồn kho sẽ được hoàn lại.")) {
-                              await deletePinSale(s.id);
-                            }
+                            showConfirmDialog(
+                              "Xác nhận xóa",
+                              "Xoá hoá đơn này? Tồn kho sẽ được hoàn lại.",
+                              async () => {
+                                await deletePinSale(s.id);
+                              }
+                            );
                           }}
                           disabled={!currentUser}
                           title={!currentUser ? "Bạn phải đăng nhập để xoá" : "Xoá hoá đơn"}
@@ -2723,6 +2726,37 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           setShowInstallmentModal(false);
         }}
       />
+
+      {/* Confirm Dialog Modal */}
+      {confirmDialog?.isOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              {confirmDialog.title}
+            </h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-6 whitespace-pre-line">
+              {confirmDialog.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  closeConfirmDialog();
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
