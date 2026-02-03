@@ -6,6 +6,7 @@ import { PurchaseOrderService } from "../lib/services/PurchaseOrderService";
 import { usePinContext } from "../contexts/PinContext";
 import type { PurchaseOrder, PurchaseOrderItem, PurchaseOrderStatus, PinMaterial, Supplier } from "../types";
 import { PlusIcon, TrashIcon, XMarkIcon } from "./common/Icons";
+import { getErrorMessage } from "../lib/utils/errorUtils";
 
 // Format currency
 const formatCurrency = (amount: number) =>
@@ -116,9 +117,13 @@ export default function PurchaseOrderManager({ materials, suppliers }: Props) {
         }
         try {
             const sku = newMaterial.sku || `NL-${Date.now()}`;
-            await (ctx as any).addPinMaterial?.({
-                ...newMaterial,
+            await ctx.addPinMaterial?.({
+                id: crypto.randomUUID(),
+                name: newMaterial.name,
                 sku,
+                unit: newMaterial.unit,
+                purchasePrice: newMaterial.purchasePrice,
+                retailPrice: newMaterial.retailPrice,
                 stock: 0,
                 wholesalePrice: newMaterial.retailPrice,
             });
@@ -126,7 +131,7 @@ export default function PurchaseOrderManager({ materials, suppliers }: Props) {
             setNewMaterial({ name: "", sku: "", unit: "Cái", purchasePrice: 0, retailPrice: 0 });
             alert("Đã thêm sản phẩm mới!");
         } catch (err) {
-            alert("Lỗi: " + (err as any)?.message);
+            alert("Lỗi: " + getErrorMessage(err));
         }
     };
 
@@ -138,13 +143,13 @@ export default function PurchaseOrderManager({ materials, suppliers }: Props) {
         }
         try {
             const id = crypto.randomUUID();
-            await (ctx as any).addSupplier?.({ id, ...newSupplier });
+            await ctx.addSupplier?.({ id, name: newSupplier.name, phone: newSupplier.phone });
             // Auto select new supplier
             setFormData(prev => ({ ...prev, supplierId: id, supplierName: newSupplier.name }));
             setShowAddSupplier(false);
             setNewSupplier({ name: "", phone: "" });
         } catch (err) {
-            alert("Lỗi: " + (err as any)?.message);
+            alert("Lỗi: " + getErrorMessage(err));
         }
     };
 

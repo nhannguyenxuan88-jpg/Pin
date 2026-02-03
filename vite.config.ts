@@ -33,5 +33,20 @@ export default defineConfig(({ mode }) => {
         "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Vendor chunks - tách các thư viện lớn
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-query": ["@tanstack/react-query"],
+            "vendor-charts": ["recharts"],
+            "vendor-date": ["date-fns"],
+            "vendor-supabase": ["@supabase/supabase-js"],
+          },
+        },
+      },
+    },
   };
 });

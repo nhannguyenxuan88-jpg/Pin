@@ -16,6 +16,7 @@ import type {
   PinRepairOrder,
   ToastItem,
   PinMaterialHistory,
+  GoodsReceipt,
 } from "../types";
 import { createMaterialsService } from "../lib/services/MaterialsService";
 import { createProductionService } from "../lib/services/ProductionService";
@@ -96,6 +97,8 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
   const [fixedAssets, setFixedAssets] = useState<FixedAsset[]>([]);
   const [capitalInvestments, setCapitalInvestments] = useState<CapitalInvestment[]>([]);
   const [pinRepairOrders, setRepairOrders] = useState<PinRepairOrder[]>([]);
+  const [goodsReceipts, setGoodsReceipts] = useState<GoodsReceipt[]>([]);
+  const [currentBranchId, setCurrentBranchId] = useState<string | null>("main");
 
   const coerceRepairStatus = (value: unknown): PinRepairOrder["status"] => {
     const v = typeof value === "string" ? value : "";
@@ -690,6 +693,10 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
     storeSettings,
     addToast,
 
+    // Branch management
+    currentBranchId,
+    setCurrentBranchId,
+
     // finance state
     fixedAssets,
     setFixedAssets,
@@ -756,6 +763,17 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
 
     // Admin
     resetProductionData: adminSvc.resetProductionData,
+
+    // Goods Receipts
+    goodsReceipts,
+    setGoodsReceipts,
+    addGoodsReceipt: async (receipt: GoodsReceipt) => {
+      setGoodsReceipts((prev) => [...prev, receipt]);
+    },
+
+    // Material/Supplier aliases for compatibility
+    addPinMaterial: materialsSvc.upsertMaterial,
+    addSupplier: suppliersSvc.upsertSupplier,
   } as unknown) as PinContextType;
 
   return <PinStandaloneContext.Provider value={value}>{children}</PinStandaloneContext.Provider>;

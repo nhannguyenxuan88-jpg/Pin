@@ -87,8 +87,8 @@ export default function Receivables() {
   const ctx = usePinContext();
   const workOrders = ctx.pinRepairOrders || [];
   const sales = pinSales || [];
-  const goodsReceipts = (ctx as any).goodsReceipts || [];
-  const currentBranchId = (ctx as any).currentBranchId;
+  const goodsReceipts = ctx.goodsReceipts || [];
+  const currentBranchId = ctx.currentBranchId;
 
   const [activeTab, setActiveTab] = useState<"customers" | "suppliers" | "installments">(
     "customers"
@@ -141,22 +141,22 @@ export default function Receivables() {
     const arr: Row[] = [];
 
     for (const wo of workOrders || []) {
-      if (currentBranchId && (wo as any).branchId && (wo as any).branchId !== currentBranchId)
+      if (currentBranchId && wo.branchId && wo.branchId !== currentBranchId)
         continue;
 
       // Only show debt for completed/returned orders
-      const status = (wo as any).status;
+      const status = wo.status;
       if (status !== "Trả máy" && status !== "Đã sửa xong") continue;
 
-      const total = Number((wo as any).total ?? 0);
+      const total = Number(wo.total ?? 0);
       if (total <= 0) continue;
 
       // Calculate paid based on paymentStatus or manually calculate
       let paid = 0;
       let debt = 0;
 
-      const paymentStatus = (wo as any).paymentStatus;
-      const depositAmount = Number((wo as any).depositAmount ?? 0);
+      const paymentStatus = wo.paymentStatus;
+      const depositAmount = Number(wo.depositAmount ?? 0);
 
       if (paymentStatus === "paid") {
         // Fully paid, no debt - skip
@@ -169,7 +169,7 @@ export default function Receivables() {
       } else {
         // Unknown payment status - calculate from all sources
         const paidFromCash = paidByWO.get(wo.id) || 0;
-        const paidFromPartial = Number((wo as any).partialPaymentAmount ?? 0);
+        const paidFromPartial = Number(wo.partialPaymentAmount ?? 0);
         paid = depositAmount + paidFromCash + paidFromPartial;
         debt = Math.max(0, total - paid);
       }
@@ -177,25 +177,25 @@ export default function Receivables() {
       if (debt <= 0) continue;
 
       const details: string[] = [];
-      if ((wo as any).deviceModel) details.push(`Thiết bị: ${(wo as any).deviceModel}`);
-      if ((wo as any).issueDescription) details.push(`Vấn đề: ${(wo as any).issueDescription}`);
-      if ((wo as any).partsUsed?.length) {
-        const p = (wo as any).partsUsed
+      if (wo.deviceName) details.push(`Thiết bị: ${wo.deviceName}`);
+      if (wo.issueDescription) details.push(`Vấn đề: ${wo.issueDescription}`);
+      if (wo.materialsUsed?.length) {
+        const p = wo.materialsUsed
           .slice(0, 3)
-          .map((x: any) => x.partName || x.part_name)
+          .map((x) => x.name || x.materialId)
           .join(", ");
         details.push(`Linh kiện: ${p}`);
       }
 
       arr.push({
         id: wo.id,
-        date: (wo as any).createdDate || (wo as any).created_at || new Date().toISOString(),
-        customerName: (wo as any).customerName || "",
-        customerPhone: (wo as any).customerPhone,
+        date: wo.creationDate || wo.created_at || new Date().toISOString(),
+        customerName: wo.customerName || "",
+        customerPhone: wo.customerPhone,
         title: `Phiếu sửa chữa: ${wo.id}`,
-        summary: (wo as any).issueDescription,
+        summary: wo.issueDescription,
         details,
-        technician: (wo as any).technician,
+        technician: wo.technicianName,
         kind: "workorder",
         amount: total,
         paid,
@@ -204,17 +204,17 @@ export default function Receivables() {
     }
 
     for (const sale of sales || []) {
-      if (currentBranchId && (sale as any).branchId && (sale as any).branchId !== currentBranchId)
+      if (currentBranchId && sale.branchId && sale.branchId !== currentBranchId)
         continue;
-      const total = Number((sale as any).total ?? 0);
+      const total = Number(sale.total ?? 0);
       if (total <= 0) continue;
 
       // Check payment status first - skip fully paid sales and installment sales (handled in installments tab)
-      const paymentStatus = (sale as any).paymentStatus;
+      const paymentStatus = sale.paymentStatus;
       if (paymentStatus === "paid" || paymentStatus === "installment") continue;
 
       // Calculate paid amount from sale record first, then fallback to cash transactions
-      const salePaidAmount = Number((sale as any).paidAmount ?? 0);
+      const salePaidAmount = Number(sale.paidAmount ?? 0);
       const cashTxPaid = paidBySale.get(sale.id) || 0;
       // Use the higher of the two (in case cash transaction was created but paidAmount not updated)
       const paid = Math.max(salePaidAmount, cashTxPaid);
@@ -222,36 +222,35 @@ export default function Receivables() {
       if (debt <= 0) continue;
 
       const details: string[] = [];
-      if ((sale as any).items?.length) {
-        const items = (sale as any).items.slice(0, 3).map((itm: any) => {
-          const name = itm.name || itm.productName || itm.product_name || "Sản phẩm";
+      if (sale.items?.length) {
+        const items = sale.items.slice(0, 3).map((itm) => {
+          const name = itm.name || itm.productId || "Sản phẩm";
           const qty = itm.quantity || 1;
           const price = itm.sellingPrice || 0;
           return `${name} (${qty} x ${price.toLocaleString("vi-VN")}đ)`;
         });
         details.push(...items);
-        if ((sale as any).items.length > 3) {
-          details.push(`... và ${(sale as any).items.length - 3} sản phẩm khác`);
+        if (sale.items.length > 3) {
+          details.push(`... và ${sale.items.length - 3} sản phẩm khác`);
         }
       }
 
       // Get customer info from sale.customer object
-      const customerObj = (sale as any).customer;
+      const customerObj = sale.customer;
       const customerName =
         typeof customerObj === "object"
           ? customerObj?.name || ""
-          : (sale as any).customerName || "";
+          : "";
       const customerPhone =
         typeof customerObj === "object"
           ? customerObj?.phone || ""
-          : (sale as any).customerPhone || "";
+          : "";
 
       arr.push({
         id: sale.id,
         date:
-          (sale as any).date ||
-          (sale as any).saleDate ||
-          (sale as any).created_at ||
+          sale.date ||
+          sale.created_at ||
           new Date().toISOString(),
         customerName,
         customerPhone,
@@ -272,17 +271,17 @@ export default function Receivables() {
     const totalBySup = new Map<string, { total: number; latest: string; count: number }>();
     for (const gr of goodsReceipts || []) {
       if (!gr) continue;
-      if (currentBranchId && (gr as any).branchId && (gr as any).branchId !== currentBranchId)
+      if (currentBranchId && gr.branchId && gr.branchId !== currentBranchId)
         continue;
       const prev = totalBySup.get(gr.supplierId) || {
         total: 0,
-        latest: (gr as any).receivedDate || (gr as any).created_at || new Date().toISOString(),
+        latest: gr.receivedDate || gr.created_at || new Date().toISOString(),
         count: 0,
       };
-      prev.total += Number((gr as any).totalAmount ?? 0);
+      prev.total += Number(gr.totalAmount ?? 0);
       prev.count += 1;
       const d = new Date(
-        (gr as any).receivedDate || (gr as any).created_at || new Date().toISOString()
+        gr.receivedDate || gr.created_at || new Date().toISOString()
       );
       const l = new Date(prev.latest);
       if (d.getTime() > l.getTime()) prev.latest = d.toISOString();
@@ -301,7 +300,7 @@ export default function Receivables() {
 
     const arr: SupplierRow[] = [];
     for (const [supId, info] of totalBySup.entries()) {
-      const sup = (suppliers || []).find((s: any) => s.id === supId);
+      const sup = (suppliers || []).find((s) => s.id === supId);
       const name = sup?.name || supId;
       const paid = paidBySup.get(supId) || 0;
       const debt = Math.max(0, (info.total || 0) - paid);
@@ -326,7 +325,7 @@ export default function Receivables() {
 
   // Calculate installment rows
   const installmentRows = useMemo(() => {
-    const customers = (ctx as any).pinCustomers || [];
+    const customers = ctx.pinCustomers || [];
     return installmentPlans
       .filter((plan) => plan.status !== "completed")
       .map((plan) => {

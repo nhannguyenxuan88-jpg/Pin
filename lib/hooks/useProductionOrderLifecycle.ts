@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { usePinContext } from "../../contexts/PinContext";
 import { useMaterialStock } from "./useMaterialStock";
 import type { ProductionOrder, ActualCost, CostAnalysis } from "../../types";
+import { getErrorMessage } from "../utils/errorUtils";
 
 /**
  * Production Order Lifecycle Management Hook
@@ -48,7 +49,7 @@ export const useProductionOrderLifecycle = () => {
         console.error("Error updating production order:", error);
         addToast({
           title: "Lỗi cập nhật",
-          message: `Không thể cập nhật trạng thái: ${(error as any)?.message}`,
+          message: `Không thể cập nhật trạng thái: ${getErrorMessage(error)}`,
           type: "error",
         });
         throw error;

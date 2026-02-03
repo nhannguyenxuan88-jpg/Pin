@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { ExclamationTriangleIcon } from "./Icons";
+import { errorMonitoring } from "../../lib/services/ErrorMonitoringService";
 
 interface Props {
   children: ReactNode;
@@ -33,7 +34,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error to console in development
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error("ErrorBoundary caught an error:", error, errorInfo);
+    }
 
     // Update state with error details
     this.setState({
@@ -41,8 +44,10 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // TODO: Send error to monitoring service (e.g., Sentry) in production
-    // Example: logErrorToService(error, errorInfo);
+    // Send error to monitoring service
+    errorMonitoring.captureError(error, {
+      componentStack: errorInfo.componentStack ?? undefined,
+    });
   }
 
   handleReset = (): void => {

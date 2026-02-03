@@ -674,6 +674,7 @@ export interface PinSale {
   userId: string;
   userName: string;
   created_at?: string;
+  branchId?: string; // Chi nhánh bán hàng
   // Optional payment tracking (front-end/UI only; not necessarily stored in DB)
   paymentStatus?: "paid" | "partial" | "debt" | "installment";
   paidAmount?: number; // amount received at sale time
@@ -806,6 +807,7 @@ export interface PinRepairOrder {
   dueDate?: string; // Thời gian hẹn trả - để nhắc nợ
   cashTransactionId?: string;
   created_at?: string;
+  branchId?: string; // Chi nhánh xử lý đơn
 
   // === Báo giá & Quản lý vật liệu ===
   quotedAt?: string; // Ngày tạo báo giá

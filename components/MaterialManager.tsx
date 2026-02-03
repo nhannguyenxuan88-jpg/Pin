@@ -10,6 +10,7 @@ import PinImportHistory from "./PinImportHistory";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
 import PurchaseOrderManager from "./PurchaseOrderManager";
 import { generateMaterialSKU } from "../lib/sku";
+import { getErrorMessage } from "../lib/utils/errorUtils";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
@@ -237,7 +238,7 @@ const MaterialForm: React.FC<{
         ]);
         setFormData({
           supplier: material.supplier || "",
-          supplierPhone: (material as any).supplierPhone || "",
+          supplierPhone: material.supplierPhone || "",
           paymentMethod: "cash",
           paymentStatus: "pending",
           partialPaymentAmount: 0,
@@ -436,7 +437,7 @@ const MaterialForm: React.FC<{
       onClose();
     } catch (error) {
       console.error("Submit error:", error);
-      showToast("Lỗi", "Lỗi khi lưu: " + (error as any)?.message, "error");
+      showToast("Lỗi", "Lỗi khi lưu: " + getErrorMessage(error), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -1661,9 +1662,9 @@ const MaterialEditModal: React.FC<{
         retailPrice: material.retailPrice || 0,
         wholesalePrice: material.wholesalePrice || 0,
         supplier: material.supplier || "",
-        supplierPhone: (material as any).supplierPhone || "",
+        supplierPhone: material.supplierPhone || "",
         description: material.description || "",
-        category: (material as any).category || "",
+        category: material.category || "",
       });
     }
   }, [isOpen, material]);
@@ -1703,14 +1704,11 @@ const MaterialEditModal: React.FC<{
       };
 
       // Also update in Supabase to ensure category is saved
-      if (formData.category) {
-        (updatedMaterial as any).category = formData.category;
-      }
       await onSave(updatedMaterial);
       onClose();
     } catch (error) {
       console.error("Error saving material:", error);
-      showToast("Lỗi", "Lỗi khi lưu vật liệu: " + (error as any)?.message, "error");
+      showToast("Lỗi", "Lỗi khi lưu vật liệu: " + getErrorMessage(error), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -1991,7 +1989,7 @@ const StockAdjustmentModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("Stock adjustment error:", error);
-      showToast("Lỗi", "Lỗi khi điều chỉnh tồn kho: " + (error as any)?.message, "error");
+      showToast("Lỗi", "Lỗi khi điều chỉnh tồn kho: " + getErrorMessage(error), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -3097,7 +3095,7 @@ const MaterialManager: React.FC<{
       setMaterials(formattedMaterials);
     } catch (err) {
       console.error("💥 Load error:", err);
-      setError("Lỗi không xác định: " + (err as any)?.message);
+      setError("Lỗi không xác định: " + getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -3192,11 +3190,11 @@ const MaterialManager: React.FC<{
 
       if (materialError) {
         console.error("❌ Material save error:", materialError);
-        throw new Error((materialError as any).message || "Lỗi lưu vật tư");
+        throw new Error(getErrorMessage(materialError) || "Lỗi lưu vật tư");
       }
 
       // Resolve materialId from upsert result (if newly inserted)
-      const upsertedRow: any = Array.isArray(upsertData) ? upsertData[0] : (upsertData as any);
+      const upsertedRow = Array.isArray(upsertData) ? upsertData[0] : upsertData;
       materialId = materialId || upsertedRow?.id || null;
 
       // 3. Tạo bản ghi nhập kho
@@ -3408,7 +3406,7 @@ const MaterialManager: React.FC<{
         setMaterials(materials.filter((m) => m.id !== id));
       }
 
-      if (deleteError) throw new Error((deleteError as any).message || "Delete error");
+      if (deleteError) throw new Error(getErrorMessage(deleteError) || "Delete error");
 
       // Only reload if not mocked (mocked update handled above)
       if (!user || (user.id !== "dev-bypass-user" && user.id !== "offline-user")) {
@@ -3416,7 +3414,7 @@ const MaterialManager: React.FC<{
       }
     } catch (err) {
       console.error("Delete error:", err);
-      showToast("Lỗi", "Lỗi khi xóa: " + (err as any)?.message, "error");
+      showToast("Lỗi", "Lỗi khi xóa: " + getErrorMessage(err), "error");
     }
   };
 
@@ -3489,7 +3487,7 @@ const MaterialManager: React.FC<{
       showToast("Thành công", `Đã xóa ${selectedItems.size} vật tư thành công!`, "success");
     } catch (err) {
       console.error("Bulk delete error:", err);
-      showToast("Lỗi", "Lỗi khi xóa: " + (err as any)?.message, "error");
+      showToast("Lỗi", "Lỗi khi xóa: " + getErrorMessage(err), "error");
     }
   };
 
@@ -3518,7 +3516,7 @@ const MaterialManager: React.FC<{
       showToast("Thành công", `Đã cập nhật nhà cung cấp cho ${selectedItems.size} vật tư!`, "success");
     } catch (err) {
       console.error("Bulk update error:", err);
-      showToast("Lỗi", "Lỗi khi cập nhật: " + (err as any)?.message, "error");
+      showToast("Lỗi", "Lỗi khi cập nhật: " + getErrorMessage(err), "error");
     }
   };
 
@@ -3896,7 +3894,7 @@ const MaterialManager: React.FC<{
       showToast("Đồng bộ hoàn tất", `📦 Tạo mới: ${createdCount} vật liệu | 🏢 Cập nhật NCC: ${updatedCount} vật liệu`, "success");
     } catch (err) {
       console.error("Sync error:", err);
-      showToast("Lỗi", "Lỗi đồng bộ: " + (err as any)?.message, "error");
+      showToast("Lỗi", "Lỗi đồng bộ: " + getErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }
@@ -3945,8 +3943,7 @@ const MaterialManager: React.FC<{
       .filter((material) => {
         // Get supplier phone for this material
         const supplierPhone =
-          (material as any).supplierphone ||
-          (material as any).supplierPhone ||
+          material.supplierPhone ||
           getSupplierPhone(material.supplier) ||
           "";
 
@@ -3970,7 +3967,7 @@ const MaterialManager: React.FC<{
 
         const matchesUnit = !unitFilter || material.unit === unitFilter;
 
-        const matchesCategory = !categoryFilter || (material as any).category === categoryFilter;
+        const matchesCategory = !categoryFilter || material.category === categoryFilter;
 
         return matchesSearch && matchesSupplier && matchesStock && matchesUnit && matchesCategory;
       })
@@ -3978,8 +3975,7 @@ const MaterialManager: React.FC<{
         ...material,
         // Enrich material with supplier phone from suppliers list
         supplierPhone:
-          (material as any).supplierphone ||
-          (material as any).supplierPhone ||
+          material.supplierPhone ||
           getSupplierPhone(material.supplier),
       }))
       .sort((a, b) => {
@@ -4075,7 +4071,7 @@ const MaterialManager: React.FC<{
           </select>
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as any)}
+            onChange={(e) => setCategoryFilter(e.target.value)}
             className="select-base text-xs"
           >
             <option value="">Loại</option>

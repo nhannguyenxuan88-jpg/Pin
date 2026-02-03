@@ -14,6 +14,7 @@ import type {
   PinRepairOrder,
   ToastItem,
   PinMaterialHistory,
+  GoodsReceipt,
 } from "../types";
 
 // Internal types - exported for component use
@@ -47,6 +48,10 @@ export interface PinContextType {
   currentUser: CurrentUser | null;
   storeSettings: StoreSettings;
   addToast: (toast: ToastItem) => void;
+
+  // Branch Management
+  currentBranchId: string | null;
+  setCurrentBranchId: React.Dispatch<React.SetStateAction<string | null>>;
 
   // Finance state
   fixedAssets: FixedAsset[];
@@ -129,4 +134,13 @@ export interface PinContextType {
     saleId?: string;
     workOrderId?: string;
   }) => Promise<number>;
+
+  // Goods Receipts
+  goodsReceipts: GoodsReceipt[];
+  setGoodsReceipts: React.Dispatch<React.SetStateAction<GoodsReceipt[]>>;
+  addGoodsReceipt: (receipt: GoodsReceipt) => Promise<void>;
+
+  // Material management helpers
+  addPinMaterial: (material: PinMaterial) => Promise<void>;
+  addSupplier: (supplier: Supplier) => Promise<void>;
 }

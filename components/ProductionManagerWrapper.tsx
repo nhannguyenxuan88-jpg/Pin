@@ -38,7 +38,9 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
         const parsed = JSON.parse(saved);
         if (parsed.showBOMModal) setShowBOMModal(true);
         if (parsed.showCreateOrderModal) setShowCreateOrderModal(true);
-      } catch (e) {}
+      } catch {
+        // Ignore JSON parse errors from corrupted localStorage
+      }
     }
   }, []);
 

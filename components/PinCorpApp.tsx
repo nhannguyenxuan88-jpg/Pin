@@ -1,25 +1,34 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { usePinContext } from "../contexts/PinContext";
 import { ResponsiveLayout } from "./layouts";
-import MaterialManager from "./MaterialManager";
-import ProductionManagerWrapper from "./ProductionManagerWrapper";
-import PinProductManager from "./PinProductManager";
-import PinSalesManager from "./PinSalesManager";
-import PinReportManager from "./PinReportManager";
-import PinRepairManager from "./PinRepairManager";
-import PinGoodsReceipt from "./PinGoodsReceipt";
-import CostReportDashboard from "./CostReportDashboard";
-import PredictiveDashboard from "./PredictiveDashboard";
-import PinFinancialManager from "./PinFinancialManager";
-import PinProductionReset from "./PinProductionReset";
-import PinSettings from "./PinSettings";
-import Receivables from "./Receivables";
-import AdvancedAnalyticsDashboard from "./AdvancedAnalyticsDashboard";
-import BusinessSettings from "./BusinessSettings";
-import { TaxReportPage } from "./TaxReportPage";
-import DeliveryOrdersView from "./DeliveryOrdersView";
 import { CashTransaction, PinSale, User } from "../types";
+
+// Lazy load heavy components for better code splitting
+const MaterialManager = lazy(() => import("./MaterialManager"));
+const ProductionManagerWrapper = lazy(() => import("./ProductionManagerWrapper"));
+const PinProductManager = lazy(() => import("./PinProductManager"));
+const PinSalesManager = lazy(() => import("./PinSalesManager"));
+const PinReportManager = lazy(() => import("./PinReportManager"));
+const PinRepairManager = lazy(() => import("./PinRepairManager"));
+const PinGoodsReceipt = lazy(() => import("./PinGoodsReceipt"));
+const CostReportDashboard = lazy(() => import("./CostReportDashboard"));
+const PredictiveDashboard = lazy(() => import("./PredictiveDashboard"));
+const PinFinancialManager = lazy(() => import("./PinFinancialManager"));
+const PinProductionReset = lazy(() => import("./PinProductionReset"));
+const PinSettings = lazy(() => import("./PinSettings"));
+const Receivables = lazy(() => import("./Receivables"));
+const AdvancedAnalyticsDashboard = lazy(() => import("./AdvancedAnalyticsDashboard"));
+const BusinessSettings = lazy(() => import("./BusinessSettings"));
+const TaxReportPage = lazy(() => import("./TaxReportPage").then(m => ({ default: m.TaxReportPage })));
+const DeliveryOrdersView = lazy(() => import("./DeliveryOrdersView"));
+
+// Loading fallback component
+const PageLoader: React.FC = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
+  </div>
+);
 
 interface PinCorpAppProps {
   onSwitchApp: () => void;
@@ -70,34 +79,35 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
   return (
     <HashRouter>
       <ResponsiveLayout currentUser={appContext.currentUser!} onSwitchApp={onSwitchApp}>
-        <Routes>
-          {/* FIX: Pass all required props to components */}
-          <Route path="/" element={<Navigate to="/reports" replace />} />
-          <Route
-            path="/materials"
-            element={
-              <MaterialManager
-                materials={appContext.pinMaterials}
-                setMaterials={appContext.setPinMaterials}
-                productionOrders={appContext.productionOrders}
-                suppliers={appContext.suppliers}
-                setSuppliers={appContext.setSuppliers}
-              />
-            }
-          />
-          <Route
-            path="/materials/goods-receipt/new"
-            element={
-              <PinGoodsReceipt
-                suppliers={appContext.suppliers}
-                setSuppliers={appContext.setSuppliers}
-                currentUser={legacyUser}
-              />
-            }
-          />
-          <Route
-            path="/boms"
-            element={
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* FIX: Pass all required props to components */}
+            <Route path="/" element={<Navigate to="/reports" replace />} />
+            <Route
+              path="/materials"
+              element={
+                <MaterialManager
+                  materials={appContext.pinMaterials}
+                  setMaterials={appContext.setPinMaterials}
+                  productionOrders={appContext.productionOrders}
+                  suppliers={appContext.suppliers}
+                  setSuppliers={appContext.setSuppliers}
+                />
+              }
+            />
+            <Route
+              path="/materials/goods-receipt/new"
+              element={
+                <PinGoodsReceipt
+                  suppliers={appContext.suppliers}
+                  setSuppliers={appContext.setSuppliers}
+                  currentUser={legacyUser}
+                />
+              }
+            />
+            <Route
+              path="/boms"
+              element={
               <ProductionManagerWrapper
                 boms={appContext.pinBOMs}
                 setBoms={appContext.setBoms}
@@ -174,17 +184,18 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
           <Route path="/analytics" element={<AdvancedAnalyticsDashboard />} />
           <Route path="/production-reset" element={<PinProductionReset />} />
           {/* More menu route for mobile */}
-          <Route
-            path="/more"
-            element={
-              <>
-                <div className="text-center py-8 text-slate-500">
-                  <p>Chọn một chức năng từ menu</p>
-                </div>
-              </>
-            }
-          />
-        </Routes>
+            <Route
+              path="/more"
+              element={
+                <>
+                  <div className="text-center py-8 text-slate-500">
+                    <p>Chọn một chức năng từ menu</p>
+                  </div>
+                </>
+              }
+            />
+          </Routes>
+        </Suspense>
       </ResponsiveLayout>
     </HashRouter>
   );

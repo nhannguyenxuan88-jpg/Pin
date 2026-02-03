@@ -11,7 +11,7 @@ type Props = {
 export default function SupplierPaymentModal({ open, onClose }: Props) {
   const ctx = usePinContext();
   const currentUser = ctx.currentUser;
-  const currentBranchId = (ctx as any).currentBranchId;
+  const currentBranchId = ctx.currentBranchId;
   const addCashTransaction = ctx.addCashTransaction;
   const suppliers = ctx.suppliers || [];
   const addToast = ctx.addToast;
@@ -28,7 +28,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
 
   // Get selected supplier with proper debt info
-  const selectedSupplier = (suppliers as any[]).find((s: any) => s.id === selectedSupplierId);
+  const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId);
   const supplierDebt = selectedSupplier?.debt || 0;
 
   if (!open) return null;
@@ -44,7 +44,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
     }
 
     try {
-      const supplier = (suppliers as any[]).find((s: any) => s.id === selectedSupplierId);
+      const supplier = suppliers.find((s) => s.id === selectedSupplierId);
       const tx: CashTransaction = {
         id: crypto.randomUUID(),
         type: "expense",
@@ -94,13 +94,13 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
               value={selectedSupplierId}
               onChange={(e) => {
                 setSelectedSupplierId(e.target.value);
-                const supplier = (suppliers as any[]).find((s: any) => s.id === e.target.value);
+                const supplier = suppliers.find((s) => s.id === e.target.value);
                 if (supplier) setSupplierQuery(supplier.name);
               }}
               className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded text-slate-100 focus:outline-none focus:border-sky-500"
             >
               <option value="">Chọn nhà cung cấp...</option>
-              {(suppliers as any[]).map((sup: any) => (
+              {suppliers.map((sup) => (
                 <option key={sup.id} value={sup.id}>
                   {sup.name} • Nợ: {new Intl.NumberFormat("vi-VN").format(sup.debt || 0)} ₫
                 </option>

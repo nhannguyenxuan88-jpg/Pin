@@ -5,8 +5,16 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { PinProviderStandalone } from "./contexts/PinProviderStandalone";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { NetworkStatus } from "./components/common/NetworkStatus";
+import { DialogProvider } from "./components/common/ConfirmDialog";
+import { errorMonitoring } from "./lib/services/ErrorMonitoringService";
 import App from "./App";
 import "./src/index.css";
+
+// Initialize error monitoring
+errorMonitoring.init({
+  enabled: import.meta.env.PROD,
+  environment: import.meta.env.DEV ? 'development' : 'production',
+});
 
 // DEV: toggle diagnostic outlines with Shift + D
 if (import.meta.env.DEV) {
@@ -65,9 +73,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           aria-hidden="true"
         />
         <NetworkStatus />
-        <PinProviderStandalone>
-          <App />
-        </PinProviderStandalone>
+        <DialogProvider>
+          <PinProviderStandalone>
+            <App />
+          </PinProviderStandalone>
+        </DialogProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </ErrorBoundary>
