@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { PinRepairOrder, PinRepairMaterial } from "../../types";
+import type { PinRepairOrder, PinRepairMaterial, OutsourcingItem } from "../../types";
 import type { BusinessSettings } from "../../types/business";
 import { BusinessSettingsService } from "../../lib/services/BusinessSettingsService";
 
@@ -227,8 +227,8 @@ export default function RepairInvoiceTemplate({
               </tr>
             </thead>
             <tbody>
-              {repairOrder.materialsUsed.map((mat: PinRepairMaterial, index: number) => (
-                <tr key={index}>
+              {repairOrder.materialsUsed.map((mat: PinRepairMaterial) => (
+                <tr key={mat.materialId || `mat-${mat.materialName}`}>
                   <td className="border border-gray-400 px-1 sm:px-2 py-1 text-gray-900">
                     {mat.materialName}
                   </td>
@@ -270,8 +270,8 @@ export default function RepairInvoiceTemplate({
               </tr>
             </thead>
             <tbody>
-              {outsourcingItems.map((item: any, index: number) => (
-                <tr key={index}>
+              {outsourcingItems.map((item: OutsourcingItem, index: number) => (
+                <tr key={`outsource-${index}-${item.description}`}>
                   <td className="border border-gray-400 px-1 sm:px-2 py-1 text-gray-900">
                     {item.description}
                   </td>
@@ -279,10 +279,10 @@ export default function RepairInvoiceTemplate({
                     {item.quantity || 1}
                   </td>
                   <td className="border border-gray-400 px-1 sm:px-2 py-1 text-right text-gray-900">
-                    {formatCurrency(item.sellingPrice || item.price || 0)}
+                    {formatCurrency(item.sellingPrice || 0)}
                   </td>
                   <td className="border border-gray-400 px-1 sm:px-2 py-1 text-right font-semibold text-gray-900">
-                    {formatCurrency((item.sellingPrice || item.price || 0) * (item.quantity || 1))}
+                    {formatCurrency((item.sellingPrice || 0) * (item.quantity || 1))}
                   </td>
                 </tr>
               ))}

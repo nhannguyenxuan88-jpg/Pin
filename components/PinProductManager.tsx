@@ -72,7 +72,7 @@ const EditPriceModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSave: (product: PinProduct) => void;
-  onToast?: (message: string, type: "success" | "error" | "warning" | "info") => void;
+  onToast?: (message: string, type: "success" | "error" | "warn" | "info") => void;
 }> = ({ product, isOpen, onClose, onSave, onToast }) => {
   const [retailPrice, setRetailPrice] = useState(0);
   const [wholesalePrice, setWholesalePrice] = useState(0);
@@ -90,7 +90,7 @@ const EditPriceModal: React.FC<{
 
   const handleSave = () => {
     if (!currentUser) {
-      onToast?.("Vui lòng đăng nhập để thực hiện thao tác", "warning");
+      onToast?.("Vui lòng đăng nhập để thực hiện thao tác", "warn");
       return;
     }
     if (product) {
@@ -228,7 +228,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
   } = usePinContext();
 
   // Toast helper
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+  const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
     addToast?.({ id: crypto.randomUUID(), message, type });
   };
 
@@ -434,7 +434,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <button
                       onClick={() => {
                         if (!currentUser) {
-                          showToast("Vui lòng đăng nhập", "warning");
+                          showToast("Vui lòng đăng nhập", "warn");
                           return;
                         }
                         setEditingProduct(product);
@@ -448,7 +448,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <button
                       onClick={() => {
                         if (!currentUser) {
-                          showToast("Vui lòng đăng nhập", "warning");
+                          showToast("Vui lòng đăng nhập", "warn");
                           return;
                         }
                         setDeletionModalProduct(product);
@@ -613,12 +613,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           }
                           onClick={() => {
                             if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
                               return;
                             }
                             const qty = deleteQtyMap[product.id] ?? product.stock;
                             if (!qty || qty <= 0) {
-                              showToast("Vui lòng nhập số lượng > 0 để xóa", "warning");
+                              showToast("Vui lòng nhập số lượng > 0 để xóa", "warn");
                               return;
                             }
 
@@ -678,7 +678,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           variant="warning"
                           onClick={() => {
                             if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
                               return;
                             }
                             setDeletionModalProduct(product);
@@ -692,7 +692,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           disabled={!currentUser}
                           onClick={() => {
                             if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
                               return;
                             }
                             setEditingProduct(product);
@@ -707,7 +707,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                           disabled={!currentUser}
                           onClick={() => {
                             if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warning");
+                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
                               return;
                             }
                             showToast(

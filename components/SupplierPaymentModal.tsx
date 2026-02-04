@@ -56,7 +56,7 @@ export default function SupplierPaymentModal({ open, onClose }: Props) {
         },
         notes: notes || `Thanh toán NCC: ${supplier?.name || supplierQuery} #app:pincorp`,
         paymentSourceId: paymentMethod,
-        branchId: currentBranchId,
+        branchId: currentBranchId || "main",
         category: "supplier_payment",
       };
 

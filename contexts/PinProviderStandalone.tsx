@@ -500,7 +500,8 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
                 try {
                   const parsed = JSON.parse(materialsData);
                   return Array.isArray(parsed) ? parsed : [];
-                } catch {
+                } catch (e) {
+                  console.debug("Failed to parse materials data", e);
                   return [];
                 }
               }
@@ -515,7 +516,9 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
                 try {
                   const parsed = JSON.parse(items);
                   if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-                } catch { }
+                } catch (e) {
+                  console.debug("Failed to parse outsourcing items", e);
+                }
               }
 
               // Priority 2: Fallback to notes (Legacy)
@@ -526,7 +529,9 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
                   if (parts[1]) {
                     return JSON.parse(parts[1]);
                   }
-                } catch { }
+                } catch (e) {
+                  console.debug("Failed to parse legacy outsourcing from notes", e);
+                }
               }
 
               return [];

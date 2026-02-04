@@ -51,7 +51,7 @@ interface BOMManagementModalProps {
   onCreateProductionOrder?: (order: ProductionOrder, bom: PinBOM) => void;
   mode?: "list-and-create" | "create-only" | "create-order-from-bom" | "edit-bom"; // list-and-create: hiển thị danh sách để chọn và tạo order, create-only: chỉ tạo BOM, create-order-from-bom: tạo order từ BOM được chọn, edit-bom: chỉnh sửa BOM
   selectedBomId?: string; // ID của BOM được chọn để tạo order hoặc chỉnh sửa
-  onToast?: (message: string, type: "success" | "error" | "warning" | "info") => void;
+  onToast?: (message: string, type: "success" | "error" | "warn" | "info") => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -69,7 +69,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
   selectedBomId,
   onToast,
 }) => {
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+  const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
     onToast?.(message, type);
   };
   const [selectedBOM, setSelectedBOM] = useState<PinBOM | null>(null);
@@ -199,17 +199,17 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
 
   const handleSaveBOM = () => {
     if (!currentUser) {
-      showToast("Vui lòng đăng nhập để thực hiện thao tác.", "warning");
+      showToast("Vui lòng đăng nhập để thực hiện thao tác.", "warn");
       return;
     }
 
     if (!bomForm.productName.trim()) {
-      showToast("Vui lòng nhập tên sản phẩm.", "warning");
+      showToast("Vui lòng nhập tên sản phẩm.", "warn");
       return;
     }
 
     if (bomForm.materials.length === 0) {
-      showToast("Vui lòng thêm ít nhất một nguyên vật liệu.", "warning");
+      showToast("Vui lòng thêm ít nhất một nguyên vật liệu.", "warn");
       return;
     }
 
@@ -288,7 +288,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
 
   const handleCreateOrder = () => {
     if (!selectedBOM || !currentUser || !onCreateProductionOrder) {
-      showToast("Vui lòng chọn BOM và đăng nhập để tạo lệnh sản xuất.", "warning");
+      showToast("Vui lòng chọn BOM và đăng nhập để tạo lệnh sản xuất.", "warn");
       return;
     }
 
@@ -327,7 +327,7 @@ const BOMManagementModal: React.FC<BOMManagementModalProps> = ({
 
   const handleAddCost = () => {
     if (!currentUser) {
-      showToast("Vui lòng đăng nhập để thực hiện thao tác.", "warning");
+      showToast("Vui lòng đăng nhập để thực hiện thao tác.", "warn");
       return;
     }
     if (newCost.description.trim() && newCost.amount > 0) {

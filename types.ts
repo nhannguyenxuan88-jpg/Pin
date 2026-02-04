@@ -352,6 +352,7 @@ export interface Supplier {
   email?: string;
   notes?: string;
   created_at?: string;
+  debt?: number; // Outstanding debt to this supplier
 }
 
 export interface PaymentSource {

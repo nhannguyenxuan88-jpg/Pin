@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
-import type { PinMaterialHistory } from "../types";
+import type { PinMaterialHistory, PinMaterial } from "../types";
 import { supabase } from "../supabaseClient";
 
 interface MaterialHistoryViewerProps {
@@ -66,7 +66,7 @@ const MaterialHistoryViewer: React.FC<MaterialHistoryViewerProps> = ({
         if (!stockErr && Array.isArray(stockRows)) {
           const byId: Record<string, { name: string; sku?: string }> = {};
           pinMaterials.forEach(
-            (m: any) => (byId[m.id] = { name: m.name, sku: m.sku })
+            (m: PinMaterial) => (byId[m.id] = { name: m.name, sku: m.sku })
           );
           const mappedFromStock: PinMaterialHistory[] = stockRows.map(
             (row: any) => {
@@ -86,7 +86,7 @@ const MaterialHistoryViewer: React.FC<MaterialHistoryViewerProps> = ({
                 notes: row.reason || undefined,
                 userId: row.created_by || undefined,
                 userName: undefined,
-                branchId: undefined as any,
+                branchId: "main", // fallback to main branch
                 created_at: row.created_at || undefined,
               } as PinMaterialHistory;
             }
@@ -99,9 +99,10 @@ const MaterialHistoryViewer: React.FC<MaterialHistoryViewerProps> = ({
           );
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Direct history fetch failed:", e);
-      setError(e?.message || String(e));
+      const errMsg = e instanceof Error ? e.message : String(e);
+      setError(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -300,7 +301,7 @@ const MaterialHistoryViewer: React.FC<MaterialHistoryViewerProps> = ({
             className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
             onClick={async () => {
               try {
-                const demo: any = {
+                const demo = {
                   // id: let DB generate UUID (do not set to avoid uuid parse error)
                   material_id: pinMaterials[0]?.id ?? null,
                   material_name: pinMaterials[0]?.name ?? "Vật liệu demo",
@@ -316,14 +317,15 @@ const MaterialHistoryViewer: React.FC<MaterialHistoryViewerProps> = ({
                   branch_id: "main",
                   created_at: new Date().toISOString(),
                 };
-                const { error } = await supabase
+                const { error: insertError } = await supabase
                   .from("pin_material_history")
                   .insert(demo);
-                if (error) throw error;
+                if (insertError) throw insertError;
                 await reloadPinMaterialHistory?.();
                 await fetchHistoryDirect();
-              } catch (e: any) {
-                setError(e?.message || String(e));
+              } catch (e: unknown) {
+                const errMsg = e instanceof Error ? e.message : String(e);
+                setError(errMsg);
               }
             }}
           >
@@ -351,7 +353,7 @@ const MaterialHistoryViewer: React.FC<MaterialHistoryViewerProps> = ({
             className="px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:outline-none focus:border-blue-500"
           >
             <option value="">Tất cả vật liệu</option>
-            {pinMaterials.map((m: any) => (
+            {pinMaterials.map((m: PinMaterial) => (
               <option key={m.id} value={m.id}>
                 {m.name} - {m.sku}
               </option>

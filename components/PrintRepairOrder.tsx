@@ -78,7 +78,7 @@ export default function PrintRepairOrder({ order }: { order: PinRepairOrder }) {
           <tbody>
             {materials && materials.length > 0 ? (
               materials.map((m: any, idx: number) => (
-                <tr key={idx}>
+                <tr key={m.materialId || m.id || `mat-${idx}`}>
                   <td style={thtdStyle}>
                     {m.materialName || m.name || m.partName || m.partId || "-"}
                   </td>

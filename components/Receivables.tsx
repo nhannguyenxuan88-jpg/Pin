@@ -182,7 +182,7 @@ export default function Receivables() {
       if (wo.materialsUsed?.length) {
         const p = wo.materialsUsed
           .slice(0, 3)
-          .map((x) => x.name || x.materialId)
+          .map((x) => x.materialName || x.materialId)
           .join(", ");
         details.push(`Linh kiện: ${p}`);
       }
@@ -548,7 +548,7 @@ export default function Receivables() {
             notes: `Thu nợ cho ${row.kind === "workorder" ? "phiếu sửa chữa" : "đơn hàng"
               } #${row.id} #app:pincorp`,
             paymentSourceId: "cash",
-            branchId: currentBranchId,
+            branchId: currentBranchId || "main",
             category: row.kind === "workorder" ? "service_income" : "sale_income",
             ...(row.kind === "workorder" ? { workOrderId: row.id } : { saleId: row.id }),
           };
@@ -574,7 +574,7 @@ export default function Receivables() {
             },
             notes: `Thanh toán công nợ NCC ${row.customerName} #app:pincorp`,
             paymentSourceId: "cash",
-            branchId: currentBranchId,
+            branchId: currentBranchId || "main",
             category: "supplier_payment", // Fix: dùng đúng category
           };
           await addCashTransaction(tx);
@@ -622,7 +622,7 @@ export default function Receivables() {
           },
           notes: `Thu tiền trả góp kỳ ${nextPayment.periodNumber}/${selectedInstallment.terms} - Đơn hàng ${selectedInstallment.saleId}`,
           paymentSourceId: paymentMethod, // Fix: dùng paymentMethod thay vì hardcoded "cash"
-          branchId: currentBranchId,
+          branchId: currentBranchId || "main",
           category: "sale_income",
           saleId: selectedInstallment.saleId,
         };
@@ -692,7 +692,7 @@ export default function Receivables() {
           },
           notes: `Tất toán sớm trả góp - Đơn hàng ${selectedInstallment.saleId}`,
           paymentSourceId: paymentMethod, // Fix: dùng paymentMethod thay vì hardcoded "cash"
-          branchId: currentBranchId,
+          branchId: currentBranchId || "main",
           category: "sale_income",
           saleId: selectedInstallment.saleId,
         };

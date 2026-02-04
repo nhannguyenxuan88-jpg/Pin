@@ -574,7 +574,7 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                   <p className="font-semibold mb-2">Chi phí phát sinh</p>
                   <div className="space-y-1 text-sm">
                     {detailOrder.additionalCosts.map((c, idx) => (
-                      <div key={idx} className="flex justify-between">
+                      <div key={`addcost-${idx}-${c.description}`} className="flex justify-between">
                         <span>{c.description}</span>
                         <span>{formatCurrency(c.amount)}</span>
                       </div>

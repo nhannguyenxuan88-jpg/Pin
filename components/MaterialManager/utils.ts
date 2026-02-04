@@ -1,6 +1,7 @@
 // Utility functions for MaterialManager
 
 import type { MaterialItem } from "./types";
+import type { PinMaterial } from "../../types";
 // Re-export generateMaterialSKU from centralized location
 export { generateMaterialSKU } from "../../lib/sku";
 

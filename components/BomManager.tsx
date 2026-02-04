@@ -220,7 +220,7 @@ const ProductionOrderModal: React.FC<{
                 </h4>
                 <div className="space-y-2 mt-2">
                   {additionalCosts.map((cost, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
+                    <div key={`cost-${index}-${cost.description}`} className="flex items-center gap-2 text-sm">
                       <span className="flex-1 text-slate-700 dark:text-slate-200">
                         {cost.description}
                       </span>

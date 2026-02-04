@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAppContext } from "../../contexts/AppContext";
+import type { MaterialCommitment } from "../../types";
 
 /**
  * Data Synchronization Hook
@@ -76,7 +77,7 @@ export const useDataSync = () => {
    */
   const checkLowStockAlerts = () => {
     const lowStockMaterials = pinMaterials.filter((material) => {
-      const minStock = (material as any).minStock || 0;
+      const minStock = (material as { minStock?: number }).minStock || 0;
       const availableStock = material.availableStock || material.stock || 0;
       return availableStock <= minStock && minStock > 0;
     });
@@ -173,7 +174,7 @@ export const useDataSync = () => {
       )
       .forEach((order) => {
         if (order.committedMaterials) {
-          order.committedMaterials.forEach((cm: any) => {
+          order.committedMaterials.forEach((cm: MaterialCommitment) => {
             const material = pinMaterials.find((m) => m.id === cm.materialId);
             if (!material) {
               inconsistencies.push(

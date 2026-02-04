@@ -108,7 +108,7 @@ const NewPinCustomerModal: React.FC<{
   onClose: () => void;
   onSave: (customer: PinCustomer) => void;
   initialName?: string;
-  onToast?: (message: string, type: "success" | "error" | "warning" | "info") => void;
+  onToast?: (message: string, type: "success" | "error" | "warn" | "info") => void;
 }> = ({ isOpen, onClose, onSave, initialName = "", onToast }) => {
   const [formData, setFormData] = useState<Omit<PinCustomer, "id">>({
     name: initialName,
@@ -135,7 +135,7 @@ const NewPinCustomerModal: React.FC<{
       ...formData,
     };
     if (!currentUser) {
-      onToast?.("Bạn phải đăng nhập để thực hiện thao tác.", "warning");
+      onToast?.("Bạn phải đăng nhập để thực hiện thao tác.", "warn");
       return;
     }
     onSave(finalCustomer);
@@ -263,7 +263,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const { currentUser, pinSales, deletePinSale, updatePinSale, pinMaterials, addToast } = usePinContext();
 
   // Toast helper
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+  const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
     addToast?.({ id: crypto.randomUUID(), message, type });
   };
 
@@ -614,11 +614,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
   const finalizeSale = () => {
     if (!currentUser) {
-      showToast("Bạn phải đăng nhập để thực hiện thanh toán.", "warning");
+      showToast("Bạn phải đăng nhập để thực hiện thanh toán.", "warn");
       return;
     }
     if (cartItems.length === 0 || !paymentMethod) {
-      showToast("Vui lòng thêm sản phẩm vào giỏ và chọn phương thức thanh toán.", "warning");
+      showToast("Vui lòng thêm sản phẩm vào giỏ và chọn phương thức thanh toán.", "warn");
       return;
     }
 
@@ -626,7 +626,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     if (paymentMode === "partial") {
       const amt = Number(paidAmount || 0);
       if (!(amt > 0 && amt < total)) {
-        showToast("Số tiền thanh toán một phần phải lớn hơn 0 và nhỏ hơn Tổng cộng.", "warning");
+        showToast("Số tiền thanh toán một phần phải lớn hơn 0 và nhỏ hơn Tổng cộng.", "warn");
         return;
       }
     }
@@ -643,11 +643,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     }
     if (paymentMode === "installment") {
       if (!selectedCustomer) {
-        showToast("Vui lòng chọn khách hàng để trả góp!", "warning");
+        showToast("Vui lòng chọn khách hàng để trả góp!", "warn");
         return;
       }
       if (!installmentPlan) {
-        showToast("Vui lòng thiết lập kế hoạch trả góp!", "warning");
+        showToast("Vui lòng thiết lập kế hoạch trả góp!", "warn");
         setShowInstallmentModal(true);
         return;
       }
@@ -1581,7 +1581,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       <button
                         onClick={() => {
                           if (!selectedCustomer) {
-                            showToast("Vui lòng chọn khách hàng trước khi trả góp!", "warning");
+                            showToast("Vui lòng chọn khách hàng trước khi trả góp!", "warn");
                             return;
                           }
                           setPaymentMode("installment");
@@ -2084,7 +2084,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     <button
                       onClick={() => {
                         if (!currentUser) {
-                          showToast("Vui lòng đăng nhập", "warning");
+                          showToast("Vui lòng đăng nhập", "warn");
                           return;
                         }
                         showConfirmDialog(
@@ -2330,7 +2330,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         <button
                           onClick={() => {
                             if (!currentUser) {
-                              showToast("Vui lòng đăng nhập", "warning");
+                              showToast("Vui lòng đăng nhập", "warn");
                               return;
                             }
                             showConfirmDialog(

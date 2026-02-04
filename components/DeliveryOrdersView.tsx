@@ -13,7 +13,7 @@ export default function DeliveryOrdersView() {
     const [searchQuery, setSearchQuery] = useState("");
 
     // Toast helper
-    const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+    const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
         addToast?.({ id: crypto.randomUUID(), message, type });
     };
 

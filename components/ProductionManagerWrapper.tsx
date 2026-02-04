@@ -63,7 +63,7 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
   const { upsertPinBOM, deletePinBOM, addToast } = usePinContext();
 
   // Toast helper
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+  const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
     addToast?.({ id: crypto.randomUUID(), message, type });
   };
 

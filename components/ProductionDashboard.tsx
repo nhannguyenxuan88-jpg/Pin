@@ -763,7 +763,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                   <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
                     <div className="space-y-2">
                       {selectedOrder.additionalCosts.map((cost, index) => (
-                        <div key={index} className="flex justify-between items-center">
+                        <div key={`cost-${index}-${cost.description}`} className="flex justify-between items-center">
                           <p className="text-slate-800 dark:text-slate-100">{cost.description}</p>
                           <p className="font-semibold text-slate-800 dark:text-slate-100">
                             {formatCurrency(cost.amount)}

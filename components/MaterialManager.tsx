@@ -4071,7 +4071,7 @@ const MaterialManager: React.FC<{
           </select>
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) => setCategoryFilter(e.target.value as "" | "material" | "product" | "finished_goods")}
             className="select-base text-xs"
           >
             <option value="">Loại</option>
@@ -4331,7 +4331,7 @@ const MaterialManager: React.FC<{
                 {/* Category Filter */}
                 <select
                   value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value as any)}
+                  onChange={(e) => setCategoryFilter(e.target.value as "" | "material" | "product" | "finished_goods")}
                   className="px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
                 >
                   <option value="">Loại</option>

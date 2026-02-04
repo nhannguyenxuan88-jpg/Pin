@@ -174,7 +174,7 @@ const ProductDeletionModal: React.FC<ProductDeletionModalProps> = ({
                 </h4>
                 <ul className="text-sm text-red-700 space-y-1">
                   {impact.blockers.map((blocker, index) => (
-                    <li key={index}>• {blocker}</li>
+                    <li key={`blocker-${index}`}>• {blocker}</li>
                   ))}
                 </ul>
               </div>
@@ -194,7 +194,7 @@ const ProductDeletionModal: React.FC<ProductDeletionModalProps> = ({
                 </h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
                   {impact.warnings.map((warning, index) => (
-                    <li key={index}>• {warning}</li>
+                    <li key={`warning-${index}`}>• {warning}</li>
                   ))}
                 </ul>
               </div>
@@ -221,7 +221,7 @@ const ProductDeletionModal: React.FC<ProductDeletionModalProps> = ({
                 </h4>
                 <ul className="text-sm text-gray-700 space-y-1">
                   {impact.suggestedActions.map((action, index) => (
-                    <li key={index}>• {action}</li>
+                    <li key={`action-${index}`}>• {action}</li>
                   ))}
                 </ul>
               </div>

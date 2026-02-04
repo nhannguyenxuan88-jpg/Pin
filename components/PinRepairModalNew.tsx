@@ -48,7 +48,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
   const { pinMaterials, pinCustomers, upsertPinCustomer, addToast } = usePinContext();
 
   // Toast helper
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+  const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
     addToast?.({ id: crypto.randomUUID(), message, type });
   };
 
@@ -266,11 +266,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
   const handleAddNewCustomer = async () => {
     if (!newCustomerData.name.trim()) {
-      showToast("Vui lòng nhập tên khách hàng", "warning");
+      showToast("Vui lòng nhập tên khách hàng", "warn");
       return;
     }
     if (!newCustomerData.phone.trim()) {
-      showToast("Vui lòng nhập số điện thoại", "warning");
+      showToast("Vui lòng nhập số điện thoại", "warn");
       return;
     }
 
@@ -337,11 +337,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     const materialName = materialSearch.trim() || materialInput.materialName.trim();
 
     if (!materialName) {
-      showToast("Vui lòng nhập tên vật liệu", "warning");
+      showToast("Vui lòng nhập tên vật liệu", "warn");
       return;
     }
     if (materialInput.quantity <= 0) {
-      showToast("Số lượng phải lớn hơn 0", "warning");
+      showToast("Số lượng phải lớn hơn 0", "warn");
       return;
     }
 
@@ -450,11 +450,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
   // === Gia công ngoài / Đặt hàng handlers ===
   const handleAddOutsourcing = () => {
     if (!outsourcingInput.description.trim()) {
-      showToast("Vui lòng nhập mô tả công việc gia công", "warning");
+      showToast("Vui lòng nhập mô tả công việc gia công", "warn");
       return;
     }
     if (outsourcingInput.quantity <= 0) {
-      showToast("Số lượng phải lớn hơn 0", "warning");
+      showToast("Số lượng phải lớn hơn 0", "warn");
       return;
     }
 
@@ -535,22 +535,22 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     }
 
     if (!currentUser) {
-      showToast("Vui lòng đăng nhập", "warning");
+      showToast("Vui lòng đăng nhập", "warn");
       return;
     }
 
     if (!formData.customerName?.trim()) {
-      showToast("Vui lòng nhập tên khách hàng", "warning");
+      showToast("Vui lòng nhập tên khách hàng", "warn");
       return;
     }
 
     if (!formData.customerPhone?.trim()) {
-      showToast("Vui lòng nhập số điện thoại", "warning");
+      showToast("Vui lòng nhập số điện thoại", "warn");
       return;
     }
 
     if (!formData.issueDescription?.trim()) {
-      showToast("Vui lòng mô tả sự cố", "warning");
+      showToast("Vui lòng mô tả sự cố", "warn");
       return;
     }
 
@@ -578,7 +578,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       const total = calculateTotal();
 
       if (total <= 0) {
-        showToast("Vui lòng nhập ít nhất: vật liệu, gia công ngoài, hoặc phí công", "warning");
+        showToast("Vui lòng nhập ít nhất: vật liệu, gia công ngoài, hoặc phí công", "warn");
         setIsSubmitting(false);
         return;
       }
@@ -589,7 +589,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         depositAmt > 0 || formData.paymentStatus === "paid" || formData.paymentStatus === "partial";
 
       if (needsPaymentMethod && !formData.paymentMethod) {
-        showToast("Vui lòng chọn phương thức thanh toán", "warning");
+        showToast("Vui lòng chọn phương thức thanh toán", "warn");
         setIsSubmitting(false);
         return;
       }
@@ -597,12 +597,12 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       if (formData.paymentStatus === "partial") {
         const amt = Number(formData.partialPaymentAmount || 0);
         if (amt <= 0) {
-          showToast("Vui lòng nhập số tiền thanh toán cho hình thức thanh toán một phần.", "warning");
+          showToast("Vui lòng nhập số tiền thanh toán cho hình thức thanh toán một phần.", "warn");
           setIsSubmitting(false);
           return;
         }
         if (amt >= total) {
-          showToast("Số tiền thanh toán một phần phải nhỏ hơn tổng số tiền.", "warning");
+          showToast("Số tiền thanh toán một phần phải nhỏ hơn tổng số tiền.", "warn");
           setIsSubmitting(false);
           return;
         }

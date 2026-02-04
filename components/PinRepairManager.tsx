@@ -33,7 +33,7 @@ const PinRepairManagerNew: React.FC = () => {
     usePinContext();
 
   // Toast helper
-  const showToast = (message: string, type: "success" | "error" | "warning" | "info") => {
+  const showToast = (message: string, type: "success" | "error" | "warn" | "info") => {
     addToast?.({ id: crypto.randomUUID(), message, type });
   };
 
@@ -213,7 +213,7 @@ const PinRepairManagerNew: React.FC = () => {
   const handlePrint = (order: PinRepairOrder) => {
     const w = window.open("", "_blank");
     if (!w) {
-      showToast("Vui lòng cho phép pop-up để in phiếu", "warning");
+      showToast("Vui lòng cho phép pop-up để in phiếu", "warn");
       return;
     }
 

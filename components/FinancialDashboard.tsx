@@ -435,7 +435,7 @@ const FinancialDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Cơ cấu Tài sản</h3>
             <div className="space-y-4">
               {assetBreakdown.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
+                <div key={item.category} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-4 h-4 rounded-full bg-blue-${((index % 3) + 1) * 200}`} />
                     <span className="text-sm font-medium text-gray-900">{item.category}</span>
@@ -567,8 +567,8 @@ const FinancialDashboard: React.FC = () => {
               <div className="min-w-full">
                 {/* Simple bar chart representation */}
                 <div className="space-y-2">
-                  {cashFlowTrends.map((trend, index) => (
-                    <div key={index} className="flex items-center space-x-4">
+                  {cashFlowTrends.map((trend) => (
+                    <div key={trend.month} className="flex items-center space-x-4">
                       <div className="w-20 text-sm text-gray-600">{trend.month}</div>
                       <div className="flex-1 flex items-center space-x-2">
                         <div className="flex items-center space-x-1">

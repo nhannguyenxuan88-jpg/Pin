@@ -1,20 +1,41 @@
 import { supabase, IS_OFFLINE_MODE } from "../../supabaseClient";
 import type { PinContextType } from "../../contexts/types";
 
-export interface ProductionAdminService {
-  resetProductionData: (options: Record<string, boolean>) => Promise<void>;
+/** Options for resetting production data */
+export interface ResetProductionOptions {
+  workOrders?: boolean;
+  parts?: boolean;
+  transactions?: boolean;
+  customers?: boolean;
+  sales?: boolean;
+  materials?: boolean;
+  boms?: boolean;
+  productionOrders?: boolean;
+  products?: boolean;
+  pinSales?: boolean;
+  repairOrders?: boolean;
+  fixedAssets?: boolean;
+  capitalInvestments?: boolean;
+  cashTransactions?: boolean;
+  cartItems?: boolean;
 }
 
-export function createProductionAdminService(ctx: PinContextType | any): ProductionAdminService {
+export interface ProductionAdminService {
+  resetProductionData: (options: ResetProductionOptions) => Promise<void>;
+}
+
+export function createProductionAdminService(ctx: PinContextType): ProductionAdminService {
   return {
     resetProductionData: async (options) => {
       if (IS_OFFLINE_MODE) {
         try {
-          if ((options as any).workOrders) ctx.setWorkOrders?.([]);
-          if ((options as any).parts) ctx.setParts?.([]);
-          if ((options as any).transactions) ctx.setTransactions?.([]);
-          if (options.customers) ctx.setCustomers?.([]);
-          if (options.sales) ctx.setSales?.([]);
+          // MotoCare-specific methods (only in full AppContext)
+          const motoCtx = ctx as unknown as Record<string, ((v: unknown[]) => void) | undefined>;
+          if (options.workOrders) motoCtx.setWorkOrders?.([]);
+          if (options.parts) motoCtx.setParts?.([]);
+          if (options.transactions) motoCtx.setTransactions?.([]);
+          if (options.customers) motoCtx.setCustomers?.([]);
+          if (options.sales) motoCtx.setSales?.([]);
           if (options.materials) ctx.setPinMaterials([]);
           if (options.boms) ctx.setBoms([]);
           if (options.productionOrders) ctx.setProductionOrders([]);
@@ -125,31 +146,33 @@ export function createProductionAdminService(ctx: PinContextType | any): Product
         }
 
         // MotoCare optional resets when running from full AppContext via PinContext
+        // Cast to Record for optional MotoCare-specific methods
+        const motoCtx = ctx as unknown as Record<string, ((v: unknown[]) => void) | undefined>;
         const isMotoCareReset =
-          (options as any).workOrders || (options as any).parts || (options as any).transactions;
-        if ((options as any).workOrders) {
+          options.workOrders || options.parts || options.transactions;
+        if (options.workOrders) {
           await deleteAllFromTable("motocare_workorders");
-          ctx.setWorkOrders?.([]);
+          motoCtx.setWorkOrders?.([]);
         }
-        if ((options as any).parts) {
+        if (options.parts) {
           await deleteAllFromTable("motocare_parts");
-          ctx.setParts?.([]);
+          motoCtx.setParts?.([]);
         }
-        if ((options as any).transactions) {
+        if (options.transactions) {
           await deleteAllFromTable("motocare_inventorytransactions");
-          ctx.setTransactions?.([]);
+          motoCtx.setTransactions?.([]);
         }
         if (isMotoCareReset && options.customers) {
           await deleteAllFromTable("motocare_customers");
-          ctx.setCustomers?.([]);
+          motoCtx.setCustomers?.([]);
         }
         if (isMotoCareReset && options.sales) {
           await deleteAllFromTable("motocare_sales");
-          ctx.setSales?.([]);
+          motoCtx.setSales?.([]);
         }
         if (
           isMotoCareReset &&
-          (((options as any).transactions as boolean) || (options as any).parts || options.sales)
+          (options.transactions || options.parts || options.sales)
         ) {
           await deleteAllFromTable("goods_receipts");
           ctx.setGoodsReceipts?.([]);

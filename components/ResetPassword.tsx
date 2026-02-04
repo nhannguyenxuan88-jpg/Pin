@@ -43,7 +43,9 @@ const ResetPassword: React.FC = () => {
               "",
               window.location.pathname + window.location.search + cleanHash
             );
-          } catch {}
+          } catch (e) {
+            console.debug("ResetPassword: could not clean URL hash", e);
+          }
         }
       } catch (e: any) {
         // Not fatal; user can still enter password if session exists
