@@ -44,6 +44,8 @@ interface ReceiptItem {
   retailPrice: number;
   wholesalePrice: number;
   isNew: boolean;
+  category?: "material" | "product" | "finished_goods";
+  category_id?: string;
 }
 
 interface PinGoodsReceiptNewProps {
@@ -251,13 +253,14 @@ const ProductModal: React.FC<{
     loadCategories();
   }, []);
 
-  // Auto-calculate prices when purchase price changes
+  // Auto-calculate prices when purchase price changes (only if not manually edited)
   useEffect(() => {
     if (formData.purchasePrice > 0) {
+      // Only auto-calculate if prices are 0 or empty (not manually set)
       setFormData((prev) => ({
         ...prev,
-        retailPrice: Math.round(formData.purchasePrice * 1.4),
-        wholesalePrice: Math.round(formData.purchasePrice * 1.2),
+        retailPrice: prev.retailPrice === 0 ? Math.round(formData.purchasePrice * 1.4) : prev.retailPrice,
+        wholesalePrice: prev.wholesalePrice === 0 ? Math.round(formData.purchasePrice * 1.2) : prev.wholesalePrice,
       }));
     } else if (formData.purchasePrice === 0) {
       setFormData((prev) => ({
@@ -761,9 +764,11 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       unit: product.unit,
       quantity: 1,
       purchasePrice: product.purchasePrice || 0,
-      retailPrice: product.retailPrice || product.purchasePrice * 1.2,
-      wholesalePrice: product.wholesalePrice || product.purchasePrice * 1.1,
+      retailPrice: product.retailPrice || 0, // ✅ Giữ nguyên giá hiện có
+      wholesalePrice: product.wholesalePrice || 0, // ✅ Giữ nguyên giá hiện có
       isNew: false,
+      category: product.category,
+      category_id: product.category_id,
     };
     setReceiptItems((prev) => [...prev, newItem]);
     setProductSearch("");
@@ -804,9 +809,11 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       unit: product.unit,
       quantity: 1,
       purchasePrice: product.purchasePrice,
-      retailPrice: product.retailPrice || product.purchasePrice * 1.2,
-      wholesalePrice: product.wholesalePrice || product.purchasePrice * 1.1,
+      retailPrice: product.retailPrice, // ✅ Lưu giá lẻ từ form
+      wholesalePrice: product.wholesalePrice, // ✅ Lưu giá sỉ từ form
       isNew: true, // ✅ Sản phẩm mới cần được insert vào database
+      category: product.category,
+      category_id: product.category_id,
     };
     setReceiptItems((prev) => [...prev, newItem]);
   };
@@ -912,6 +919,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             stock: item.quantity,
             supplier: selectedSupplier?.name,
             supplierPhone: selectedSupplier?.phone,
+            category: item.category,
+            category_id: item.category_id,
           };
           updatedMaterials.push(newMaterial);
         } else if (item.materialId) {
@@ -990,6 +999,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
               supplier: material.supplier || null,
               supplier_phone: material.supplierPhone || null,
               description: material.description || null,
+              category: material.category || null,
+              category_id: material.category_id || null,
               updated_at: new Date().toISOString(),
             })
             .select("id")

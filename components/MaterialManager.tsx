@@ -3065,10 +3065,15 @@ const MaterialManager: React.FC<{
         return;
       }
 
-      // Fetch materials
+      // Fetch materials with category names
       const { data, error: fetchError } = await supabase
         .from("pin_materials")
-        .select("*")
+        .select(`
+          *,
+          categories:category_id (
+            name
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (fetchError) {
@@ -3090,6 +3095,9 @@ const MaterialManager: React.FC<{
         supplierPhone: item.supplierphone || item.supplier_phone || "",
         description: item.description || "",
         created_at: item.created_at,
+        category: item.category || "",
+        category_id: item.category_id || "",
+        category_name: item.categories?.name || "",
       }));
 
       setMaterials(formattedMaterials);
@@ -4484,7 +4492,7 @@ const MaterialManager: React.FC<{
                         Đơn vị
                       </th>
                       <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        Loại
+                        Danh mục
                       </th>
                       <th
                         className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -4573,20 +4581,9 @@ const MaterialManager: React.FC<{
                             {material.unit}
                           </td>
                           <td className="px-3 py-2">
-                            {(material as any).category ? (
-                              <span
-                                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${(material as any).category === "material"
-                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                                  : (material as any).category === "product"
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                                    : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                                  }`}
-                              >
-                                {(material as any).category === "material"
-                                  ? "Vật tư"
-                                  : (material as any).category === "product"
-                                    ? "Sản phẩm"
-                                    : "Thành phẩm"}
+                            {(material as any).category_name ? (
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                {(material as any).category_name}
                               </span>
                             ) : (
                               <span className="text-xs text-gray-400 italic">-</span>
