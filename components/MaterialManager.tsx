@@ -4585,6 +4585,20 @@ const MaterialManager: React.FC<{
                               <span className="text-sm text-gray-700 dark:text-gray-300">
                                 {(material as any).category_name}
                               </span>
+                            ) : (material as any).category ? (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+                                  (material as any).category === "material"
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                                    : (material as any).category === "product"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                                    : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                                }`}
+                              >
+                                {(material as any).category === "material" && "Vật tư"}
+                                {(material as any).category === "product" && "Sản phẩm"}
+                                {(material as any).category === "finished_goods" && "Thành phẩm"}
+                              </span>
                             ) : (
                               <span className="text-xs text-gray-400 italic">-</span>
                             )}
