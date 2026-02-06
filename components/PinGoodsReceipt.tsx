@@ -692,10 +692,11 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
 
   // Tự động xác định trạng thái
   const paymentStatus = useMemo(() => {
-    if (isDebt && debtAmount > 0) return "partial";
     if (!isDebt) return "paid";
-    return "unpaid";
-  }, [isDebt, debtAmount]);
+    if (debtAmount >= totalWithTax) return "unpaid";
+    if (debtAmount > 0) return "partial";
+    return "paid"; // isDebt=true nhưng debtAmount=0 => thanh toán đủ
+  }, [isDebt, debtAmount, totalWithTax]);
 
   // ===== HANDLERS =====
   const handleSelectSupplier = (supplier: Supplier) => {
@@ -1175,6 +1176,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             supplier: row.supplier || undefined,
             supplierPhone: row.supplier_phone || undefined,
             category: row.category || undefined,
+            category_id: row.category_id || undefined,
             description: row.description || undefined,
             created_at: row.created_at || row.createdat || undefined,
           }));
@@ -1907,7 +1909,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                 <input
                   type="number"
                   value={debtAmount || ""}
-                  onChange={(e) => setDebtAmount(Math.min(Number(e.target.value), totalWithTax))}
+                  onChange={(e) => setDebtAmount(Math.max(0, Math.min(Number(e.target.value), totalWithTax)))}
                   className="w-full px-3 py-2 text-right text-sm md:text-base font-bold bg-slate-900 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/30"
                   placeholder="0"
                   max={totalWithTax}

@@ -227,24 +227,28 @@ export default function PurchaseOrderManager({ materials, suppliers }: Props) {
             return;
         }
 
-        if (editingOrder) {
-            await PurchaseOrderService.updateOrder(editingOrder.id, {
-                ...formData,
-                items: formData.items,
-            });
-        } else {
-            await PurchaseOrderService.createOrder({
-                ...formData,
-                status: "draft",
-                totalAmount: cartTotal,
-                paidAmount: 0,
-                items: formData.items,
-                createdBy: currentUser?.name,
-            });
+        try {
+            if (editingOrder) {
+                await PurchaseOrderService.updateOrder(editingOrder.id, {
+                    ...formData,
+                    items: formData.items,
+                });
+            } else {
+                await PurchaseOrderService.createOrder({
+                    ...formData,
+                    status: "draft",
+                    totalAmount: cartTotal,
+                    paidAmount: 0,
+                    items: formData.items,
+                    createdBy: currentUser?.name,
+                });
+            }
+            await loadOrders();
+            setShowForm(false);
+            resetForm();
+        } catch (err) {
+            alert("Lỗi khi lưu đơn hàng: " + getErrorMessage(err));
         }
-        await loadOrders();
-        setShowForm(false);
-        resetForm();
     };
 
     // Actions

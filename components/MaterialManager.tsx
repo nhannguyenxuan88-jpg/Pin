@@ -1699,6 +1699,7 @@ const MaterialEditModal: React.FC<{
         retailPrice: formData.retailPrice,
         wholesalePrice: formData.wholesalePrice,
         supplier: formData.supplier.trim(),
+        supplierPhone: formData.supplierPhone.trim(),
         description: formData.description.trim(),
         category: formData.category || undefined,
       };
@@ -3135,6 +3136,8 @@ const MaterialManager: React.FC<{
 
         if (existingMaterials && existingMaterials.length > 0) {
           currentMaterial = existingMaterials[0];
+          // Also set materialId to prevent duplicate creation via upsert
+          materialId = currentMaterial.id;
         }
       }
 
@@ -3333,10 +3336,10 @@ const MaterialManager: React.FC<{
           description: base.description,
           created_at: base.created_at,
         };
-        setMaterials(
-          materials.find((m) => m.id === newMaterial.id)
-            ? materials.map((m) => (m.id === newMaterial.id ? newMaterial : m))
-            : [newMaterial, ...materials]
+        setMaterials((prev) =>
+          prev.find((m) => m.id === newMaterial.id)
+            ? prev.map((m) => (m.id === newMaterial.id ? newMaterial : m))
+            : [newMaterial, ...prev]
         );
       }
     } catch (err) {
@@ -3410,8 +3413,7 @@ const MaterialManager: React.FC<{
         deleteError = null;
 
         // Manually update local state
-        // Manually update local state
-        setMaterials(materials.filter((m) => m.id !== id));
+        setMaterials((prev) => prev.filter((m) => m.id !== id));
       }
 
       if (deleteError) throw new Error(getErrorMessage(deleteError) || "Delete error");
@@ -3484,15 +3486,25 @@ const MaterialManager: React.FC<{
     if (!window.confirm(`Xóa ${selectedItems.size} vật tư đã chọn?`)) return;
 
     try {
-      const deletePromises = Array.from(selectedItems).map((id) =>
-        supabase.from("pin_materials").delete().eq("id", id)
+      const deleteResults = await Promise.all(
+        Array.from(selectedItems).map((id) =>
+          supabase.from("pin_materials").delete().eq("id", id)
+        )
       );
 
-      await Promise.all(deletePromises);
+      const failedDeletes = deleteResults.filter((r) => r.error);
+      if (failedDeletes.length > 0) {
+        console.error("Some deletes failed:", failedDeletes.map((r) => r.error));
+        showToast("Cảnh báo", `${failedDeletes.length}/${selectedItems.size} vật tư xóa thất bại`, "warn");
+      }
+
       await loadMaterials();
       setSelectedItems(new Set());
       setShowBulkActions(false);
-      showToast("Thành công", `Đã xóa ${selectedItems.size} vật tư thành công!`, "success");
+      const successCount = selectedItems.size - failedDeletes.length;
+      if (successCount > 0) {
+        showToast("Thành công", `Đã xóa ${successCount} vật tư thành công!`, "success");
+      }
     } catch (err) {
       console.error("Bulk delete error:", err);
       showToast("Lỗi", "Lỗi khi xóa: " + getErrorMessage(err), "error");
@@ -3511,6 +3523,7 @@ const MaterialManager: React.FC<{
           .from("pin_materials")
           .update({
             supplier: bulkSupplier,
+            supplier_phone: bulkSupplierPhone || null,
           })
           .eq("id", id)
       );
@@ -3689,8 +3702,8 @@ const MaterialManager: React.FC<{
         updateError = null;
 
         // Manually update local state
-        setMaterials(
-          materials.map((m) =>
+        setMaterials((prev) =>
+          prev.map((m) =>
             m.id === adjustment.material_id ? { ...m, stock: desiredStock } : m
           )
         );
@@ -4873,6 +4886,7 @@ const MaterialManager: React.FC<{
                       retail_price: updatedMaterial.retailPrice,
                       wholesale_price: updatedMaterial.wholesalePrice,
                       supplier: updatedMaterial.supplier || null,
+                      supplier_phone: updatedMaterial.supplierPhone || null,
                       description: updatedMaterial.description || null,
                       category: (updatedMaterial as any).category || null,
                       updated_at: new Date().toISOString(),
@@ -4882,8 +4896,8 @@ const MaterialManager: React.FC<{
                   if (error) throw error;
 
                   // Update local state
-                  setMaterials(
-                    materials.map((m) => (m.id === updatedMaterial.id ? updatedMaterial : m))
+                  setMaterials((prev) =>
+                    prev.map((m) => (m.id === updatedMaterial.id ? updatedMaterial : m))
                   );
 
                   showToast("Thành công", "Đã cập nhật vật liệu thành công!", "success");
