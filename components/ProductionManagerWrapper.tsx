@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import type { PinBOM, PinMaterial, ProductionOrder, User } from "../types";
 import { usePinContext } from "../contexts/PinContext";
 import ProductionDashboard from "./ProductionDashboard";
@@ -29,35 +29,6 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedBomIdForOrder, setSelectedBomIdForOrder] = useState<string | undefined>();
   const [editingBomId, setEditingBomId] = useState<string | undefined>();
-
-  // Persist modal states
-  useEffect(() => {
-    const saved = localStorage.getItem("productionManager_modals");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.showBOMModal) setShowBOMModal(true);
-        if (parsed.showCreateOrderModal) setShowCreateOrderModal(true);
-      } catch {
-        // Ignore JSON parse errors from corrupted localStorage
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const anyOpen = showBOMModal || showCreateOrderModal;
-    if (anyOpen) {
-      localStorage.setItem(
-        "productionManager_modals",
-        JSON.stringify({
-          showBOMModal,
-          showCreateOrderModal,
-        })
-      );
-    } else {
-      localStorage.removeItem("productionManager_modals");
-    }
-  }, [showBOMModal, showCreateOrderModal]);
 
   // Use context upsert/delete to persist BOMs to DB
   const { upsertPinBOM, deletePinBOM, addToast } = usePinContext();
@@ -149,6 +120,7 @@ const ProductionManagerWrapper: React.FC<ProductionManagerProps> = ({
         onEditBOM={handleEditBOM}
         onDeleteBOM={handleDeleteBOMFromDashboard}
         completeOrder={completeOrder}
+        onToast={(title, message, type) => showToast(`${title}: ${message}`, type)}
       />
 
       {showBOMModal && (

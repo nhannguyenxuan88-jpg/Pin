@@ -273,11 +273,13 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         ) : (
           orders.map((order) => {
             const bom = boms.find((b) => b.id === order.bomId);
+            const isTerminal = order.status === "Hoàn thành" || order.status === "Đã nhập kho" || order.status === "Đã hủy";
             return (
               <div
                 key={order.id}
-                draggable
+                draggable={!isTerminal}
                 onDragStart={(e) => {
+                  if (isTerminal) { e.preventDefault(); return; }
                   e.dataTransfer.setData("orderId", order.id);
                 }}
               >
@@ -364,10 +366,18 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
 
     filteredOrders.forEach((order) => {
       if (order.status === "Đã hủy") return;
-      const key = (
-        order.status === "Đã nhập kho" ? "Hoàn thành" : order.status
-      ) as keyof typeof grouped;
-      if (grouped[key]) grouped[key].push(order);
+      // Map "Đã nhập kho" to "Hoàn thành", and unknown statuses ("Chờ sản xuất", "Mới", etc.) to "Đang chờ"
+      let key: keyof typeof grouped;
+      if (order.status === "Đã nhập kho") {
+        key = "Hoàn thành";
+      } else if (order.status === "Đang sản xuất") {
+        key = "Đang sản xuất";
+      } else if (order.status === "Hoàn thành") {
+        key = "Hoàn thành";
+      } else {
+        key = "Đang chờ"; // "Đang chờ", "Chờ sản xuất", "Mới", etc.
+      }
+      grouped[key].push(order);
     });
 
     // Sort by creation date (newest first)
@@ -399,22 +409,49 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
   // Intercept moves to "Hoàn thành" to run completion flow with stock deduction
   const handleMove = useCallback(
     async (orderId: string, newStatus: ProductionOrder["status"]) => {
+      // Auth check - prevent unauthenticated moves
+      if (!currentUser) {
+        onToast?.("Lỗi", "Vui lòng đăng nhập để thực hiện thao tác.", "error");
+        return;
+      }
+
+      // Prevent moving terminal-state orders back
+      const order = orders.find((o) => o.id === orderId);
+      if (order && (order.status === "Hoàn thành" || order.status === "Đã nhập kho" || order.status === "Đã hủy")) {
+        onToast?.("Cảnh báo", "Không thể thay đổi trạng thái của lệnh đã hoàn thành/hủy.", "warn");
+        return;
+      }
+
       if (newStatus === "Hoàn thành" && completeOrder) {
+        // Use the same recovery-safe flow as ProductionManager
+        const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+          e.preventDefault();
+          e.returnValue = "Đang lưu dữ liệu sản xuất. Vui lòng chờ để tránh mất dữ liệu.";
+          return e.returnValue;
+        };
         try {
           setCompletingOrderId(orderId);
+          window.addEventListener("beforeunload", beforeUnloadHandler);
+          localStorage.setItem(
+            "pending-production-completion",
+            JSON.stringify({ orderId, startedAt: Date.now() })
+          );
           await completeOrder(orderId);
+          localStorage.removeItem("pending-production-completion");
+          onToast?.("Thành công", `Đã hoàn thành lệnh sản xuất`, "success");
         } catch (e) {
-          // Errors are handled upstream; keep UI responsive
           console.error("Error completing order via Kanban:", e);
+          onToast?.("Lỗi", "Có lỗi xảy ra khi hoàn thành lệnh sản xuất.", "error");
         } finally {
           setCompletingOrderId(null);
+          window.removeEventListener("beforeunload", beforeUnloadHandler);
         }
       } else {
         // For other transitions, keep the lightweight status update
         updateOrder(orderId, newStatus);
       }
     },
-    [completeOrder, updateOrder]
+    [completeOrder, updateOrder, currentUser, orders, onToast]
   );
 
   return (
@@ -617,6 +654,21 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
           {/* Right Side: Kanban Board */}
           <div className="lg:col-span-9">
             <div className="flex space-x-4 overflow-x-auto pb-4">
+              <KanbanColumn
+                title="Đang chờ"
+                status="Đang chờ"
+                orders={ordersByStatus["Đang chờ"]}
+                onMove={handleMove}
+                onViewDetails={handleViewDetails}
+                currentUser={currentUser}
+                icon={<ClockIcon className="w-5 h-5" />}
+                bgColor="bg-amber-500"
+                textColor="text-white"
+                completingOrderId={completingOrderId}
+                boms={boms}
+                onToast={onToast}
+              />
+
               <KanbanColumn
                 title="Đang sản xuất"
                 status="Đang sản xuất"

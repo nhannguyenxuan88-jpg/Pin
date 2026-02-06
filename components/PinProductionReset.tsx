@@ -73,10 +73,7 @@ const PinProductionReset: React.FC = () => {
   };
 
   const executeReset = async () => {
-    console.log("🚀 executeReset called", { confirmText, resetOptions });
-
     if (confirmText !== "RESET PIN CORP DATA") {
-      console.log("❌ Confirm text mismatch:", confirmText);
       addToast({
         id: Date.now().toString(),
         message: 'Vui lòng nhập chính xác "RESET PIN CORP DATA"',
@@ -86,30 +83,28 @@ const PinProductionReset: React.FC = () => {
     }
 
     setIsResetting(true);
-    console.log("⏳ Starting reset process...");
 
     try {
-      // Tạo backup timestamp
-      const backupName = new Date().toISOString().replace(/[:.]/g, "-");
-
-      console.log("🔄 Starting database reset...", resetOptions);
-
       // Sử dụng function reset thật sự từ database
       await resetProductionData(
         resetOptions as unknown as Record<string, boolean>
       );
 
-      console.log("✅ Reset completed successfully");
-
       setShowConfirmDialog(false);
       setConfirmText("");
+
+      addToast({
+        id: Date.now().toString(),
+        message: "Reset dữ liệu thành công!",
+        type: "success",
+      });
     } catch (error) {
-      console.error("❌ Reset error:", error);
+      console.error("Reset error:", error);
 
       addToast({
         id: Date.now().toString(),
         title: "Lỗi reset",
-        message: `❌ Lỗi khi reset dữ liệu: ${
+        message: `Lỗi khi reset dữ liệu: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
         type: "error",

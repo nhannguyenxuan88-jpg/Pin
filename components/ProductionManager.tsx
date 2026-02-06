@@ -41,14 +41,17 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
     title: string;
     message: string;
     onConfirm: () => void;
+    onCancel?: () => void;
   }>({ open: false, title: "", message: "", onConfirm: () => {} });
 
-  const showConfirmDialog = (title: string, message: string, onConfirm: () => void) => {
-    setConfirmDialog({ open: true, title, message, onConfirm });
+  const showConfirmDialog = (title: string, message: string, onConfirm: () => void, onCancel?: () => void) => {
+    setConfirmDialog({ open: true, title, message, onConfirm, onCancel });
   };
 
   const closeConfirmDialog = () => {
+    const cancel = confirmDialog.onCancel;
     setConfirmDialog({ open: false, title: "", message: "", onConfirm: () => {} });
+    cancel?.();
   };
 
   // Toast helper
@@ -125,16 +128,16 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
           window.removeEventListener("beforeunload", beforeUnloadHandler);
           setResumeChecked(true);
         }
-      }
-    );
-
-    // Handle cancel case - set resumeChecked when dialog closes without confirm
-    return () => {
-      if (!resumeChecked) {
+      },
+      // onCancel: clear token when user explicitly dismisses recovery
+      () => {
         localStorage.removeItem("pending-production-completion");
         setResumeChecked(true);
       }
-    };
+    );
+
+    // Note: no cleanup - token should persist until explicitly cleared by
+    // successful completion or explicit user cancel via the confirm dialog
   }, [orders, currentUser, resumeChecked, completeOrder]);
 
   const filteredOrders = useMemo(() => {
@@ -152,12 +155,18 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
     );
   }, [orders, searchTerm]);
 
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredOrders, currentPage]);
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE));
 
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  // Clamp currentPage to valid bounds when orders/filters change
+  const safePage = Math.min(currentPage, totalPages);
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [totalPages, currentPage]);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredOrders, safePage]);
 
   const getStatusChipClass = (status: ProductionOrder["status"]) => {
     switch (status) {
@@ -346,13 +355,13 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                     >
                       <option value="Đang chờ">Đang chờ</option>
                       <option value="Đang sản xuất">Đang sản xuất</option>
-                      <option value="Hoàn thành">Hoàn thành</option>
-                      <option value="Đã nhập kho" disabled>
-                        Đã nhập kho
-                      </option>
-                      <option value="Đã hủy" disabled>
-                        Đã hủy
-                      </option>
+                      {/* 'Hoàn thành' removed from dropdown - must use dedicated button to trigger completion flow with stock deduction */}
+                      {(order.status === "Hoàn thành" || order.status === "Đã nhập kho") && (
+                        <option value={order.status}>{order.status}</option>
+                      )}
+                      {order.status === "Đã hủy" && (
+                        <option value="Đã hủy" disabled>Đã hủy</option>
+                      )}
                     </select>
                   </td>
                   <td
@@ -371,10 +380,10 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                       >
                         Chi tiết
                       </button>
-                      {order.status !== "Hoàn thành" && order.status !== "Đã nhập kho" && order.status !== "Đã hủy" && (
+                      {order.status === "Đang sản xuất" && (
                         <button
                           onClick={() => handleCompleteOrder(order)}
-                          disabled={!currentUser || completingOrderId === order.id}
+                          disabled={!currentUser || completingOrderId !== null}
                           className={`px-2 py-1 text-xs rounded ${!currentUser || completingOrderId === order.id
                             ? "bg-green-200 text-green-600 cursor-not-allowed"
                             : "bg-green-600 text-white hover:bg-green-700"
@@ -382,8 +391,8 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                           title={
                             !currentUser
                               ? "Bạn phải đăng nhập để hoàn thành lệnh"
-                              : completingOrderId === order.id
-                                ? "Đang lưu dữ liệu..."
+                              : completingOrderId !== null
+                                ? "Đang xử lý lệnh khác..."
                                 : "Hoàn thành lệnh sản xuất - tăng tồn kho thành phẩm"
                           }
                         >
@@ -493,8 +502,8 @@ const ProductionManager: React.FC<ProductionManagerProps> = ({
                     {order.status === "Đang sản xuất" && completeOrder && (
                       <button
                         onClick={() => handleCompleteOrder(order)}
-                        disabled={!currentUser || completingOrderId === order.id}
-                        className={`px-2 py-1 text-xs rounded ${!currentUser || completingOrderId === order.id
+                        disabled={!currentUser || completingOrderId !== null}
+                        className={`px-2 py-1 text-xs rounded ${!currentUser || completingOrderId !== null
                           ? "bg-green-200 text-green-600 cursor-not-allowed"
                           : "bg-green-600 text-white"
                           }`}
