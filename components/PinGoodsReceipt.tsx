@@ -810,8 +810,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       unit: product.unit,
       quantity: 1,
       purchasePrice: product.purchasePrice,
-      retailPrice: product.retailPrice, // ✅ Lưu giá lẻ từ form
-      wholesalePrice: product.wholesalePrice, // ✅ Lưu giá sỉ từ form
+      retailPrice: product.retailPrice ?? 0, // ✅ Lưu giá lẻ từ form
+      wholesalePrice: product.wholesalePrice ?? 0, // ✅ Lưu giá sỉ từ form
       isNew: true, // ✅ Sản phẩm mới cần được insert vào database
       category: product.category,
       category_id: product.category_id,

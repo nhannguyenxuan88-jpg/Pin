@@ -2869,7 +2869,7 @@ const SupplierPriceAnalysisModal: React.FC<{
 // Main MaterialManager Component - Updated to use centralized hooks
 const MaterialManager: React.FC<{
   materials: PinMaterial[];
-  setMaterials: (materials: PinMaterial[]) => void;
+  setMaterials: React.Dispatch<React.SetStateAction<PinMaterial[]>>;
   productionOrders?: any[]; // ProductionOrder[] - will be passed from context
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
@@ -3137,7 +3137,7 @@ const MaterialManager: React.FC<{
         if (existingMaterials && existingMaterials.length > 0) {
           currentMaterial = existingMaterials[0];
           // Also set materialId to prevent duplicate creation via upsert
-          materialId = currentMaterial.id;
+          if (currentMaterial) materialId = currentMaterial.id;
         }
       }
 
