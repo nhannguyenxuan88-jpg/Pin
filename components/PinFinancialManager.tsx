@@ -42,6 +42,7 @@ const PinFinancialManager: React.FC = () => {
     setCapitalInvestments,
     cashTransactions = [] as CashTransaction[],
     addCashTransaction,
+    pinSales = [],
     currentUser,
     addToast,
     deletePinCapitalInvestment,
@@ -211,9 +212,16 @@ const PinFinancialManager: React.FC = () => {
       .filter((tx) => !checkIsExpense(tx))
       .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
-    const totalExpense = displayTransactions
-      .filter((tx) => checkIsExpense(tx))
+    // Tách riêng: chi phí vận hành vs vốn nhập kho
+    const inventoryPurchases = displayTransactions
+      .filter((tx) => tx.category === "inventory_purchase" || tx.category === "supplier_payment")
       .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+    const operatingExpenses = displayTransactions
+      .filter((tx) => checkIsExpense(tx) && tx.category !== "inventory_purchase" && tx.category !== "supplier_payment")
+      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+    const totalExpense = inventoryPurchases + operatingExpenses;
 
     const difference = totalIncome - totalExpense;
 
@@ -241,11 +249,19 @@ const PinFinancialManager: React.FC = () => {
     return {
       totalIncome,
       totalExpense,
+      inventoryPurchases,
+      operatingExpenses,
       difference,
       cashBalance,
       bankBalance,
     };
   }, [filteredCashTransactions, cashTransactions, showAllApps]);
+
+  // Helper: tìm đơn bán hàng tương ứng với giao dịch
+  const getSaleForTransaction = (tx: CashTransaction) => {
+    if (!tx.saleId) return null;
+    return pinSales.find((s) => s.id === tx.saleId) || null;
+  };
 
   // Form states for adding transactions
   const [newTransaction, setNewTransaction] = useState({
@@ -818,8 +834,8 @@ const PinFinancialManager: React.FC = () => {
             </button>
           </div>
 
-          {/* Summary Cards - Compact, 2 cols on mobile, 5 on desktop */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-1.5 md:gap-2">
+          {/* Summary Cards - Compact, 2 cols on mobile, 6 on desktop */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-1.5 md:gap-2">
             {/* Thu (Income) */}
             <div className="bg-gradient-to-br from-teal-600/20 to-teal-700/10 border border-teal-500/30 rounded-lg p-2">
               <div className="flex items-center gap-1 text-teal-400 text-[10px] md:text-xs mb-0.5">
@@ -831,15 +847,27 @@ const PinFinancialManager: React.FC = () => {
               </p>
             </div>
 
-            {/* Chi (Expense) */}
+            {/* Chi vận hành (Operating Expense) */}
             <div className="bg-gradient-to-br from-red-600/20 to-red-700/10 border border-red-500/30 rounded-lg p-2">
               <div className="flex items-center gap-1 text-red-400 text-[10px] md:text-xs mb-0.5">
                 <TrendingDown className="w-3 h-3" />
-                Chi
+                Chi phí
               </div>
               <p className="text-xs md:text-sm font-bold text-red-400 truncate">
-                -{formatCurrency(cashbookSummary.totalExpense)}
+                -{formatCurrency(cashbookSummary.operatingExpenses)}
               </p>
+            </div>
+
+            {/* Vốn nhập kho (Inventory Purchases - NOT expense) */}
+            <div className="bg-gradient-to-br from-amber-600/20 to-amber-700/10 border border-amber-500/30 rounded-lg p-2">
+              <div className="flex items-center gap-1 text-amber-400 text-[10px] md:text-xs mb-0.5">
+                📦
+                <span className="truncate">Nhập kho</span>
+              </div>
+              <p className="text-xs md:text-sm font-bold text-amber-400 truncate">
+                -{formatCurrency(cashbookSummary.inventoryPurchases)}
+              </p>
+              <p className="text-[9px] text-amber-600 mt-0.5 hidden md:block">Vốn đầu tư, không phải chi phí</p>
             </div>
 
             {/* Chênh lệch (Difference) */}
@@ -869,7 +897,7 @@ const PinFinancialManager: React.FC = () => {
             </div>
 
             {/* Ngân hàng (Bank) */}
-            <div className="bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-lg p-2 col-span-2 md:col-span-1">
+            <div className="bg-gradient-to-br from-blue-600/20 to-blue-700/10 border border-blue-500/30 rounded-lg p-2">
               <div className="flex items-center gap-1 text-blue-400 text-[10px] md:text-xs mb-0.5">
                 <Building className="w-3 h-3" />
                 Ngân hàng
@@ -973,8 +1001,13 @@ const PinFinancialManager: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-700">
                   {filteredCashTransactions.length > 0 ? (
-                    filteredCashTransactions.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-700/30 transition-colors">
+                    filteredCashTransactions.map((tx) => {
+                      const linkedSale = getSaleForTransaction(tx);
+                      const saleCOGS = linkedSale ? linkedSale.items.reduce((s, i) => s + (i.costPrice || 0) * i.quantity, 0) : 0;
+                      const saleProfit = linkedSale ? linkedSale.total - saleCOGS : 0;
+                      const isInventoryPurchase = tx.category === "inventory_purchase" || tx.category === "supplier_payment";
+                      return (
+                      <tr key={tx.id} className={`hover:bg-slate-700/30 transition-colors ${isInventoryPurchase ? "bg-amber-500/5" : ""}`}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
                           {new Date(tx.date).toLocaleDateString("vi-VN")}
                         </td>
@@ -988,14 +1021,23 @@ const PinFinancialManager: React.FC = () => {
                               {tx.notes.replace(/#app:pincorp/gi, "")}
                             </div>
                           )}
+                          {linkedSale && (
+                            <div className="flex items-center gap-2 mt-1 text-[10px]">
+                              <span className="text-orange-400">Vốn: {formatCurrency(saleCOGS)}</span>
+                              <span className="text-slate-600">→</span>
+                              <span className={`font-medium ${saleProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                Lãi: {saleProfit >= 0 ? "+" : ""}{formatCurrency(saleProfit)}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-300">
                           <div className="flex flex-col">
-                            <span className="text-xs font-medium text-blue-400">
+                            <span className={`text-xs font-medium ${isInventoryPurchase ? "text-amber-400" : "text-blue-400"}`}>
                               {getTransactionSource(tx)}
                             </span>
                             <span className="text-xs text-gray-500">
-                              {getCategoryLabel(tx.category || "")}
+                              {isInventoryPurchase ? "📦 Nhập kho/vật tư" : getCategoryLabel(tx.category || "")}
                             </span>
                           </div>
                         </td>
@@ -1058,7 +1100,8 @@ const PinFinancialManager: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center">
@@ -1080,7 +1123,12 @@ const PinFinancialManager: React.FC = () => {
             {/* Mobile List View - Flattened */}
             <div className="md:hidden space-y-3">
               {filteredCashTransactions.length > 0 ? (
-                filteredCashTransactions.map((tx) => (
+                filteredCashTransactions.map((tx) => {
+                  const linkedSale = getSaleForTransaction(tx);
+                  const saleCOGS = linkedSale ? linkedSale.items.reduce((s, i) => s + (i.costPrice || 0) * i.quantity, 0) : 0;
+                  const saleProfit = linkedSale ? linkedSale.total - saleCOGS : 0;
+                  const isInventoryPurchase = tx.category === "inventory_purchase" || tx.category === "supplier_payment";
+                  return (
                   <div
                     key={tx.id}
                     onClick={() => {
@@ -1097,12 +1145,16 @@ const PinFinancialManager: React.FC = () => {
                       setEditingTransaction(tx);
                       setShowAddTransaction(true);
                     }}
-                    className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 active:bg-slate-700/50 transition-colors"
+                    className={`border rounded-xl p-3 active:bg-slate-700/50 transition-colors ${
+                      isInventoryPurchase ? "bg-amber-500/5 border-amber-500/20" : "bg-slate-800/50 border-slate-700/50"}`}
                   >
                     {/* Header: Date + Amount */}
                     <div className="flex justify-between items-start">
-                      <div className="text-xs text-gray-400">
-                        {new Date(tx.date).toLocaleDateString("vi-VN")}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-gray-400">
+                          {new Date(tx.date).toLocaleDateString("vi-VN")}
+                        </span>
+                        {isInventoryPurchase && <span className="text-[9px] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">Nhập kho</span>}
                       </div>
                       <span
                         className={`text-base font-bold ${isExpenseTransaction(tx) ? "text-red-400" : "text-teal-400"
@@ -1118,6 +1170,15 @@ const PinFinancialManager: React.FC = () => {
                       <div className="text-sm font-medium text-white">{tx.description}</div>
                       {tx.contact && typeof tx.contact === "object" && tx.contact.name && (
                         <div className="text-xs text-gray-400 mt-0.5">👤 {tx.contact.name}</div>
+                      )}
+                      {linkedSale && (
+                        <div className="flex items-center gap-2 mt-1 text-[10px]">
+                          <span className="text-orange-400">Vốn: {formatCurrency(saleCOGS)}</span>
+                          <span className="text-slate-600">→</span>
+                          <span className={`font-semibold ${saleProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                            Lãi: {saleProfit >= 0 ? "+" : ""}{formatCurrency(saleProfit)}
+                          </span>
+                        </div>
                       )}
                     </div>
 
@@ -1179,9 +1240,9 @@ const PinFinancialManager: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               ) : (
-                <div className="text-center py-8 text-gray-500">
                   <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>Chưa có giao dịch nào</p>
                 </div>
