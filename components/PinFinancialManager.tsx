@@ -1243,6 +1243,7 @@ const PinFinancialManager: React.FC = () => {
                   );
                 })
               ) : (
+                <div className="text-center py-8 text-gray-500">
                   <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>Chưa có giao dịch nào</p>
                 </div>
