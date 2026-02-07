@@ -68,6 +68,7 @@ interface DBPinProduct {
   cost_price: number;
   retail_price: number;
   wholesale_price: number;
+  category_id?: string | null;
 }
 
 interface DBPinBOM {
@@ -163,6 +164,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       cost_price: Number(product.costPrice ?? 0),
       retail_price: product.retailPrice ?? product.sellingPrice ?? 0,
       wholesale_price: product.wholesalePrice ?? 0,
+      category_id: product.category_id || null,
     };
     console.log(`   - Upserting to DB:`, payload);
     const { error } = await supabase.from("pin_products").upsert(payload);
@@ -717,6 +719,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
           sellingPrice:
             existingProduct?.sellingPrice ||
             Math.round((isFinite(newCost) ? newCost : oldCost) * 1.2),
+          category_id: existingProduct?.category_id || undefined,
         } as PinProduct;
 
         if (IS_OFFLINE_MODE) {

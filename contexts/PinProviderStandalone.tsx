@@ -407,6 +407,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             sku: row.sku as string,
             unit: row.unit as string,
             category: (row.category || undefined) as PinMaterial["category"],
+            category_id: (row.category_id || row.categoryid || undefined) as string | undefined,
             purchasePrice: Number(row.purchaseprice ?? row.purchase_price ?? 0),
             retailPrice:
               Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0) || undefined,
@@ -439,6 +440,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               )
             ),
             sellingPrice: Number(row.sellingprice ?? 0) || undefined,
+            category_id: (row.category_id || row.categoryid || undefined) as string | undefined,
             created_at: (row.created_at || row.createdat || undefined) as string | undefined,
           });
           setPinProducts(((prodsRes.data as DBRow[]) || []).map(mapDbProdToUi));

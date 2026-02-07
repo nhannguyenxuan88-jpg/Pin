@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { usePinContext } from "../contexts/PinContext";
-import type { PinProduct, PinBOM, ProductionOrder } from "../types";
+import type { PinProduct, PinBOM, ProductionOrder, Category } from "../types";
 import { XMarkIcon } from "./common/Icons";
 import { Icon, type IconName } from "./common/Icon";
 import Pagination from "./common/Pagination";
 import ProductDeletionModal from "./ProductDeletionModal";
 import { useProductDeletion, DeletionOptions } from "../lib/hooks/useProductDeletion";
+import { CategoryService } from "../lib/services/CategoryService";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
@@ -73,9 +74,11 @@ const EditPriceModal: React.FC<{
   onClose: () => void;
   onSave: (product: PinProduct) => void;
   onToast?: (message: string, type: "success" | "error" | "warn" | "info") => void;
-}> = ({ product, isOpen, onClose, onSave, onToast }) => {
+  categories?: Category[];
+}> = ({ product, isOpen, onClose, onSave, onToast, categories = [] }) => {
   const [retailPrice, setRetailPrice] = useState(0);
   const [wholesalePrice, setWholesalePrice] = useState(0);
+  const [categoryId, setCategoryId] = useState("");
   const { currentUser } = usePinContext();
 
   useEffect(() => {
@@ -85,6 +88,7 @@ const EditPriceModal: React.FC<{
         product.wholesalePrice ||
           Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
       );
+      setCategoryId(product.category_id || "");
     }
   }, [product, isOpen]);
 
@@ -101,6 +105,7 @@ const EditPriceModal: React.FC<{
         retailPrice: retail,
         wholesalePrice: wholesale,
         sellingPrice: retail, // Keep for backward compatibility
+        category_id: categoryId || undefined,
       });
       onClose();
     }
@@ -125,6 +130,23 @@ const EditPriceModal: React.FC<{
         </div>
         <div className="p-6 space-y-4">
           <p className="font-semibold text-slate-800 dark:text-slate-100">{product.name}</p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Danh mục
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600"
+            >
+              <option value="">-- Chọn danh mục --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.type === "material" ? "📦" : "🏷️"} {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Giá vốn
@@ -203,6 +225,28 @@ const ITEMS_PER_PAGE = 10;
 
 const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateProduct }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [filterCategoryId, setFilterCategoryId] = useState("");
+
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await CategoryService.getAllCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Helper to get category name by id
+  const getCategoryName = (catId?: string) => {
+    if (!catId) return null;
+    const cat = categories.find((c) => c.id === catId);
+    return cat ? cat.name : null;
+  };
 
   // Persist modal state
   useEffect(() => {
@@ -261,10 +305,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
     () =>
       products.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           p.sku.toLowerCase().includes(searchTerm.toLowerCase())) &&
+          (filterCategoryId === "" ||
+           (filterCategoryId === "__none__" ? !p.category_id : p.category_id === filterCategoryId))
       ),
-    [products, searchTerm]
+    [products, searchTerm, filterCategoryId]
   );
 
   const paginatedProducts = useMemo(() => {
@@ -317,6 +363,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
         onSave={updateProduct}
         product={editingProduct}
         onToast={showToast}
+        categories={categories}
       />
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 animate-fadeIn">
         <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -353,6 +400,19 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
           />
+          <select
+            value={filterCategoryId}
+            onChange={(e) => { setFilterCategoryId(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+          >
+            <option value="">Tất cả danh mục</option>
+            <option value="__none__">Chưa phân loại</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.type === "material" ? "📦" : "🏷️"} {cat.name}
+              </option>
+            ))}
+          </select>
           {filteredProducts.length !== products.length && (
             <div className="px-3 md:px-5 py-2 md:py-3 bg-slate-100 dark:bg-slate-800 rounded-lg md:rounded-xl border border-slate-200 dark:border-slate-700 text-center md:text-left">
               <span className="text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-400">
@@ -393,6 +453,11 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <span className="text-[10px] font-mono text-slate-500 bg-slate-200 dark:bg-slate-600 px-1.5 py-0.5 rounded">
                       {product.sku}
                     </span>
+                    {getCategoryName(product.category_id) && (
+                      <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded ml-1">
+                        {getCategoryName(product.category_id)}
+                      </span>
+                    )}
                   </div>
                   <div
                     className={`text-xs font-bold px-2 py-1 rounded ${product.stock <= 10 ? "bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400" : product.stock <= 50 ? "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-400" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400"}`}
@@ -486,6 +551,12 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                   SKU
                 </div>
               </th>
+              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Icon name="tag" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  Danh mục
+                </div>
+              </th>
               <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-right">
                 <div className="flex items-center gap-2 justify-end">
                   <Icon name="chart-bar" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
@@ -541,6 +612,15 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-sm font-mono text-slate-700 dark:text-slate-300">
                       {product.sku}
                     </span>
+                  </td>
+                  <td className="p-3">
+                    {getCategoryName(product.category_id) ? (
+                      <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-sm font-medium">
+                        {getCategoryName(product.category_id)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Chưa phân loại</span>
+                    )}
                   </td>
                   <td className="p-3 text-right">
                     <div

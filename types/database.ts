@@ -14,6 +14,7 @@ export interface DBPinProduct {
   cost_price: number;
   retail_price: number | null;
   wholesale_price: number | null;
+  category_id?: string | null;
   created_at?: string;
 }
 
