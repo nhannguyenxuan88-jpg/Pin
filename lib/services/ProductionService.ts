@@ -413,6 +413,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
           stock: newStock,
           costPrice: isFinite(newCost) ? newCost : oldCost,
           sellingPrice: existingProd?.sellingPrice || 0,
+          category_id: existingProd?.category_id || 'cat-product-default',
         } as PinProduct;
 
         ctx.setPinProducts((prev: PinProduct[]) => {
@@ -582,6 +583,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         sellingPrice: existingProd?.sellingPrice || 0,
         retailPrice: existingProd?.retailPrice || existingProd?.sellingPrice || 0,
         wholesalePrice: existingProd?.wholesalePrice || 0,
+        category_id: existingProd?.category_id || 'cat-product-default',
       } as PinProduct;
       const ok = await persistProduct(product);
 
@@ -719,7 +721,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
           sellingPrice:
             existingProduct?.sellingPrice ||
             Math.round((isFinite(newCost) ? newCost : oldCost) * 1.2),
-          category_id: existingProduct?.category_id || undefined,
+          category_id: existingProduct?.category_id || 'cat-product-default',
         } as PinProduct;
 
         if (IS_OFFLINE_MODE) {
