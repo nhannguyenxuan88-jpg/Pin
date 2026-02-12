@@ -98,6 +98,9 @@ export default function Receivables() {
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [showSupplierPayModal, setShowSupplierPayModal] = useState(false);
   const [preSelectedDebtId, setPreSelectedDebtId] = useState<string | undefined>(undefined);
+  const [preSelectedCustomerKey, setPreSelectedCustomerKey] = useState<string | undefined>(undefined);
+  const [collectModalMode, setCollectModalMode] = useState<"per-order" | "consolidated">("per-order");
+  const [viewMode, setViewMode] = useState<"per-order" | "by-customer">("per-order");
   const [installmentPlans, setInstallmentPlans] = useState<InstallmentPlan[]>([]);
   const [showInstallmentPayModal, setShowInstallmentPayModal] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState<InstallmentRow | null>(null);
@@ -266,6 +269,52 @@ export default function Receivables() {
     return arr.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [workOrders, sales, cashTransactions, currentBranchId]);
 
+  // Gom nợ theo khách hàng
+  interface CustomerGroupRow {
+    id: string; // customer key
+    customerName: string;
+    customerPhone?: string;
+    totalDebt: number;
+    totalAmount: number;
+    totalPaid: number;
+    orderCount: number;
+    latestDate: string;
+    orders: Row[];
+  }
+
+  const customerGroupedRows = useMemo(() => {
+    const groupMap = new Map<string, CustomerGroupRow>();
+
+    for (const row of customerRows) {
+      const key = `${row.customerPhone || ""}-${row.customerName || ""}`.toLowerCase();
+      const existing = groupMap.get(key);
+      if (existing) {
+        existing.totalDebt += row.debt;
+        existing.totalAmount += row.amount;
+        existing.totalPaid += row.paid;
+        existing.orderCount += 1;
+        existing.orders.push(row);
+        const rowDate = new Date(row.date).getTime();
+        const existingDate = new Date(existing.latestDate).getTime();
+        if (rowDate > existingDate) existing.latestDate = row.date;
+      } else {
+        groupMap.set(key, {
+          id: key,
+          customerName: row.customerName,
+          customerPhone: row.customerPhone,
+          totalDebt: row.debt,
+          totalAmount: row.amount,
+          totalPaid: row.paid,
+          orderCount: 1,
+          latestDate: row.date,
+          orders: [row],
+        });
+      }
+    }
+
+    return Array.from(groupMap.values()).sort((a, b) => b.totalDebt - a.totalDebt);
+  }, [customerRows]);
+
   // Calculate supplier payables (from goods receipts)
   const supplierRows = useMemo(() => {
     const totalBySup = new Map<string, { total: number; latest: string; count: number }>();
@@ -397,6 +446,16 @@ export default function Receivables() {
         r.title.toLowerCase().includes(q)
     );
   }, [customerRows, query]);
+
+  const customerGroupedFiltered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return customerGroupedRows;
+    return customerGroupedRows.filter(
+      (r) =>
+        r.customerName.toLowerCase().includes(q) ||
+        r.customerPhone?.toLowerCase().includes(q)
+    );
+  }, [customerGroupedRows, query]);
 
   const supplierFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1152,6 +1211,34 @@ export default function Receivables() {
 
           {/* Total and Action */}
           <div className="flex items-center gap-2">
+            {/* View mode toggle for customers */}
+            {activeTab === "customers" && (
+              <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-700 rounded-md">
+                <button
+                  onClick={() => setViewMode("per-order")}
+                  title="Xem theo đơn"
+                  className={`px-1.5 py-1 text-xs rounded transition-all ${
+                    viewMode === "per-order"
+                      ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  📋
+                </button>
+                <button
+                  onClick={() => setViewMode("by-customer")}
+                  title="Gom theo khách hàng"
+                  className={`px-1.5 py-1 text-xs rounded transition-all ${
+                    viewMode === "by-customer"
+                      ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  👥
+                </button>
+              </div>
+            )}
+
             <span className="text-xs text-slate-600 dark:text-slate-400">
               Tổng: <span className="font-semibold text-rose-600">{fmt(totalDebt)} đ</span>
             </span>
@@ -1160,8 +1247,16 @@ export default function Receivables() {
               size="sm"
               onClick={() => {
                 if (activeTab === "customers") {
-                  const firstSelectedId = selectedIds.length === 1 ? selectedIds[0] : undefined;
-                  setPreSelectedDebtId(firstSelectedId);
+                  if (viewMode === "by-customer") {
+                    setCollectModalMode("consolidated");
+                    setPreSelectedDebtId(undefined);
+                    setPreSelectedCustomerKey(undefined);
+                  } else {
+                    setCollectModalMode("per-order");
+                    const firstSelectedId = selectedIds.length === 1 ? selectedIds[0] : undefined;
+                    setPreSelectedDebtId(firstSelectedId);
+                    setPreSelectedCustomerKey(undefined);
+                  }
                   setShowCollectModal(true);
                 } else {
                   setShowSupplierPayModal(true);
@@ -1208,24 +1303,174 @@ export default function Receivables() {
         {/* DataTable */}
         <div className="mt-2">
           <div className="hidden md:block">
-            <DataTable
-              data={activeList}
-              columns={
-                activeTab === "customers"
-                  ? (customerColumns as any)
-                  : activeTab === "suppliers"
-                    ? (supplierColumns as any)
-                    : (installmentColumns as any)
-              }
-              keyExtractor={(row: any) => row.id}
-              emptyMessage={
-                activeTab === "installments" ? "Không có khoản trả góp" : "Không có công nợ"
-              }
-            />
+            {/* Grouped by customer view (desktop) */}
+            {activeTab === "customers" && viewMode === "by-customer" ? (
+              <div className="space-y-2">
+                {customerGroupedFiltered.length === 0 && (
+                  <div className="text-center py-8 text-slate-500">Không có công nợ</div>
+                )}
+                {customerGroupedFiltered.map((group) => (
+                  <div
+                    key={group.id}
+                    className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setCollectModalMode("consolidated");
+                      setPreSelectedCustomerKey(group.id);
+                      setPreSelectedDebtId(undefined);
+                      setShowCollectModal(true);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          {group.customerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800 dark:text-slate-100">
+                            {group.customerName}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            {group.customerPhone && (
+                              <span>📞 {group.customerPhone}</span>
+                            )}
+                            <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">
+                              {group.orderCount} đơn
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-red-600 dark:text-red-400">
+                          {fmt(group.totalDebt)} đ
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          / {fmt(group.totalAmount)} đ tổng
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mini order list */}
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {group.orders.slice(0, 5).map((order) => (
+                        <span
+                          key={order.id}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                            order.kind === "sale"
+                              ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300"
+                              : "bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300"
+                          }`}
+                        >
+                          {order.kind === "sale" ? "ĐH" : "SC"} {fmt(order.debt)}đ
+                        </span>
+                      ))}
+                      {group.orders.length > 5 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">
+                          +{group.orders.length - 5} đơn
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <DataTable
+                data={activeList}
+                columns={
+                  activeTab === "customers"
+                    ? (customerColumns as any)
+                    : activeTab === "suppliers"
+                      ? (supplierColumns as any)
+                      : (installmentColumns as any)
+                }
+                keyExtractor={(row: any) => row.id}
+                emptyMessage={
+                  activeTab === "installments" ? "Không có khoản trả góp" : "Không có công nợ"
+                }
+              />
+            )}
           </div>
 
           {/* Mobile Card View */}
           <div className="md:hidden space-y-3">
+            {/* Grouped by customer view (mobile) */}
+            {activeTab === "customers" && viewMode === "by-customer" ? (
+              <>
+                {customerGroupedFiltered.length === 0 && (
+                  <div className="text-center py-8 text-slate-500">
+                    <Icon name="money" className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Không có công nợ</p>
+                  </div>
+                )}
+                {customerGroupedFiltered.map((group) => (
+                  <div
+                    key={group.id}
+                    className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3 active:bg-slate-50 dark:active:bg-slate-700 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setCollectModalMode("consolidated");
+                      setPreSelectedCustomerKey(group.id);
+                      setPreSelectedDebtId(undefined);
+                      setShowCollectModal(true);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          {group.customerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800 dark:text-slate-100">
+                            {group.customerName}
+                          </div>
+                          {group.customerPhone && (
+                            <div className="text-sm text-slate-500">{group.customerPhone}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                          {fmt(group.totalDebt)} đ
+                        </div>
+                        <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">
+                          {group.orderCount} đơn
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded-lg">
+                      <div className="flex justify-between text-xs text-slate-500 mb-1">
+                        <span>Tổng cộng:</span>
+                        <span>{fmt(group.totalAmount)} đ</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Đã trả:</span>
+                        <span>{fmt(group.totalPaid)} đ</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {group.orders.slice(0, 4).map((order) => (
+                        <span
+                          key={order.id}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                            order.kind === "sale"
+                              ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300"
+                              : "bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300"
+                          }`}
+                        >
+                          {order.kind === "sale" ? "ĐH" : "SC"} {fmt(order.debt)}đ
+                        </span>
+                      ))}
+                      {group.orders.length > 4 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">
+                          +{group.orders.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+            <>
             {activeList.length === 0 && (
               <div className="text-center py-8 text-slate-500">
                 <Icon name={activeTab === "installments" ? "calendar" : "money"} className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -1239,7 +1484,9 @@ export default function Receivables() {
                 {activeTab === "customers" && (
                   <div
                     onClick={() => {
+                      setCollectModalMode("per-order");
                       setPreSelectedDebtId(row.id);
+                      setPreSelectedCustomerKey(undefined);
                       setShowCollectModal(true);
                     }}
                     className="active:bg-slate-50 dark:active:bg-slate-700 transition-colors cursor-pointer"
@@ -1416,6 +1663,8 @@ export default function Receivables() {
                 )}
               </div>
             ))}
+            </>
+            )}
           </div>
         </div>
       </div>
@@ -1426,8 +1675,11 @@ export default function Receivables() {
         onClose={() => {
           setShowCollectModal(false);
           setPreSelectedDebtId(undefined);
+          setPreSelectedCustomerKey(undefined);
         }}
         preSelectedDebtId={preSelectedDebtId}
+        preSelectedCustomerKey={preSelectedCustomerKey}
+        initialMode={collectModalMode}
       />
       <SupplierPaymentModal
         open={showSupplierPayModal}
