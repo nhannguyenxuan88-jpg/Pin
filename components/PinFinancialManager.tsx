@@ -67,6 +67,10 @@ const PinFinancialManager: React.FC = () => {
   const [transactionFilter, setTransactionFilter] = useState<TransactionFilterType>("all");
   const [paymentSourceFilter, setPaymentSourceFilter] = useState<PaymentSource>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("30days");
+  const [dbSharedBalance, setDbSharedBalance] = useState<{ cash: number; bank: number }>({
+    cash: 0,
+    bank: 0,
+  });
 
   // Modal states
   const [showAddAsset, setShowAddAsset] = useState(false);
@@ -105,6 +109,35 @@ const PinFinancialManager: React.FC = () => {
   useEffect(() => {
     localStorage.setItem("pinFinanceShowAllApps", showAllApps ? "1" : "0");
   }, [showAllApps]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSharedBalance = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("pin_shared_fund_balance")
+          .select("cash_balance, bank_balance")
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data && isMounted) {
+          setDbSharedBalance({
+            cash: Number((data as { cash_balance?: number | string | null }).cash_balance || 0),
+            bank: Number((data as { bank_balance?: number | string | null }).bank_balance || 0),
+          });
+        }
+      } catch {
+        // fallback 0 nếu DB chưa có view
+      }
+    };
+
+    loadSharedBalance();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cashTransactions]);
 
   // Filter cash transactions
   const filteredCashTransactions = useMemo((): CashTransaction[] => {
@@ -191,22 +224,6 @@ const PinFinancialManager: React.FC = () => {
     // Lọc giao dịch cho hiển thị (có áp dụng bộ lọc thời gian)
     const displayTransactions = filteredCashTransactions;
 
-    // Lọc giao dịch cho tính số dư (KHÔNG áp dụng bộ lọc thời gian - tính toàn bộ)
-    let allTransactions = cashTransactions || [];
-
-    // Chỉ lọc theo app nếu cần
-    if (!showAllApps) {
-      allTransactions = allTransactions.filter((tx) => {
-        if (tx.workOrderId && String(tx.workOrderId).startsWith("LTN-SC")) {
-          return false;
-        }
-        const notes: string = tx.notes || "";
-        const hasAppTag = /#app:(pin|pincorp)/i.test(notes);
-        const isPinSale = tx.saleId && String(tx.saleId).startsWith("LTN-BH");
-        return hasAppTag || isPinSale;
-      });
-    }
-
     // Tính thu/chi từ giao dịch hiển thị (có bộ lọc thời gian)
     const totalIncome = displayTransactions
       .filter((tx) => !checkIsExpense(tx))
@@ -225,26 +242,11 @@ const PinFinancialManager: React.FC = () => {
 
     const difference = totalIncome - totalExpense;
 
-    // Tính số dư thực tế từ TOÀN BỘ giao dịch (không phụ thuộc bộ lọc thời gian)
-    const cashBalance = allTransactions
-      .filter((tx) => {
-        const source = tx.paymentSourceId?.toLowerCase() || "cash";
-        return source === "cash" || source === "tien_mat" || source === "tiền mặt";
-      })
-      .reduce((sum, tx) => {
-        const isExpense = checkIsExpense(tx);
-        return sum + (isExpense ? -Math.abs(tx.amount) : Math.abs(tx.amount));
-      }, 0);
+    // Lấy số quỹ dùng chung từ DB (đang khóa 0 cho PIN để đồng bộ Moto)
+    const cashBalance = dbSharedBalance.cash;
+    const bankBalance = dbSharedBalance.bank;
 
-    const bankBalance = allTransactions
-      .filter((tx) => {
-        const source = tx.paymentSourceId?.toLowerCase() || "";
-        return source === "bank" || source === "ngan_hang" || source === "ngân hàng";
-      })
-      .reduce((sum, tx) => {
-        const isExpense = checkIsExpense(tx);
-        return sum + (isExpense ? -Math.abs(tx.amount) : Math.abs(tx.amount));
-      }, 0);
+    const actualBalance = cashBalance + bankBalance;
 
     return {
       totalIncome,
@@ -254,8 +256,9 @@ const PinFinancialManager: React.FC = () => {
       difference,
       cashBalance,
       bankBalance,
+      actualBalance,
     };
-  }, [filteredCashTransactions, cashTransactions, showAllApps]);
+  }, [filteredCashTransactions, dbSharedBalance.cash, dbSharedBalance.bank]);
 
   // Helper: tìm đơn bán hàng tương ứng với giao dịch
   const getSaleForTransaction = (tx: CashTransaction) => {
@@ -870,17 +873,18 @@ const PinFinancialManager: React.FC = () => {
               <p className="text-[9px] text-amber-600 mt-0.5 hidden md:block">Vốn đầu tư, không phải chi phí</p>
             </div>
 
-            {/* Chênh lệch (Difference) */}
+            {/* Số dư thực tế (Independent Actual Balance) */}
             <div className="bg-gradient-to-br from-purple-600/20 to-purple-700/10 border border-purple-500/30 rounded-lg p-2">
               <div className="flex items-center gap-1 text-purple-400 text-[10px] md:text-xs mb-0.5">
                 <DollarSign className="w-3 h-3" />
-                Chênh lệch
+                Số dư thực tế
               </div>
               <p
-                className={`text-xs md:text-sm font-bold truncate ${cashbookSummary.difference >= 0 ? "text-purple-400" : "text-red-400"}`}
+                className={`text-xs md:text-sm font-bold truncate ${cashbookSummary.actualBalance >= 0 ? "text-purple-400" : "text-red-400"}`}
               >
-                {formatCurrency(cashbookSummary.difference)}
+                {formatCurrency(cashbookSummary.actualBalance)}
               </p>
+              <p className="text-[9px] text-purple-300/70 mt-0.5 hidden md:block">Không phụ thuộc bộ lọc</p>
             </div>
 
             {/* Tiền mặt (Cash) */}

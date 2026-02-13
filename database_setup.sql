@@ -190,6 +190,58 @@ CREATE TABLE IF NOT EXISTS store_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- =====================================================
+-- 11. SHARED FUND BASELINE + VIEW
+-- Reset PIN balance to 0 at setup time, then auto change by new transactions
+-- =====================================================
+CREATE TABLE IF NOT EXISTS pin_shared_fund_baseline (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id = TRUE),
+  cash_offset NUMERIC(15,2) NOT NULL DEFAULT 0,
+  bank_offset NUMERIC(15,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO pin_shared_fund_baseline (id, cash_offset, bank_offset)
+VALUES (TRUE, 0, 0)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE OR REPLACE VIEW pin_shared_fund_balance AS
+WITH pin_tx AS (
+  SELECT
+    lower(COALESCE(tx.payment_source_id, 'cash')) AS source,
+    CASE
+      WHEN tx.amount < 0 OR lower(COALESCE(tx.type, '')) = 'expense'
+        OR lower(COALESCE(tx.category, '')) IN (
+          'inventory_purchase','purchase','materials','equipment','utilities',
+          'salary','salaries','expense','other_expense','rent','marketing','transport','supplier_payment'
+        )
+      THEN -ABS(tx.amount)::numeric
+      ELSE ABS(tx.amount)::numeric
+    END AS signed_amount
+  FROM cashtransactions tx
+  WHERE
+    (
+      COALESCE(tx.notes, '') ILIKE '%#app:pin%'
+      OR COALESCE(tx.notes, '') ILIKE '%#app:pincorp%'
+      OR COALESCE(tx.sale_id, '') LIKE 'LTN-BH%'
+    )
+    AND COALESCE(tx.work_order_id, '') NOT LIKE 'LTN-SC%'
+),
+agg AS (
+  SELECT
+    COALESCE(SUM(CASE WHEN source IN ('cash', 'tien_mat', 'tiền mặt') THEN signed_amount ELSE 0 END), 0) AS raw_cash_balance,
+    COALESCE(SUM(CASE WHEN source IN ('bank', 'ngan_hang', 'ngân hàng') THEN signed_amount ELSE 0 END), 0) AS raw_bank_balance
+  FROM pin_tx
+)
+SELECT
+  (agg.raw_cash_balance - COALESCE(base.cash_offset, 0))::numeric(15,2) AS cash_balance,
+  (agg.raw_bank_balance - COALESCE(base.bank_offset, 0))::numeric(15,2) AS bank_balance,
+  ((agg.raw_cash_balance - COALESCE(base.cash_offset, 0)) + (agg.raw_bank_balance - COALESCE(base.bank_offset, 0)))::numeric(15,2) AS actual_balance,
+  NOW()::timestamptz AS updated_at
+FROM agg
+LEFT JOIN pin_shared_fund_baseline base ON base.id = TRUE;
+
 -- Insert default store settings
 INSERT INTO store_settings (name, address, phone)
 VALUES ('PinCorp', 'Địa chỉ công ty', '0123456789')
@@ -243,6 +295,10 @@ CREATE POLICY "Allow all for pin_repair_orders" ON pin_repair_orders FOR ALL TO 
 
 -- Store Settings
 CREATE POLICY "Allow all for store_settings" ON store_settings FOR ALL TO authenticated USING (true);
+
+-- Shared fund balance view
+GRANT SELECT ON pin_shared_fund_balance TO authenticated;
+GRANT SELECT ON pin_shared_fund_baseline TO authenticated;
 
 -- =====================================================
 -- CREATE INDEXES FOR PERFORMANCE
