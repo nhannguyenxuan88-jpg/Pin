@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { usePinContext } from "../contexts/PinContext";
 import type { CashTransaction, InstallmentPlan, InstallmentPayment } from "../types";
 import DebtCollectionModal from "./DebtCollectionModal";
@@ -9,6 +9,7 @@ import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Icon, type IconName } from "./common/Icon";
 import { InstallmentService } from "../lib/services/InstallmentService";
+import html2canvas from "html2canvas";
 
 interface Row {
   id: string;
@@ -68,6 +69,66 @@ export default function Receivables() {
     addToast?.({ id: crypto.randomUUID(), message: `${title}: ${message}`, type });
   };
 
+  // Helper functions for installment receipt sharing
+  const handleShareInstallmentReceipt = async () => {
+    if (!installmentReceiptRef.current) return;
+
+    try {
+      setIsExportingInstallment(true);
+      const canvas = await html2canvas(installmentReceiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const fileName = `Phieu_tra_gop_${installmentReceiptData?.installmentInfo?.customerName?.replace(/\s+/g, "_") || "khach_hang"}_${new Date().getTime()}.png`;
+          const file = new File([blob], fileName, { type: "image/png" });
+
+          // Check if Web Share API is supported with files
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: "Phiếu thu trả góp",
+                text: `Phiếu thu: ${installmentReceiptData?.installmentInfo?.customerName}`,
+              });
+            } catch (err) {
+              if ((err as Error).name !== "AbortError") {
+                console.error("Error sharing:", err);
+                // Fallback to download
+                downloadBlobInstallment(blob, fileName);
+              }
+            }
+          } else {
+            // Fallback: download the image with instructions
+            downloadBlobInstallment(blob, fileName);
+            showToast(
+              "Đã tải xuống",
+              "Hình ảnh đã được tải xuống. Bạn có thể gửi file qua Zalo, Messenger hoặc Email.",
+              "success"
+            );
+          }
+        }
+        setIsExportingInstallment(false);
+      }, "image/png");
+    } catch (error) {
+      console.error("Error sharing:", error);
+      showToast("Lỗi", "Lỗi khi chia sẻ. Vui lòng thử lại.", "error");
+      setIsExportingInstallment(false);
+    }
+  };
+
+  const downloadBlobInstallment = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -116,6 +177,8 @@ export default function Receivables() {
     periodNumber: number;
     remainingBalance: number;
   } | null>(null);
+  const [isExportingInstallment, setIsExportingInstallment] = useState(false);
+  const installmentReceiptRef = useRef<HTMLDivElement>(null);
 
   // Load installment plans
   useEffect(() => {
@@ -1924,8 +1987,9 @@ export default function Receivables() {
       {showInstallmentReceipt && installmentReceiptData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-2xl">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center print:border-black">
+            <div ref={installmentReceiptRef}>
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center print:border-black">
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 print:text-black">
                 🧾 Phiếu thu tiền trả góp
               </h3>
@@ -2022,8 +2086,9 @@ export default function Receivables() {
                 Cảm ơn quý khách!
               </div>
             </div>
+            </div>
 
-            {/* Footer with print button */}
+            {/* Footer with print and share buttons */}
             <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-2 justify-end print:hidden">
               <button
                 onClick={() => {
@@ -2033,6 +2098,13 @@ export default function Receivables() {
                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
               >
                 Đóng
+              </button>
+              <button
+                onClick={handleShareInstallmentReceipt}
+                disabled={isExportingInstallment}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isExportingInstallment ? "⏳ Đang xử lý..." : "📤 Chia sẻ"}
               </button>
               <button
                 onClick={() => window.print()}

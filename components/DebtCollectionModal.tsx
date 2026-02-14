@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { usePinContext } from "../contexts/PinContext";
 import type { CashTransaction, PinSale, PinRepairOrder } from "../types";
 import { XMarkIcon } from "./common/Icons";
+import html2canvas from "html2canvas";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
@@ -69,6 +70,8 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId, 
     allocations?: Array<{ id: string; type: string; code: string; amount: number }>;
     isConsolidated?: boolean;
   } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Tự động chọn công nợ/khách hàng khi mở modal
   useEffect(() => {
@@ -445,6 +448,65 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId, 
     window.print();
   };
 
+  const handleShareReceipt = async () => {
+    if (!receiptRef.current) return;
+
+    try {
+      setIsExporting(true);
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const fileName = `Phieu_thu_${receiptData?.debtInfo?.customerName?.replace(/\s+/g, "_") || "khach_hang"}_${new Date().getTime()}.png`;
+          const file = new File([blob], fileName, { type: "image/png" });
+
+          // Check if Web Share API is supported with files
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: receiptData?.isConsolidated ? "Phiếu thu gom nợ" : "Phiếu thu tiền",
+                text: `Phiếu thu: ${receiptData?.debtInfo?.customerName}`,
+              });
+            } catch (err) {
+              if ((err as Error).name !== "AbortError") {
+                console.error("Error sharing:", err);
+                // Fallback to download
+                downloadBlob(blob, fileName);
+              }
+            }
+          } else {
+            // Fallback: download the image with instructions
+            downloadBlob(blob, fileName);
+            showToast(
+              "Đã tải xuống",
+              "Hình ảnh đã được tải xuống. Bạn có thể gửi file qua Zalo, Messenger hoặc Email.",
+              "success"
+            );
+          }
+        }
+        setIsExporting(false);
+      }, "image/png");
+    } catch (error) {
+      console.error("Error sharing:", error);
+      showToast("Lỗi", "Lỗi khi chia sẻ. Vui lòng thử lại.", "error");
+      setIsExporting(false);
+    }
+  };
+
+  const downloadBlob = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleCloseReceipt = () => {
     setShowReceipt(false);
     setReceiptData(null);
@@ -456,21 +518,22 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId, 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
         <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center print:border-black sticky top-0 bg-white dark:bg-slate-800">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 print:text-black">
-              {receiptData.isConsolidated ? "Phiếu thu gom nợ" : "Phiếu thu tiền"}
-            </h3>
-            <button
-              onClick={handleCloseReceipt}
-              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors print:hidden"
-            >
-              <XMarkIcon className="w-5 h-5 text-slate-500" />
-            </button>
-          </div>
+          <div ref={receiptRef}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center print:border-black sticky top-0 bg-white dark:bg-slate-800">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 print:text-black">
+                {receiptData.isConsolidated ? "Phiếu thu gom nợ" : "Phiếu thu tiền"}
+              </h3>
+              <button
+                onClick={handleCloseReceipt}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors print:hidden"
+              >
+                <XMarkIcon className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
 
-          {/* Receipt Content */}
-          <div className="p-6 space-y-4 print:text-black">
+            {/* Receipt Content */}
+            <div className="p-6 space-y-4 print:text-black">
             <div className="text-center print:text-black">
               <h4 className="text-xl font-bold">PIN Corp</h4>
               <p className="text-sm text-slate-600 dark:text-slate-400 print:text-black">
@@ -575,14 +638,22 @@ export default function DebtCollectionModal({ open, onClose, preSelectedDebtId, 
               Cảm ơn quý khách!
             </div>
           </div>
+          </div>
 
-          {/* Footer with print button */}
+          {/* Footer with print and share buttons */}
           <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-2 justify-end print:hidden">
             <button
               onClick={handleCloseReceipt}
               className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
             >
               Đóng
+            </button>
+            <button
+              onClick={handleShareReceipt}
+              disabled={isExporting}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              {isExporting ? "⏳ Đang xử lý..." : "📤 Chia sẻ"}
             </button>
             <button
               onClick={handlePrintReceipt}
