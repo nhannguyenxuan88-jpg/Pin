@@ -121,13 +121,10 @@ export class BusinessLogicService {
         };
       }
 
-      // 2. Process sale
+      // 2. Process sale (handlePinSale already deducts inventory internally)
       await appContext.handlePinSale(sale, newCashTx);
 
-      // 3. Update inventory (this should be handled by handlePinSale, but we verify)
-      await this.updateInventoryAfterSale(sale, appContext);
-
-      // 4. Check and trigger reorder alerts
+      // 3. Check and trigger reorder alerts
       await this.checkReorderPoints(appContext);
 
       return {

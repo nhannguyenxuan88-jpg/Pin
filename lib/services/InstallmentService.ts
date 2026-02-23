@@ -289,10 +289,11 @@ export class InstallmentService {
     // Tính tổng tiền phải trả góp (có lãi) = tổng các kỳ
     const totalInstallmentAmount = plan.payments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Tính tổng đã trả = tổng các kỳ đã paid
-    const totalPaid = updatedPayments
-      .filter((p) => p.status === "paid")
-      .reduce((sum, p) => sum + p.amount, 0);
+    // Tính tổng đã trả = tổng số tiền thực tế đã thanh toán (bao gồm cả partial)
+    const totalPaid = updatedPayments.reduce(
+      (sum, p) => sum + (p.paidAmount || 0),
+      0
+    );
 
     // Số tiền còn lại = tổng phải trả - đã trả
     const remainingAmount = totalInstallmentAmount - totalPaid;

@@ -308,11 +308,28 @@ export function createAnalyticsService(ctx: PinContextType): AnalyticsService {
           );
         }, 0);
 
+        const cost = productSales.reduce((sum, sale) => {
+          const productItems = sale.items.filter(
+            (item) => item.productId === productId
+          );
+          return (
+            sum +
+            productItems.reduce((itemSum, item) => {
+              const cp =
+                item.costPrice !== undefined && item.costPrice > 0
+                  ? item.costPrice
+                  : getProducts().find((p) => p.id === item.productId)
+                      ?.costPrice || 0;
+              return itemSum + cp * item.quantity;
+            }, 0)
+          );
+        }, 0);
+
         return {
           date: format(month, "yyyy-MM"),
           revenue,
-          cost: 0,
-          profit: revenue,
+          cost,
+          profit: revenue - cost,
           orders: productSales.length,
         };
       });

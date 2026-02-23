@@ -159,9 +159,10 @@ export class FinancialAnalyticsService {
         currentLiabilities > 0
           ? (currentAssets - inventoryValue) / currentLiabilities
           : 0,
+      // cashRatio = tiền mặt thực tế / nợ ngắn hạn
       cashRatio:
         currentLiabilities > 0
-          ? capitalStructure.equity.retainedEarnings / currentLiabilities
+          ? capitalStructure.workingCapital / currentLiabilities
           : 0,
       workingCapitalRatio: capitalStructure.workingCapital / totalAssets,
 

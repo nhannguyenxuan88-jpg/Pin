@@ -80,7 +80,8 @@ const FinancialDashboard: React.FC = () => {
         date: nowIso,
         equity: {
           ownersEquity: Math.max(0, totalAssetValue + totalCash),
-          retainedEarnings: Math.max(0, totalRevenue),
+          // retainedEarnings ≈ dòng tiền ròng tích lũy (cash balance), không phải tổng doanh thu
+          retainedEarnings: Math.max(0, totalCash),
           additionalPaidInCapital: 0,
           treasuryStock: 0,
         },

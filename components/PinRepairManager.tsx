@@ -95,14 +95,16 @@ const PinRepairManagerNew: React.FC = () => {
     ).length;
     const totalRevenue = orders.reduce((sum: number, o: PinRepairOrder) => sum + (o.total || 0), 0);
 
-    // Calculate profit (assuming 30% margin on materials + full labor cost)
+    // Calculate estimated profit:
+    //   - Vật tư: ước tính biên lợi nhuận 30% trên giá bán cho khách
+    //   - Tiền công: tính toàn bộ là lợi nhuận
     const totalProfit = orders.reduce((sum: number, o: PinRepairOrder) => {
-      const materialsCost = (o.materialsUsed || []).reduce(
+      const materialProfit = (o.materialsUsed || []).reduce(
         (s, m) => s + m.quantity * m.price * 0.3,
         0
       );
       const laborProfit = o.laborCost || 0;
-      return sum + materialsCost + laborProfit;
+      return sum + materialProfit + laborProfit;
     }, 0);
 
     return {

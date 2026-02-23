@@ -301,7 +301,8 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
 
     // Calculate totals for each row
     dateMap.forEach((row) => {
-      row.totalRevenue = row.salesRevenue + row.repairLaborCost;
+      // totalRevenue = bán hàng + (vật tư sửa chữa tính cho KH) + tiền công sửa chữa
+      row.totalRevenue = row.salesRevenue + row.repairMaterialCost + row.repairLaborCost;
       row.netProfit = (row.salesProfit + row.otherIncome) - row.otherExpense;
     });
 
