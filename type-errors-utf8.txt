@@ -1,0 +1,15 @@
+﻿
+> pincorp-app@1.0.0 type-check
+> tsc --noEmit
+
+components/PinSalesManager.tsx(32,10): error TS2440: Import declaration conflicts with local declaration of 'FloatingCartButton'.
+components/PinSalesManager.tsx(2415,20): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2421,21): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2422,20): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2428,21): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2432,18): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2434,19): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2435,18): error TS2304: Cannot find name 'Button'.
+components/PinSalesManager.tsx(2437,19): error TS2304: Cannot find name 'Button'.
+components/ui/Input.tsx(48,29): error TS2345: Argument of type 'false | "" | 0 | 0n | "pl-10" | null | undefined' is not assignable to parameter of type 'string | false | null | undefined'.
+  Type '0' is not assignable to type 'string | false | null | undefined'.

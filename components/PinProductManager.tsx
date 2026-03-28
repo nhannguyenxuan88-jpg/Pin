@@ -26,7 +26,7 @@ const variantStyles: Record<ActionButtonVariant, string> = {
   danger: "text-rose-400",
   warning: "text-amber-400",
   primary: "text-cyan-400",
-  muted: "text-slate-400 dark:text-slate-300",
+  muted: "text-pin-gray-400 dark:text-pin-gray-300",
 };
 
 const ActionButton: React.FC<ActionButtonProps> = ({
@@ -39,7 +39,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   const tooltipClasses = disabled
     ? "hidden"
-    : "pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1 opacity-0 group-hover:opacity-100 group-hover:-translate-y-0 transition-all duration-150 rounded-md bg-slate-900/90 text-white text-[11px] font-medium px-2 py-1 whitespace-nowrap shadow-lg z-50";
+    : "pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1 opacity-0 group-hover:opacity-100 group-hover:-translate-y-0 transition-all duration-150 rounded-md bg-pin-gray-900/90 text-white text-[11px] font-medium px-2 py-1 whitespace-nowrap shadow-lg z-50";
 
   return (
     <div className={`relative group ${className ?? ""}`}>
@@ -47,19 +47,17 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         type="button"
         aria-label={label}
         disabled={disabled}
-        className={`h-10 w-10 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 focus:outline-none ${
-          disabled
-            ? "opacity-30 cursor-not-allowed bg-slate-100 ring-slate-200 dark:bg-slate-800/40 dark:ring-slate-600"
-            : "bg-slate-50 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500 hover:bg-slate-100 dark:hover:bg-slate-600 hover:-translate-y-0.5"
-        }`}
+        className={`h-10 w-10 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 focus:outline-none ${disabled
+            ? "opacity-30 cursor-not-allowed bg-pin-gray-100 ring-pin-gray-200 dark:bg-pin-gray-800/40 dark:ring-pin-gray-600"
+            : "bg-pin-gray-50 ring-pin-gray-200 dark:bg-pin-gray-700 dark:ring-pin-gray-500 hover:bg-pin-gray-100 dark:hover:bg-pin-gray-600 hover:-translate-y-0.5"
+          }`}
         {...props}
       >
         <Icon
           name={icon}
           weight="bold"
-          className={`w-6 h-6 transition-opacity duration-200 ${
-            disabled ? "opacity-75" : "opacity-100"
-          } ${variantStyles[variant]}`}
+          className={`w-6 h-6 transition-opacity duration-200 ${disabled ? "opacity-75" : "opacity-100"
+            } ${variantStyles[variant]}`}
         />
       </button>
       <div className={tooltipClasses}>{label}</div>
@@ -86,7 +84,7 @@ const EditPriceModal: React.FC<{
       setRetailPrice(product.retailPrice || product.sellingPrice || 0);
       setWholesalePrice(
         product.wholesalePrice ||
-          Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
+        Math.round((product.retailPrice || product.sellingPrice || 0) * 0.9)
       );
       setCategoryId(product.category_id || "");
     }
@@ -121,23 +119,23 @@ const EditPriceModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg w-full max-w-md">
-        <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Cập nhật Giá bán</h3>
+      <div className="bg-white dark:bg-pin-gray-800 rounded-lg shadow-lg w-full max-w-md">
+        <div className="p-4 border-b dark:border-pin-gray-700 flex justify-between items-center">
+          <h3 className="text-lg font-bold text-pin-gray-800 dark:text-pin-gray-100">Cập nhật Giá bán</h3>
           <button onClick={onClose}>
-            <XMarkIcon className="w-6 h-6 text-slate-500 dark:text-slate-400" />
+            <XMarkIcon className="w-6 h-6 text-pin-gray-500 dark:text-pin-gray-400" />
           </button>
         </div>
         <div className="p-6 space-y-4">
-          <p className="font-semibold text-slate-800 dark:text-slate-100">{product.name}</p>
+          <p className="font-semibold text-pin-gray-800 dark:text-pin-gray-100">{product.name}</p>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="block text-sm font-medium text-pin-gray-700 dark:text-pin-gray-300">
               Danh mục
             </label>
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600"
+              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-white border-pin-gray-300 dark:border-pin-gray-600"
             >
               <option value="">-- Chọn danh mục --</option>
               {categories.map((cat) => (
@@ -148,18 +146,18 @@ const EditPriceModal: React.FC<{
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="block text-sm font-medium text-pin-gray-700 dark:text-pin-gray-300">
               Giá vốn
             </label>
             <input
               type="text"
               value={formatCurrency(product.costPrice)}
               disabled
-              className="mt-1 w-full p-2 border rounded-md bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600"
+              className="mt-1 w-full p-2 border rounded-md bg-pin-gray-100 dark:bg-pin-gray-700 border-pin-gray-300 dark:border-pin-gray-600"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <label className="block text-sm font-medium text-pin-gray-700 dark:text-pin-gray-300 flex items-center gap-2">
               <Icon name="money" className="w-4 h-4 text-green-600 dark:text-green-400" />
               Giá bán lẻ (*)
             </label>
@@ -167,16 +165,16 @@ const EditPriceModal: React.FC<{
               type="number"
               value={retailPrice}
               onChange={(e) => setRetailPrice(Number(e.target.value))}
-              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600"
+              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-white border-pin-gray-300 dark:border-pin-gray-600"
               autoFocus
             />
-            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            <div className="text-xs text-pin-gray-600 dark:text-pin-gray-400 mt-1">
               Lợi nhuận: {formatCurrency(profitRetail)} ({profitMarginRetail >= 0 ? "+" : ""}
               {profitMarginRetail.toFixed(1)}%)
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <label className="block text-sm font-medium text-pin-gray-700 dark:text-pin-gray-300 flex items-center gap-2">
               <Icon name="storefront" className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               Giá bán sỉ
             </label>
@@ -184,18 +182,18 @@ const EditPriceModal: React.FC<{
               type="number"
               value={wholesalePrice}
               onChange={(e) => setWholesalePrice(Number(e.target.value))}
-              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600"
+              className="mt-1 w-full p-2 border rounded-md bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-white border-pin-gray-300 dark:border-pin-gray-600"
             />
-            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            <div className="text-xs text-pin-gray-600 dark:text-pin-gray-400 mt-1">
               Lợi nhuận: {formatCurrency(profitWholesale)} ({profitMarginWholesale >= 0 ? "+" : ""}
               {profitMarginWholesale.toFixed(1)}%)
             </div>
           </div>
         </div>
-        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 border-t dark:border-slate-700 flex justify-end gap-3">
+        <div className="p-4 bg-pin-gray-50 dark:bg-pin-gray-700/50 border-t dark:border-pin-gray-700 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200 font-semibold py-2 px-4 rounded-lg"
+            className="bg-pin-gray-200 text-pin-gray-800 dark:bg-pin-gray-600 dark:text-pin-gray-200 font-semibold py-2 px-4 rounded-lg"
           >
             Hủy
           </button>
@@ -203,9 +201,8 @@ const EditPriceModal: React.FC<{
             onClick={handleSave}
             disabled={!currentUser}
             title={!currentUser ? "Bạn phải đăng nhập để lưu thay đổi" : undefined}
-            className={`font-semibold py-2 px-4 rounded-lg ${
-              currentUser ? "bg-sky-600 text-white" : "bg-sky-300 text-white/70 cursor-not-allowed"
-            }`}
+            className={`font-semibold py-2 px-4 rounded-lg ${currentUser ? "bg-pin-blue-600 text-white" : "bg-pin-blue-300 text-white/70 cursor-not-allowed"
+              }`}
           >
             Lưu
           </button>
@@ -306,9 +303,9 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
       products.filter(
         (p) =>
           (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           p.sku.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            p.sku.toLowerCase().includes(searchTerm.toLowerCase())) &&
           (filterCategoryId === "" ||
-           (filterCategoryId === "__none__" ? !p.category_id : p.category_id === filterCategoryId))
+            (filterCategoryId === "__none__" ? !p.category_id : p.category_id === filterCategoryId))
       ),
     [products, searchTerm, filterCategoryId]
   );
@@ -366,24 +363,24 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
         categories={categories}
       />
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 animate-fadeIn">
-        <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Icon name="cube" className="w-6 h-6 text-slate-700 dark:text-slate-300" />
+        <h1 className="text-xl md:text-2xl font-bold text-pin-gray-900 dark:text-white flex items-center gap-2">
+          <Icon name="cube" className="w-6 h-6 text-pin-gray-700 dark:text-pin-gray-300" />
           Quản lý Thành phẩm
         </h1>
         <div className="flex items-center gap-2 overflow-x-auto">
           <button
             onClick={syncProductsFromCompletedOrders}
-            className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold transition-all duration-200 flex items-center gap-1 text-xs whitespace-nowrap"
+            className="px-3 py-2 bg-pin-gray-900 hover:bg-pin-gray-800 text-white rounded-lg font-semibold transition-all duration-200 flex items-center gap-1 text-xs whitespace-nowrap"
           >
             <Icon name="arrows-clockwise" className="w-4 h-4 text-white" />
             Sync từ Đơn hoàn thành
           </button>
-          <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 whitespace-nowrap">
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Tổng: </span>
-            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+          <div className="px-3 py-2 bg-pin-gray-100 dark:bg-pin-gray-800 rounded-lg border border-pin-gray-200 dark:border-pin-gray-700 whitespace-nowrap">
+            <span className="text-xs font-semibold text-pin-gray-600 dark:text-pin-gray-400">Tổng: </span>
+            <span className="text-sm font-bold text-pin-gray-800 dark:text-pin-gray-200">
               {products.length}
             </span>
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-semibold text-pin-gray-600 dark:text-pin-gray-400">
               {" "}
               sản phẩm
             </span>
@@ -391,19 +388,19 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 animate-fadeIn">
+      <div className="bg-white dark:bg-pin-gray-800 p-3 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 animate-fadeIn">
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <input
             type="text"
             placeholder="Tìm theo tên hoặc SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+            className="flex-1 px-3 py-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-lg bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
           />
           <select
             value={filterCategoryId}
             onChange={(e) => { setFilterCategoryId(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+            className="px-3 py-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-lg bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
           >
             <option value="">Tất cả danh mục</option>
             <option value="__none__">Chưa phân loại</option>
@@ -414,14 +411,14 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
             ))}
           </select>
           {filteredProducts.length !== products.length && (
-            <div className="px-3 md:px-5 py-2 md:py-3 bg-slate-100 dark:bg-slate-800 rounded-lg md:rounded-xl border border-slate-200 dark:border-slate-700 text-center md:text-left">
-              <span className="text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-400">
+            <div className="px-3 md:px-5 py-2 md:py-3 bg-pin-gray-100 dark:bg-pin-gray-800 rounded-lg md:rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 text-center md:text-left">
+              <span className="text-xs md:text-sm font-semibold text-pin-gray-600 dark:text-pin-gray-400">
                 Tìm thấy:{" "}
               </span>
-              <span className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-200">
+              <span className="text-sm md:text-lg font-bold text-pin-gray-800 dark:text-pin-gray-200">
                 {filteredProducts.length}
               </span>
-              <span className="hidden md:inline text-sm font-semibold text-slate-600 dark:text-slate-400">
+              <span className="hidden md:inline text-sm font-semibold text-pin-gray-600 dark:text-pin-gray-400">
                 {" "}
                 sản phẩm
               </span>
@@ -429,7 +426,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
           )}
         </div>
       </div>
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200/60 dark:border-slate-700 overflow-x-auto">
+      <div className="bg-white dark:bg-pin-gray-800 rounded-lg shadow-sm border border-pin-gray-200/60 dark:border-pin-gray-700 overflow-x-auto">
         {/* Mobile Card View */}
         <div className="md:hidden space-y-2 p-2">
           {paginatedProducts.map((product) => {
@@ -442,15 +439,15 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
             return (
               <div
                 key={product.id}
-                className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 border border-slate-200 dark:border-slate-600"
+                className="bg-pin-gray-50 dark:bg-pin-gray-700/50 rounded-lg p-3 border border-pin-gray-200 dark:border-pin-gray-600"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+                    <h3 className="font-medium text-pin-gray-800 dark:text-pin-gray-200 text-sm truncate">
                       {product.name}
                     </h3>
-                    <span className="text-[10px] font-mono text-slate-500 bg-slate-200 dark:bg-slate-600 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-mono text-pin-gray-500 bg-pin-gray-200 dark:bg-pin-gray-600 px-1.5 py-0.5 rounded">
                       {product.sku}
                     </span>
                     {getCategoryName(product.category_id) && (
@@ -469,19 +466,19 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                 {/* Prices */}
                 <div className="grid grid-cols-3 gap-2 text-xs mb-2">
                   <div>
-                    <span className="text-slate-500 block">Giá vốn</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-pin-gray-500 block">Giá vốn</span>
+                    <span className="font-medium text-pin-gray-700 dark:text-pin-gray-300">
                       {formatCurrency(product.costPrice)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Bán lẻ</span>
+                    <span className="text-pin-gray-500 block">Bán lẻ</span>
                     <span className="font-medium text-green-600 dark:text-green-400">
                       {formatCurrency(retailPrice)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Bán sỉ</span>
+                    <span className="text-pin-gray-500 block">Bán sỉ</span>
                     <span className="font-medium text-blue-600 dark:text-blue-400">
                       {formatCurrency(wholesalePrice)}
                     </span>
@@ -489,7 +486,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                 </div>
 
                 {/* Profit & Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-600">
+                <div className="flex items-center justify-between pt-2 border-t border-pin-gray-200 dark:border-pin-gray-600">
                   <span
                     className={`text-xs ${profitMarginRetail >= 20 ? "text-green-600" : profitMarginRetail >= 10 ? "text-yellow-600" : "text-red-600"}`}
                   >
@@ -506,7 +503,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                         setIsModalOpen(true);
                       }}
                       disabled={!currentUser}
-                      className={`p-1.5 rounded ${currentUser ? "text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/30" : "text-slate-400"}`}
+                      className={`p-1.5 rounded ${currentUser ? "text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/30" : "text-pin-gray-400"}`}
                     >
                       <Icon name="money" className="w-4 h-4" />
                     </button>
@@ -519,7 +516,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                         setDeletionModalProduct(product);
                       }}
                       disabled={!currentUser}
-                      className={`p-1.5 rounded ${currentUser ? "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30" : "text-slate-400"}`}
+                      className={`p-1.5 rounded ${currentUser ? "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30" : "text-pin-gray-400"}`}
                     >
                       <Icon name="gear" className="w-4 h-4" />
                     </button>
@@ -529,286 +526,286 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
             );
           })}
           {filteredProducts.length === 0 && (
-            <div className="text-center p-8 text-slate-500 dark:text-slate-400">
+            <div className="text-center p-8 text-pin-gray-500 dark:text-pin-gray-400">
               Chưa có thành phẩm nào.
             </div>
           )}
         </div>
 
         {/* Desktop Table View */}
-        <table className="hidden md:table w-full text-left min-w-max">
-          <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-            <tr>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">
-                <div className="flex items-center gap-2">
-                  <Icon name="package" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  Tên Thành phẩm
-                </div>
-              </th>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">
-                <div className="flex items-center gap-2">
-                  <Icon name="tag" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  SKU
-                </div>
-              </th>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300">
-                <div className="flex items-center gap-2">
-                  <Icon name="tag" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  Danh mục
-                </div>
-              </th>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-right">
-                <div className="flex items-center gap-2 justify-end">
-                  <Icon name="chart-bar" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  Tồn kho
-                </div>
-              </th>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-right">
-                <div className="flex items-center gap-2 justify-end">
-                  <Icon name="coins" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  Giá vốn
-                </div>
-              </th>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-right">
-                <div className="flex items-center gap-2 justify-end">
-                  <Icon name="money" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  Giá bán
-                </div>
-              </th>
-              <th className="p-3 font-semibold text-slate-700 dark:text-slate-300 text-center">
-                <div className="flex items-center gap-2 justify-center">
-                  <Icon name="gear" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                  Thao tác
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedProducts.map((product) => {
-              const retailPrice = product.retailPrice || product.sellingPrice || 0;
-              const wholesalePrice = product.wholesalePrice || 0;
-              const profitRetail = retailPrice - product.costPrice;
-              const profitMarginRetail =
-                product.costPrice > 0 ? (profitRetail / product.costPrice) * 100 : 0;
+        <div className="hidden md:block w-full overflow-x-auto overflow-y-auto max-h-[600px] border border-pin-gray-200 dark:border-pin-gray-700 rounded-lg shadow-sm">
+          <table className="w-full text-left min-w-max relative bg-white dark:bg-pin-gray-900">
+            <thead className="sticky top-0 z-10 border-b border-pin-gray-200 dark:border-pin-gray-700 bg-pin-gray-50 dark:bg-pin-gray-800 shadow-sm">
+              <tr>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Icon name="package" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    Tên Thành phẩm
+                  </div>
+                </th>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Icon name="tag" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    SKU
+                  </div>
+                </th>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Icon name="tag" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    Danh mục
+                  </div>
+                </th>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300 text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <Icon name="chart-bar" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    Tồn kho
+                  </div>
+                </th>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300 text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <Icon name="coins" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    Giá vốn
+                  </div>
+                </th>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300 text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <Icon name="money" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    Giá bán
+                  </div>
+                </th>
+                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300 text-center sticky right-0 z-20 bg-pin-gray-50 dark:bg-pin-gray-800 border-l border-pin-gray-200 dark:border-pin-gray-700 shadow-[-4px_0_4px_rgba(0,0,0,0.05)]">
+                  <div className="flex items-center gap-2 justify-center">
+                    <Icon name="gear" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
+                    Thao tác
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedProducts.map((product) => {
+                const retailPrice = product.retailPrice || product.sellingPrice || 0;
+                const wholesalePrice = product.wholesalePrice || 0;
+                const profitRetail = retailPrice - product.costPrice;
+                const profitMarginRetail =
+                  product.costPrice > 0 ? (profitRetail / product.costPrice) * 100 : 0;
 
-              return (
-                <tr
-                  key={product.id}
-                  className="border-t dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-                >
-                  <td className="p-3">
-                    <div>
-                      <div className="font-medium text-slate-800 dark:text-slate-200">
-                        {product.name}
+                return (
+                  <tr
+                    key={product.id}
+                    className="group border-t dark:border-pin-gray-700 hover:bg-pin-gray-50 dark:hover:bg-pin-gray-700/30 transition-colors"
+                  >
+                    <td className="p-3">
+                      <div>
+                        <div className="font-medium text-pin-gray-800 dark:text-pin-gray-200">
+                          {product.name}
+                        </div>
+                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">
+                          Lợi nhuận lẻ: {formatCurrency(profitRetail)} (
+                          {profitMarginRetail > 0 ? "+" : ""}
+                          {profitMarginRetail.toFixed(1)}%)
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">
-                        Lợi nhuận lẻ: {formatCurrency(profitRetail)} (
-                        {profitMarginRetail > 0 ? "+" : ""}
-                        {profitMarginRetail.toFixed(1)}%)
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-sm font-mono text-slate-700 dark:text-slate-300">
-                      {product.sku}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    {getCategoryName(product.category_id) ? (
-                      <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-sm font-medium">
-                        {getCategoryName(product.category_id)}
+                    </td>
+                    <td className="p-3">
+                      <span className="bg-pin-gray-100 dark:bg-pin-gray-700 px-2 py-1 rounded text-sm font-mono text-pin-gray-700 dark:text-pin-gray-300">
+                        {product.sku}
                       </span>
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">Chưa phân loại</span>
-                    )}
-                  </td>
-                  <td className="p-3 text-right">
-                    <div
-                      className={`font-bold ${
-                        product.stock <= 10
-                          ? "text-red-500"
-                          : product.stock <= 50
-                            ? "text-yellow-500"
-                            : "text-green-600 dark:text-green-400"
-                      }`}
-                    >
-                      {product.stock}
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      {product.stock <= 10 ? "Thấp" : product.stock <= 50 ? "Vừa" : "Ổn"}
-                    </div>
-                  </td>
-                  <td className="p-3 text-right text-slate-800 dark:text-slate-200">
-                    {formatCurrency(product.costPrice)}
-                  </td>
-                  <td className="p-3 text-right">
-                    <div className="space-y-1">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200">
-                        Lẻ: {formatCurrency(retailPrice)}
+                    </td>
+                    <td className="p-3">
+                      {getCategoryName(product.category_id) ? (
+                        <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-sm font-medium">
+                          {getCategoryName(product.category_id)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-pin-gray-400 italic">Chưa phân loại</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right">
+                      <div
+                        className={`font-bold ${product.stock <= 10
+                            ? "text-red-500"
+                            : product.stock <= 50
+                              ? "text-yellow-500"
+                              : "text-green-600 dark:text-green-400"
+                          }`}
+                      >
+                        {product.stock}
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">
-                        Sỉ: {formatCurrency(wholesalePrice)}
+                      <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">
+                        {product.stock <= 10 ? "Thấp" : product.stock <= 50 ? "Vừa" : "Ổn"}
                       </div>
-                    </div>
-                    <div
-                      className={`text-xs mt-1 ${
-                        profitMarginRetail >= 20
-                          ? "text-green-500"
-                          : profitMarginRetail >= 10
-                            ? "text-yellow-500"
-                            : "text-red-500"
-                      }`}
-                    >
-                      {profitMarginRetail >= 20 ? "Tốt" : profitMarginRetail >= 10 ? "TB" : "Thấp"}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                      {/* Quantity input and delete button */}
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>SL</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={product.stock}
-                          placeholder="SL"
-                          value={deleteQtyMap[product.id] ?? ""}
-                          onChange={(e) =>
-                            setDeleteQtyMap((m) => ({
-                              ...m,
-                              [product.id]: Number(e.target.value),
-                            }))
-                          }
-                          className="w-16 h-8 px-2 text-sm rounded-lg border border-slate-400/70 bg-transparent text-slate-800 dark:text-white focus:ring-2 focus:ring-red-400/40 focus:border-red-400"
-                          title="Số lượng muốn xóa và hoàn kho NVL"
-                        />
-                        <ActionButton
-                          icon="trash"
-                          label="Xóa & hoàn kho"
-                          variant="danger"
-                          disabled={
-                            !deleteQtyMap[product.id] ||
-                            deleteQtyMap[product.id] <= 0 ||
-                            !currentUser
-                          }
-                          onClick={() => {
-                            if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
-                              return;
+                    </td>
+                    <td className="p-3 text-right text-pin-gray-800 dark:text-pin-gray-200">
+                      {formatCurrency(product.costPrice)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-pin-gray-800 dark:text-pin-gray-200">
+                          Lẻ: {formatCurrency(retailPrice)}
+                        </div>
+                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">
+                          Sỉ: {formatCurrency(wholesalePrice)}
+                        </div>
+                      </div>
+                      <div
+                        className={`text-xs mt-1 ${profitMarginRetail >= 20
+                            ? "text-green-500"
+                            : profitMarginRetail >= 10
+                              ? "text-yellow-500"
+                              : "text-red-500"
+                          }`}
+                      >
+                        {profitMarginRetail >= 20 ? "Tốt" : profitMarginRetail >= 10 ? "TB" : "Thấp"}
+                      </div>
+                    </td>
+                    <td className="p-3 sticky right-0 z-[5] bg-white dark:bg-pin-gray-900 border-l border-pin-gray-200 dark:border-pin-gray-700 group-hover:bg-pin-gray-50 dark:group-hover:bg-pin-gray-700/30 transition-colors">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                        {/* Quantity input and delete button */}
+                        <div className="flex items-center gap-2 text-xs text-pin-gray-400">
+                          <span>SL</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={product.stock}
+                            placeholder="SL"
+                            value={deleteQtyMap[product.id] ?? ""}
+                            onChange={(e) =>
+                              setDeleteQtyMap((m) => ({
+                                ...m,
+                                [product.id]: Number(e.target.value),
+                              }))
                             }
-                            const qty = deleteQtyMap[product.id] ?? product.stock;
-                            if (!qty || qty <= 0) {
-                              showToast("Vui lòng nhập số lượng > 0 để xóa", "warn");
-                              return;
+                            className="w-16 h-8 px-2 text-sm rounded-lg border border-pin-gray-400/70 bg-transparent text-pin-gray-800 dark:text-white focus:ring-2 focus:ring-red-400/40 focus:border-red-400"
+                            title="Số lượng muốn xóa và hoàn kho NVL"
+                          />
+                          <ActionButton
+                            icon="trash"
+                            label="Xóa & hoàn kho"
+                            variant="danger"
+                            disabled={
+                              !deleteQtyMap[product.id] ||
+                              deleteQtyMap[product.id] <= 0 ||
+                              !currentUser
                             }
+                            onClick={() => {
+                              if (!currentUser) {
+                                showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
+                                return;
+                              }
+                              const qty = deleteQtyMap[product.id] ?? product.stock;
+                              if (!qty || qty <= 0) {
+                                showToast("Vui lòng nhập số lượng > 0 để xóa", "warn");
+                                return;
+                              }
 
-                            // Check for active production orders
-                            const relatedBOMs = pinBOMs.filter(
-                              (bom: PinBOM) =>
-                                bom.productSku === product.sku || bom.productName === product.name
-                            );
-                            const bomIds = relatedBOMs.map((bom: PinBOM) => bom.id);
-                            const activeOrders = productionOrders.filter(
-                              (order: ProductionOrder) =>
-                                bomIds.includes(order.bomId) &&
-                                order.status !== "Hoàn thành" &&
-                                order.status !== "Đã hủy"
-                            );
-
-                            if (activeOrders.length > 0) {
-                              showToast(
-                                `Không thể xóa sản phẩm "${product.name}" - có ${activeOrders.length} đơn hàng sản xuất đang hoạt động. Vui lòng hoàn thành hoặc hủy các đơn hàng này trước.`,
-                                "error"
+                              // Check for active production orders
+                              const relatedBOMs = pinBOMs.filter(
+                                (bom: PinBOM) =>
+                                  bom.productSku === product.sku || bom.productName === product.name
                               );
-                              return;
-                            }
+                              const bomIds = relatedBOMs.map((bom: PinBOM) => bom.id);
+                              const activeOrders = productionOrders.filter(
+                                (order: ProductionOrder) =>
+                                  bomIds.includes(order.bomId) &&
+                                  order.status !== "Hoàn thành" &&
+                                  order.status !== "Đã hủy"
+                              );
 
-                            // Show additional warnings for BOMs and completed orders
-                            const completedOrders = productionOrders.filter(
-                              (order: ProductionOrder) =>
-                                bomIds.includes(order.bomId) &&
-                                (order.status === "Hoàn thành" || order.status === "Đã hủy")
-                            );
+                              if (activeOrders.length > 0) {
+                                showToast(
+                                  `Không thể xóa sản phẩm "${product.name}" - có ${activeOrders.length} đơn hàng sản xuất đang hoạt động. Vui lòng hoàn thành hoặc hủy các đơn hàng này trước.`,
+                                  "error"
+                                );
+                                return;
+                              }
 
-                            let warningMessage = `Xóa ${qty} đơn vị thành phẩm "${product.name}"? Hệ thống sẽ hoàn kho NVL theo BOM và số lượng bạn đã chọn.`;
+                              // Show additional warnings for BOMs and completed orders
+                              const completedOrders = productionOrders.filter(
+                                (order: ProductionOrder) =>
+                                  bomIds.includes(order.bomId) &&
+                                  (order.status === "Hoàn thành" || order.status === "Đã hủy")
+                              );
 
-                            if (relatedBOMs.length > 0) {
-                              warningMessage += ` ⚠️ Sẽ ảnh hưởng đến ${relatedBOMs.length} công thức sản xuất (BOM).`;
-                            }
-                            if (completedOrders.length > 0) {
-                              warningMessage += ` ⚠️ Có ${completedOrders.length} đơn hàng đã hoàn thành liên quan.`;
-                            }
+                              let warningMessage = `Xóa ${qty} đơn vị thành phẩm "${product.name}"? Hệ thống sẽ hoàn kho NVL theo BOM và số lượng bạn đã chọn.`;
 
-                            const productToDelete = product;
-                            const qtyToDelete = qty;
-                            showConfirmDialog(
-                              "Xác nhận xóa sản phẩm",
-                              warningMessage,
-                              () => removePinProductAndReturnMaterials(productToDelete, qtyToDelete)
-                            );
-                          }}
-                        />
+                              if (relatedBOMs.length > 0) {
+                                warningMessage += ` ⚠️ Sẽ ảnh hưởng đến ${relatedBOMs.length} công thức sản xuất (BOM).`;
+                              }
+                              if (completedOrders.length > 0) {
+                                warningMessage += ` ⚠️ Có ${completedOrders.length} đơn hàng đã hoàn thành liên quan.`;
+                              }
+
+                              const productToDelete = product;
+                              const qtyToDelete = qty;
+                              showConfirmDialog(
+                                "Xác nhận xóa sản phẩm",
+                                warningMessage,
+                                () => removePinProductAndReturnMaterials(productToDelete, qtyToDelete)
+                              );
+                            }}
+                          />
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2">
+                          <ActionButton
+                            icon="gear"
+                            label="Xóa nâng cao"
+                            variant="warning"
+                            onClick={() => {
+                              if (!currentUser) {
+                                showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
+                                return;
+                              }
+                              setDeletionModalProduct(product);
+                            }}
+                          />
+
+                          <ActionButton
+                            icon="money"
+                            label="Sửa giá bán"
+                            variant="primary"
+                            disabled={!currentUser}
+                            onClick={() => {
+                              if (!currentUser) {
+                                showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
+                                return;
+                              }
+                              setEditingProduct(product);
+                              setIsModalOpen(true);
+                            }}
+                          />
+
+                          <ActionButton
+                            icon="pencil"
+                            label="Sửa thông tin"
+                            variant="muted"
+                            disabled={!currentUser}
+                            onClick={() => {
+                              if (!currentUser) {
+                                showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
+                                return;
+                              }
+                              showToast(
+                                "Tính năng sửa thông tin sản phẩm sẽ được phát triển trong phiên bản tiếp theo.",
+                                "info"
+                              );
+                            }}
+                          />
+                        </div>
                       </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2">
-                        <ActionButton
-                          icon="gear"
-                          label="Xóa nâng cao"
-                          variant="warning"
-                          onClick={() => {
-                            if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
-                              return;
-                            }
-                            setDeletionModalProduct(product);
-                          }}
-                        />
-
-                        <ActionButton
-                          icon="money"
-                          label="Sửa giá bán"
-                          variant="primary"
-                          disabled={!currentUser}
-                          onClick={() => {
-                            if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
-                              return;
-                            }
-                            setEditingProduct(product);
-                            setIsModalOpen(true);
-                          }}
-                        />
-
-                        <ActionButton
-                          icon="pencil"
-                          label="Sửa thông tin"
-                          variant="muted"
-                          disabled={!currentUser}
-                          onClick={() => {
-                            if (!currentUser) {
-                              showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
-                              return;
-                            }
-                            showToast(
-                              "Tính năng sửa thông tin sản phẩm sẽ được phát triển trong phiên bản tiếp theo.",
-                              "info"
-                            );
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {filteredProducts.length === 0 && (
-          <div className="hidden md:block text-center p-8 text-slate-500 dark:text-slate-400">
-            Chưa có thành phẩm nào.
-          </div>
-        )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filteredProducts.length === 0 && (
+            <div className="hidden md:block text-center p-8 text-pin-gray-500 dark:text-pin-gray-400">
+              Chưa có thành phẩm nào.
+            </div>
+          )}
+        </div>
       </div>
       {totalPages > 1 && (
         <Pagination
@@ -823,17 +820,17 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
       {/* Confirm Dialog Modal */}
       {confirmDialog?.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-pin-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-pin-gray-900 dark:text-white mb-4">
               {confirmDialog.title}
             </h3>
-            <p className="text-slate-600 dark:text-slate-300 mb-6 whitespace-pre-line">
+            <p className="text-pin-gray-600 dark:text-pin-gray-300 mb-6 whitespace-pre-line">
               {confirmDialog.message}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={closeConfirmDialog}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+                className="px-4 py-2 bg-pin-gray-200 dark:bg-pin-gray-700 text-pin-gray-700 dark:text-pin-gray-300 rounded-lg hover:bg-pin-gray-300 dark:hover:bg-pin-gray-600 transition"
               >
                 Hủy
               </button>

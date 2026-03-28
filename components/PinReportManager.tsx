@@ -41,7 +41,7 @@ interface DailyReportRow {
 }
 
 // Category Tab type
-type ReportCategory = "revenue" | "cashflow" | "production" | "inventory";
+type ReportCategory = "revenue" | "cashflow" | "production" | "inventory" | "tax";
 
 // Period filter type
 type PeriodFilter = "today" | "7days" | "month" | "quarter" | "year" | "custom";
@@ -73,6 +73,15 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+
+  // Tax report state
+  type TaxReportType = "s1a-hkd" | "vat-01" | "revenue-detail";
+  type TaxPeriodType = "month" | "quarter";
+  const [taxReportType, setTaxReportType] = useState<TaxReportType>("s1a-hkd");
+  const [taxPeriod, setTaxPeriod] = useState<TaxPeriodType>("month");
+  const [taxYear, setTaxYear] = useState(today.getFullYear());
+  const [taxMonth, setTaxMonth] = useState(today.getMonth() + 1);
+  const [taxQuarter, setTaxQuarter] = useState(Math.ceil((today.getMonth() + 1) / 3));
 
   // Expanded day detail
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -469,6 +478,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
     { id: "cashflow" as ReportCategory, label: "Thu chi", icon: "📊", color: "blue" },
     { id: "production" as ReportCategory, label: "Sản xuất", icon: "🏭", color: "amber" },
     { id: "inventory" as ReportCategory, label: "Tồn kho", icon: "📦", color: "violet" },
+    { id: "tax" as ReportCategory, label: "Báo cáo thuế", icon: "📋", color: "orange" },
   ];
 
   // Month names
@@ -1485,6 +1495,320 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* ============ TAX REPORT TAB ============ */}
+      {selectedCategory === "tax" && (() => {
+        // Calculate tax date range
+        const taxDateRange = (() => {
+          if (taxPeriod === "month") {
+            const from = new Date(taxYear, taxMonth - 1, 1);
+            const to = new Date(taxYear, taxMonth, 0, 23, 59, 59);
+            return { from, to };
+          } else {
+            const startMonth = (taxQuarter - 1) * 3;
+            const from = new Date(taxYear, startMonth, 1);
+            const to = new Date(taxYear, startMonth + 3, 0, 23, 59, 59);
+            return { from, to };
+          }
+        })();
+
+        // Filter sales & repairs in range
+        const taxSales = sales.filter(s => {
+          const d = new Date(s.date);
+          return d >= taxDateRange.from && d <= taxDateRange.to;
+        });
+        const taxRepairs = repairOrders.filter(r => {
+          const d = new Date(r.creationDate);
+          return d >= taxDateRange.from && d <= taxDateRange.to && (r.paymentStatus === "paid" || r.paymentStatus === "partial");
+        });
+
+        // Revenue calculations
+        const goodsRevenue = taxSales.reduce((sum, s) => sum + s.total, 0);
+        // Vật tư sửa chữa = hàng hóa (thuế 1.5%), tiền công = dịch vụ (thuế 4.5%)
+        const repairMaterialsRevenue = taxRepairs.reduce((sum, r) => {
+          const matCost = (r.materialsUsed || []).reduce((ms, m) => ms + m.price * m.quantity, 0);
+          return sum + matCost;
+        }, 0);
+        const repairLaborRevenue = taxRepairs.reduce((sum, r) => sum + (r.laborCost || 0), 0);
+
+        // Total goods = sales + repair materials (taxed at 1.5%)
+        const totalGoodsRevenue = goodsRevenue + repairMaterialsRevenue;
+        const totalServiceRevenue = repairLaborRevenue;
+        const totalRevenue = totalGoodsRevenue + totalServiceRevenue;
+
+        // Tax rates for household business (Hộ kinh doanh)
+        const goodsVATRate = 0.01; // 1% GTGT
+        const goodsPITRate = 0.005; // 0.5% TNCN
+        const serviceVATRate = 0.03; // 3% GTGT
+        const servicePITRate = 0.015; // 1.5% TNCN
+
+        const goodsVAT = totalGoodsRevenue * goodsVATRate;
+        const goodsPIT = totalGoodsRevenue * goodsPITRate;
+        const goodsTotalTax = goodsVAT + goodsPIT;
+
+        const serviceVAT = totalServiceRevenue * serviceVATRate;
+        const servicePIT = totalServiceRevenue * servicePITRate;
+        const serviceTotalTax = serviceVAT + servicePIT;
+
+        const totalVAT = goodsVAT + serviceVAT;
+        const totalPIT = goodsPIT + servicePIT;
+        const totalTax = goodsTotalTax + serviceTotalTax;
+        const totalTransactions = taxSales.length + taxRepairs.length;
+
+        // Number of repair orders with materials
+        const repairWithMaterials = taxRepairs.filter(r => (r.materialsUsed || []).length > 0).length;
+
+        // Format date range
+        const fromStr = taxDateRange.from.toLocaleDateString("vi-VN");
+        const toStr = taxDateRange.to.toLocaleDateString("vi-VN");
+        const periodLabel = taxPeriod === "month"
+          ? `Tháng ${taxMonth}/${taxYear}`
+          : `Quý ${taxQuarter}/${taxYear}`;
+
+        // Excel export handler
+        const handleExportTaxExcel = () => {
+          let csv = "\uFEFF";
+          csv += "SỔ DOANH THU HỘ KINH DOANH (S1a-HKD)\n";
+          csv += `Kỳ báo cáo: ${periodLabel}\n`;
+          csv += `Từ ngày: ${fromStr} - ${toStr}\n\n`;
+          csv += "BẢNG TỔNG HỢP DOANH THU VÀ THUẾ\n";
+          csv += "Loại doanh thu,Doanh thu,GTGT,TNCN,Tổng thuế\n";
+          csv += `Bán hàng / Phụ tùng (${taxSales.length} đơn + TL = ${(goodsVATRate * 100 + goodsPITRate * 100).toFixed(1)}%),${totalGoodsRevenue},${goodsVAT},${goodsPIT},${goodsTotalTax}\n`;
+          csv += `Tiền công sửa chữa (${taxRepairs.length} phiếu có tiền công × ${(serviceVATRate * 100 + servicePITRate * 100).toFixed(1)}%),${totalServiceRevenue},${serviceVAT},${servicePIT},${serviceTotalTax}\n`;
+          csv += `Tổng cộng,${totalRevenue},${totalVAT},${totalPIT},${totalTax}\n`;
+
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `S1a-HKD_${periodLabel.replace("/", "-")}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        const taxReportTypes = [
+          { id: "s1a-hkd" as TaxReportType, label: "Sổ S1a-HKD", sub: "Doanh thu < 500tr/năm (Excel)", icon: "📊", recommended: true },
+          { id: "vat-01" as TaxReportType, label: "Tờ khai VAT", sub: "01/GTGT (XML)", icon: "📄", recommended: false },
+          { id: "revenue-detail" as TaxReportType, label: "Báo cáo doanh thu", sub: "Chi tiết theo kỳ (XML)", icon: "📈", recommended: false },
+        ];
+
+        return (
+          <div className="px-4 pb-6 space-y-4">
+            {/* Header */}
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-xl">📋</div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Xuất báo cáo thuế</h2>
+                  <p className="text-sm text-slate-400">Xuất file XML theo định dạng chuẩn Tổng cục Thuế để nhập vào phần mềm kê khai thuế</p>
+                </div>
+              </div>
+
+              {/* Info banner */}
+              <div className="mt-4 bg-slate-700/50 rounded-lg p-4 border border-slate-600/50 flex items-start gap-3">
+                <span className="text-blue-400 text-lg mt-0.5">ℹ️</span>
+                <div>
+                  <p className="text-sm text-amber-300 font-medium">💡 Hộ kinh doanh dưới 500 triệu/năm:</p>
+                  <p className="text-sm text-slate-300">Chỉ cần xuất <strong className="text-white">Sổ doanh thu S1a-HKD</strong> (file Excel) - không cần kê khai VAT.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Config Section */}
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700/50 space-y-5">
+              <h3 className="text-base font-semibold text-white">Cấu hình báo cáo</h3>
+
+              {/* Report Type Selection */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Loại báo cáo</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {taxReportTypes.map((rt) => (
+                    <button
+                      key={rt.id}
+                      onClick={() => setTaxReportType(rt.id)}
+                      className={`relative flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                        taxReportType === rt.id
+                          ? "bg-emerald-500/10 border-emerald-500/60 ring-1 ring-emerald-500/30"
+                          : "bg-slate-700/40 border-slate-600/50 hover:border-slate-500"
+                      }`}
+                    >
+                      <span className="text-xl">{rt.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${taxReportType === rt.id ? "text-emerald-300" : "text-white"}`}>{rt.label}</span>
+                          {rt.recommended && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-medium">Đề xuất</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 truncate">{rt.sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Period Selection */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Kỳ báo cáo</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setTaxPeriod("month")}
+                    className={`py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      taxPeriod === "month"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"
+                        : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:text-white"
+                    }`}
+                  >
+                    Theo tháng
+                  </button>
+                  <button
+                    onClick={() => setTaxPeriod("quarter")}
+                    className={`py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      taxPeriod === "quarter"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50"
+                        : "bg-slate-700/50 text-slate-400 border border-slate-600/50 hover:text-white"
+                    }`}
+                  >
+                    Theo quý
+                  </button>
+                </div>
+              </div>
+
+              {/* Year */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Năm</label>
+                <select
+                  value={taxYear}
+                  onChange={(e) => setTaxYear(Number(e.target.value))}
+                  className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 appearance-none cursor-pointer"
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const yr = today.getFullYear() - 2 + i;
+                    return <option key={yr} value={yr}>{yr}</option>;
+                  })}
+                </select>
+              </div>
+
+              {/* Month or Quarter */}
+              {taxPeriod === "month" ? (
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Tháng</label>
+                  <select
+                    value={taxMonth}
+                    onChange={(e) => setTaxMonth(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 appearance-none cursor-pointer"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>Tháng {i + 1}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Quý</label>
+                  <select
+                    value={taxQuarter}
+                    onChange={(e) => setTaxQuarter(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 appearance-none cursor-pointer"
+                  >
+                    {[1, 2, 3, 4].map(q => (
+                      <option key={q} value={q}>Quý {q}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Data Overview Section */}
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700/50 space-y-5">
+              <h3 className="text-lg font-bold text-white">Tổng quan dữ liệu</h3>
+
+              {/* 3 Stat Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/40">
+                  <div className="text-xs text-slate-400 mb-1">Số giao dịch</div>
+                  <div className="text-3xl font-bold text-white">{totalTransactions}</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-xl p-4 border border-emerald-500/30">
+                  <div className="text-xs text-emerald-400 mb-1">Tổng doanh thu</div>
+                  <div className="text-2xl font-bold text-emerald-400">{formatNumber(totalRevenue)} đ</div>
+                </div>
+                <div className="bg-slate-700/50 rounded-xl p-4 border border-red-500/30">
+                  <div className="text-xs text-red-400 mb-1">Tổng thuế phải nộp</div>
+                  <div className="text-2xl font-bold text-red-400">{formatNumber(totalTax)} đ</div>
+                </div>
+              </div>
+
+              {/* Revenue Breakdown Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-600">
+                      <th className="text-left py-3 px-3 text-slate-400 font-medium">Loại doanh thu</th>
+                      <th className="text-right py-3 px-3 text-slate-400 font-medium">Doanh thu</th>
+                      <th className="text-right py-3 px-3 text-emerald-400 font-medium">GTGT</th>
+                      <th className="text-right py-3 px-3 text-red-400 font-medium">TNCN</th>
+                      <th className="text-right py-3 px-3 text-slate-300 font-medium">Tổng thuế</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="font-medium text-white">Bán hàng / Phụ tùng</div>
+                        <div className="text-xs text-slate-500">{taxSales.length} đơn + TL × {((goodsVATRate + goodsPITRate) * 100).toFixed(1)}%</div>
+                      </td>
+                      <td className="py-3 px-3 text-right text-white">{formatNumber(totalGoodsRevenue)} đ</td>
+                      <td className="py-3 px-3 text-right text-emerald-400">{formatNumber(goodsVAT)} đ</td>
+                      <td className="py-3 px-3 text-right text-red-400">{formatNumber(goodsPIT)} đ</td>
+                      <td className="py-3 px-3 text-right text-white">{formatNumber(goodsTotalTax)} đ</td>
+                    </tr>
+                    <tr className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="font-medium text-white">Tiền công sửa chữa</div>
+                        <div className="text-xs text-slate-500">{taxRepairs.length} phiếu có tiền công × {((serviceVATRate + servicePITRate) * 100).toFixed(1)}%</div>
+                      </td>
+                      <td className="py-3 px-3 text-right text-white">{formatNumber(totalServiceRevenue)} đ</td>
+                      <td className="py-3 px-3 text-right text-emerald-400">{formatNumber(serviceVAT)} đ</td>
+                      <td className="py-3 px-3 text-right text-red-400">{formatNumber(servicePIT)} đ</td>
+                      <td className="py-3 px-3 text-right text-white">{formatNumber(serviceTotalTax)} đ</td>
+                    </tr>
+                    <tr className="bg-slate-700/40">
+                      <td className="py-3 px-3 font-bold text-white">Tổng cộng</td>
+                      <td className="py-3 px-3 text-right font-bold text-white">{formatNumber(totalRevenue)} đ</td>
+                      <td className="py-3 px-3 text-right font-bold text-emerald-400">{formatNumber(totalVAT)} đ</td>
+                      <td className="py-3 px-3 text-right font-bold text-red-400">{formatNumber(totalPIT)} đ</td>
+                      <td className="py-3 px-3 text-right font-bold text-orange-400">{formatNumber(totalTax)} đ</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Period Info */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm text-slate-400 pt-2 border-t border-slate-700/50">
+                <div>
+                  <span className="text-slate-500">Kỳ báo cáo: </span>
+                  <span className="text-white font-medium">{periodLabel}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Từ ngày: </span>
+                  <span className="text-white font-medium">{fromStr} - {toStr}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Export Button */}
+            <button
+              onClick={handleExportTaxExcel}
+              className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+            >
+              <span>📥</span>
+              <span>Xuất file Excel (S1a-HKD)</span>
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import Login from "./components/Login";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import { LoadingSpinner } from "./components/common/Icons";
+import { Toaster } from "sonner";
 
 const LoadingFallback: React.FC = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-slate-100 dark:bg-slate-900">
@@ -94,9 +95,12 @@ const AppPin: React.FC = () => {
   }
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <PinCorpApp onSwitchApp={() => { }} />
-    </Suspense>
+    <>
+      <Toaster position="top-right" richColors theme="system" />
+      <Suspense fallback={<LoadingFallback />}>
+        <PinCorpApp onSwitchApp={() => { }} />
+      </Suspense>
+    </>
   );
 };
 

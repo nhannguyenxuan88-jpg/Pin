@@ -31,13 +31,13 @@ const PinNavItem: React.FC<{
   icon: React.ReactElement<any>;
   label: string;
   color?: string;
-}> = ({ to, icon, label, color = "text-sky-600 dark:text-sky-400" }) => {
+}> = ({ to, icon, label, color = "text-pin-blue-600 dark:text-pin-blue-400" }) => {
   const baseItem =
     "flex flex-col items-center justify-center text-center px-2 py-1.5 rounded-lg min-w-[4.5rem] w-auto transition-all duration-200 border";
   const activeClass =
-    "bg-white border-slate-200 shadow-md shadow-slate-200/60 dark:bg-slate-800 dark:border-slate-600 dark:shadow-none";
+    "bg-white border-pin-gray-200 shadow-md shadow-pin-gray-200/60 dark:bg-pin-gray-800 dark:border-pin-gray-600 dark:shadow-none";
   const inactiveClass =
-    "bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200 dark:hover:bg-slate-700/40 dark:hover:border-slate-600";
+    "bg-transparent border-transparent hover:bg-pin-gray-50 hover:border-pin-gray-200 dark:hover:bg-pin-gray-700/40 dark:hover:border-pin-gray-600";
 
   return (
     <NavLink
@@ -48,17 +48,16 @@ const PinNavItem: React.FC<{
         <>
           <div
             className={`w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${isActive
-                ? "bg-slate-50 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500"
-                : "bg-slate-100 ring-transparent dark:bg-slate-800/40"
+              ? "bg-pin-gray-50 ring-pin-gray-200 dark:bg-pin-gray-700 dark:ring-pin-gray-500"
+              : "bg-pin-gray-100 ring-transparent dark:bg-pin-gray-800/40"
               }`}
           >
             {React.cloneElement(icon, {
-              className: `w-4 h-4 transition-opacity duration-200 ${color} ${isActive ? "opacity-100" : "opacity-75"
-                }`,
+              className: `w-4 h-4 transition-opacity duration-200 ${isActive ? color + " opacity-100" : "text-pin-gray-500 dark:text-pin-gray-400 opacity-75"}`,
             })}
           </div>
           <span
-            className={`text-[10px] font-medium mt-1 w-full whitespace-nowrap ${isActive ? "text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"
+            className={`text-[10px] font-medium mt-1 w-full whitespace-nowrap ${isActive ? "text-pin-gray-900 dark:text-pin-gray-100" : "text-pin-gray-500 dark:text-pin-gray-400"
               }`}
           >
             {label}
@@ -140,7 +139,7 @@ export const PinTopNav: React.FC<{
   ];
 
   return (
-    <header className="bg-white dark:bg-slate-800 shadow-sm print:hidden border-b border-slate-200 dark:border-slate-700/50 sticky top-0 z-30">
+    <header className="bg-white dark:bg-pin-gray-800 shadow-sm print:hidden border-b border-pin-gray-200 dark:border-pin-gray-700/50 sticky top-0 z-30">
       <div className="mx-auto px-3">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-2">
@@ -148,10 +147,10 @@ export const PinTopNav: React.FC<{
             <div className="relative">
               <button
                 onClick={() => setShowLogoMenu(!showLogoMenu)}
-                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 transition-colors"
               >
                 <Logo size={28} className="hidden sm:block" />
-                <CpuChipIcon className="w-6 h-6 text-sky-500 sm:hidden" />
+                <CpuChipIcon className="w-6 h-6 text-pin-blue-500 sm:hidden" />
               </button>
 
               {showLogoMenu && (
@@ -159,12 +158,12 @@ export const PinTopNav: React.FC<{
                   {/* Backdrop */}
                   <div className="fixed inset-0 z-40" onClick={() => setShowLogoMenu(false)} />
                   {/* Dropdown Menu */}
-                  <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 max-h-[80vh] overflow-y-auto">
-                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                      <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-pin-gray-800 rounded-lg shadow-xl border border-pin-gray-200 dark:border-pin-gray-700 z-50 max-h-[80vh] overflow-y-auto">
+                    <div className="p-4 border-b border-pin-gray-200 dark:border-pin-gray-700">
+                      <h3 className="font-semibold text-pin-gray-800 dark:text-pin-gray-100 mb-1">
                         PIN Corp
                       </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-sm text-pin-gray-500 dark:text-pin-gray-400">
                         {currentUser.name}
                       </p>
                     </div>
@@ -186,7 +185,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/receivables"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <BanknotesIcon className="w-4 h-4" />
                         Công nợ
@@ -195,7 +194,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/reports"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <ChartBarIcon className="w-4 h-4" />
                         Báo cáo
@@ -204,7 +203,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/analytics"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <SparklesIcon className="w-4 h-4" />
                         Phân tích
@@ -213,7 +212,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/products"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <TagIcon className="w-4 h-4" />
                         Sản phẩm
@@ -222,7 +221,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/predictive"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <CpuChipIcon className="w-4 h-4" />
                         AI Dự đoán
@@ -231,18 +230,18 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/cost-analysis"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <DocumentChartBarIcon className="w-4 h-4" />
                         Chi phí SX
                       </NavLink>
 
-                      <div className="border-t border-slate-200 dark:border-slate-600 my-2"></div>
+                      <div className="border-t border-pin-gray-200 dark:border-pin-gray-600 my-2"></div>
 
                       <NavLink
                         to="/settings"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <CogIcon className="w-5 h-5" />
                         Danh bạ
@@ -251,7 +250,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/business-settings"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <CogIcon className="w-4 h-4" />
                         Cài đặt doanh nghiệp
@@ -260,7 +259,7 @@ export const PinTopNav: React.FC<{
                       <NavLink
                         to="/tax-report"
                         onClick={() => setShowLogoMenu(false)}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <DocumentChartBarIcon className="w-4 h-4" />
                         Báo cáo thuế
@@ -271,13 +270,13 @@ export const PinTopNav: React.FC<{
                           onSwitchApp();
                           setShowLogoMenu(false);
                         }}
-                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
                       >
                         <ArrowsLeftRightIcon className="w-4 h-4" />
                         Chuyển ứng dụng
                       </button>
 
-                      <div className="border-t border-slate-200 dark:border-slate-600 my-2"></div>
+                      <div className="border-t border-pin-gray-200 dark:border-pin-gray-600 my-2"></div>
 
                       {/* Logout */}
                       <button
@@ -300,7 +299,7 @@ export const PinTopNav: React.FC<{
               )}
             </div>
 
-            <h1 className="text-base font-bold text-slate-800 dark:text-slate-100">PIN Corp</h1>
+            <h1 className="text-base font-bold text-pin-gray-800 dark:text-pin-gray-100">PIN Corp</h1>
           </div>
           <div className="flex items-center gap-2">
             <nav className="flex items-center gap-0.5">
@@ -333,7 +332,7 @@ const MobileNavItem: React.FC<{
   icon: React.ReactElement<any>;
   label: string;
   color?: string;
-}> = ({ to, icon, label, color = "text-sky-400" }) => (
+}> = ({ to, icon, label, color = "text-pin-blue-400" }) => (
   <NavLink
     to={to}
     className="flex flex-col items-center justify-center text-center w-full pt-2 pb-1 transition-colors duration-200"
@@ -341,10 +340,10 @@ const MobileNavItem: React.FC<{
     {({ isActive }) => (
       <>
         {React.cloneElement(icon, {
-          className: `w-6 h-6 ${isActive ? color : "text-slate-500 dark:text-slate-400"}`,
+          className: `w-6 h-6 ${isActive ? color : "text-pin-gray-500 dark:text-pin-gray-400"}`,
         })}
         <span
-          className={`text-xs font-medium mt-1 ${isActive ? color : "text-slate-500 dark:text-slate-400"
+          className={`text-xs font-medium mt-1 ${isActive ? color : "text-pin-gray-500 dark:text-pin-gray-400"
             }`}
         >
           {label}
@@ -389,7 +388,7 @@ export const PinMobileNav: React.FC = () => {
   ];
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40">
+    <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-pin-gray-800 border-t border-pin-gray-200 dark:border-pin-gray-700 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-40">
       <nav className="flex items-center justify-around h-16">
         {navLinks.map((link) => (
           <MobileNavItem key={link.to} {...link} />
@@ -406,7 +405,7 @@ export const FloatingNavButtons: React.FC<{ onSwitchApp: () => void }> = ({ onSw
     <div className="md:hidden fixed top-4 right-4 z-50 flex flex-col gap-3">
       <button
         onClick={onSwitchApp}
-        className="w-12 h-12 flex items-center justify-center rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm shadow-lg hover:bg-white/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 transition-colors"
+        className="w-12 h-12 flex items-center justify-center rounded-full bg-white/50 dark:bg-pin-gray-800/50 backdrop-blur-sm shadow-lg hover:bg-white/80 dark:hover:bg-pin-gray-700/80 text-pin-gray-700 dark:text-pin-gray-200 transition-colors"
         title="Chuyển ứng dụng"
       >
         <HomeIcon className="w-6 h-6" />

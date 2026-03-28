@@ -29,216 +29,16 @@ import {
 import { InvoicePreviewModal } from "./invoices/InvoicePreviewModal";
 import SalesInvoiceTemplate from "./invoices/SalesInvoiceTemplate";
 import InstallmentModal from "./InstallmentModal";
+import { FloatingCartButton } from "./pos/FloatingCartButton";
+import { SmartPriceInput } from "./pos/SmartPriceInput";
+import { NewPinCustomerModal } from "./pos/NewPinCustomerModal";
+import { EmptyState } from "./ui/EmptyState";
+import { Button } from "./ui/Button";
 import { InstallmentService } from "../lib/services/InstallmentService";
 import { supabase } from "../supabaseClient";
 
-
-
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
-
-// --- Component: Smart Price Input ---
-const SmartPriceInput: React.FC<{
-  value: number;
-  onUpdate: (val: number) => void;
-  priceType: "retail" | "wholesale";
-}> = ({ value, onUpdate }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [localValue, setLocalValue] = useState(value.toString());
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setLocalValue(value.toString());
-  }, [value]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleBlur = () => {
-    setIsEditing(false);
-    const num = parseFloat(localValue);
-    if (!isNaN(num)) {
-      onUpdate(num);
-    } else {
-      setLocalValue(value.toString()); // Revert if invalid
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleBlur();
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <input
-        ref={inputRef}
-        type="number"
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className="w-24 p-0 text-sm bg-transparent border-0 border-b-2 border-sky-500 focus:ring-0 text-slate-900 dark:text-slate-100 font-bold text-right outline-none"
-      />
-    );
-  }
-
-  return (
-    <div
-      onClick={() => setIsEditing(true)}
-      className="cursor-pointer group flex items-center justify-end gap-1 px-1 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
-      title="Bấm để sửa giá"
-    >
-      <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-        {formatCurrency(value)}
-      </span>
-      <PencilSquareIcon className="w-3 h-3 text-slate-400 group-hover:text-sky-500 opacity-0 group-hover:opacity-100 transition-all" />
-    </div>
-  );
-};
-
-// --- New Customer Modal ---
-const NewPinCustomerModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (customer: PinCustomer) => void;
-  initialName?: string;
-  onToast?: (message: string, type: "success" | "error" | "warn" | "info") => void;
-}> = ({ isOpen, onClose, onSave, initialName = "", onToast }) => {
-  const [formData, setFormData] = useState<Omit<PinCustomer, "id">>({
-    name: initialName,
-    phone: "",
-    address: "",
-  });
-  const { currentUser } = usePinContext();
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({ name: initialName, phone: "", address: "" });
-    }
-  }, [isOpen, initialName]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalCustomer: PinCustomer = {
-      id: crypto.randomUUID(), // Generate proper UUID
-      ...formData,
-    };
-    if (!currentUser) {
-      onToast?.("Bạn phải đăng nhập để thực hiện thao tác.", "warn");
-      return;
-    }
-    onSave(finalCustomer);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-[60] flex justify-center items-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-lg">
-        <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">
-              Thêm Khách hàng mới
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Tên khách hàng (*)
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md"
-                  required
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Số điện thoại (*)
-                </label>
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Địa chỉ
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address || ""}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="bg-slate-50 dark:bg-slate-800 px-6 py-4 flex justify-end space-x-3 border-t border-slate-200 dark:border-slate-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200 font-semibold py-2 px-4 rounded-lg"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={!currentUser}
-              title={!currentUser ? "Bạn phải đăng nhập để thêm khách hàng" : undefined}
-              className={`font-semibold py-2 px-4 rounded-lg ${currentUser
-                ? "bg-sky-600 text-white"
-                : "bg-sky-300 text-white/70 cursor-not-allowed"
-                }`}
-            >
-              Lưu
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// --- Floating Cart Button for Mobile ---
-const FloatingCartButton: React.FC<{
-  count: number;
-  total: number;
-  onClick: () => void;
-}> = ({ count, total, onClick }) => (
-  <div className="lg:hidden fixed bottom-20 right-4 left-4 z-20">
-    <button
-      onClick={onClick}
-      className="w-full bg-orange-500 text-white font-bold rounded-lg shadow-lg flex items-center py-3 px-5 hover:bg-orange-600 transition-transform hover:scale-105"
-    >
-      <ShoppingCartIcon className="w-6 h-6" />
-      <span className="bg-white text-orange-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold ml-3">
-        {count}
-      </span>
-      <span className="mx-auto text-lg">{formatCurrency(total)}</span>
-      <span>Tiếp tục &rarr;</span>
-    </button>
-  </div>
-);
 
 // --- Main Component ---
 interface PinSalesManagerProps {
@@ -845,13 +645,13 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
         </InvoicePreviewModal>
       )}
       {/* Mobile-optimized Tab Navigation */}
-      <div className="mb-3 md:mb-4 rounded-lg bg-white/70 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/60 px-2">
+      <div className="mb-3 md:mb-4 rounded-lg bg-white/70 dark:bg-pin-gray-800/70 border border-pin-gray-200/70 dark:border-pin-gray-700/60 px-2">
         <nav className="flex space-x-4 md:space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab("pos")}
             className={`py-2 md:py-3 px-1 font-medium text-xs md:text-sm ${activeTab === "pos"
-              ? "text-slate-900 dark:text-white"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              ? "text-pin-gray-900 dark:text-white"
+              : "text-pin-gray-500 dark:text-pin-gray-400 hover:text-pin-gray-700 dark:hover:text-pin-gray-200"
               }`}
           >
             🛒 Bán hàng
@@ -859,8 +659,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           <button
             onClick={() => setActiveTab("history")}
             className={`py-2 md:py-3 px-1 font-medium text-xs md:text-sm ${activeTab === "history"
-              ? "text-slate-900 dark:text-white"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              ? "text-pin-gray-900 dark:text-white"
+              : "text-pin-gray-500 dark:text-pin-gray-400 hover:text-pin-gray-700 dark:hover:text-pin-gray-200"
               }`}
           >
             📋 Lịch sử
@@ -875,7 +675,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           {/* Product List */}
           <div
             className={`${mobileView === "products" ? "flex" : "hidden"
-              } lg:flex flex-col bg-white dark:bg-slate-800 p-2 md:p-4 rounded-lg shadow-sm border dark:border-slate-700 h-full ${cartItems.length > 0 ? "lg:col-span-2" : "lg:col-span-1"}`}
+              } lg:flex flex-col bg-white dark:bg-pin-gray-800 p-2 md:p-4 rounded-lg shadow-sm border dark:border-pin-gray-700 h-full ${cartItems.length > 0 ? "lg:col-span-2" : "lg:col-span-1"}`}
           >
             {/* Compact Search for mobile */}
             <input
@@ -883,7 +683,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               placeholder="🔍 Tìm sản phẩm..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+              className="w-full p-2 text-sm border border-pin-gray-300 dark:border-pin-gray-600 rounded-lg mb-2 bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100 focus:ring-2 focus:ring-pin-blue-500 focus:border-transparent"
             />
 
             {/* Category Filter - Compact on mobile */}
@@ -891,8 +691,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               <button
                 onClick={() => setSalesCategory("all")}
                 className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors whitespace-nowrap ${salesCategory === "all"
-                  ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  ? "bg-pin-gray-900 text-white dark:bg-pin-gray-100 dark:text-pin-gray-900"
+                  : "bg-pin-gray-100 text-pin-gray-600 dark:bg-pin-gray-700 dark:text-pin-gray-300"
                   }`}
               >
                 Tất cả ({availableItems.length})
@@ -900,8 +700,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               <button
                 onClick={() => setSalesCategory("products")}
                 className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors whitespace-nowrap ${salesCategory === "products"
-                  ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  ? "bg-pin-gray-900 text-white dark:bg-pin-gray-100 dark:text-pin-gray-900"
+                  : "bg-pin-gray-100 text-pin-gray-600 dark:bg-pin-gray-700 dark:text-pin-gray-300"
                   }`}
               >
                 📱 TP ({products.filter((p) => p.stock > 0).length})
@@ -909,8 +709,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               <button
                 onClick={() => setSalesCategory("materials")}
                 className={`px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors whitespace-nowrap ${salesCategory === "materials"
-                  ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  ? "bg-pin-gray-900 text-white dark:bg-pin-gray-100 dark:text-pin-gray-900"
+                  : "bg-pin-gray-100 text-pin-gray-600 dark:bg-pin-gray-700 dark:text-pin-gray-300"
                   }`}
               >
                 📦 NVL ({(pinMaterials || []).filter((m: PinMaterial) => (m.stock || 0) > 0).length}
@@ -923,7 +723,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   {availableProducts.map((product: PinProduct & { type?: string }) => (
                     <div
                       key={product.id}
-                      className="bg-white dark:bg-slate-800 p-2 md:p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-sky-500 dark:hover:border-sky-400 hover:shadow-md transition-all duration-150"
+                      className="bg-white dark:bg-pin-gray-800 p-2 md:p-3 rounded-lg border border-pin-gray-200 dark:border-pin-gray-700 hover:border-pin-blue-500 dark:hover:border-pin-blue-400 hover:shadow-md transition-all duration-150"
                     >
                       {/* Mobile: Single row layout */}
                       <div className="md:hidden flex items-center gap-2">
@@ -939,10 +739,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
                         {/* Name + Info */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">
+                          <h3 className="font-medium text-pin-gray-800 dark:text-pin-gray-100 text-sm truncate">
                             {product.name}
                           </h3>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <div className="flex items-center gap-3 text-xs text-pin-gray-500">
                             <span className="font-semibold text-amber-600 dark:text-amber-400">
                               {formatCurrency(
                                 (product as any).retailPrice ?? product.sellingPrice ?? 0
@@ -953,7 +753,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                 : product.stock <= 5
                                   ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                  : "bg-pin-gray-100 text-pin-gray-600 dark:bg-pin-gray-700 dark:text-pin-gray-300"
                                 }`}
                             >
                               {product.stock === 0 ? "Hết" : `Kho: ${product.stock}`}
@@ -978,7 +778,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                 e.stopPropagation();
                                 addToCart(product, "wholesale");
                               }}
-                              className="bg-sky-500 active:bg-sky-600 text-white rounded px-2.5 py-1.5 text-xs font-medium"
+                              className="bg-pin-blue-500 active:bg-pin-blue-600 text-white rounded px-2.5 py-1.5 text-xs font-medium"
                             >
                               +Sỉ
                             </button>
@@ -990,7 +790,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       <div className="hidden md:block">
                         {/* Header with name and type badge */}
                         <div className="flex items-start justify-between gap-1 mb-1.5">
-                          <h3 className="font-medium text-slate-800 dark:text-slate-100 text-sm leading-tight flex-1 line-clamp-2">
+                          <h3 className="font-medium text-pin-gray-800 dark:text-pin-gray-100 text-sm leading-tight flex-1 line-clamp-2">
                             {product.name}
                           </h3>
                           <span
@@ -1004,23 +804,23 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         </div>
 
                         {/* SKU */}
-                        <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mb-2 bg-slate-50 dark:bg-slate-700/50 px-1.5 py-0.5 rounded truncate">
+                        <p className="text-[10px] font-mono text-pin-gray-500 dark:text-pin-gray-400 mb-2 bg-pin-gray-50 dark:bg-pin-gray-700/50 px-1.5 py-0.5 rounded truncate">
                           {product.sku}
                         </p>
 
                         {/* Price and Stock */}
                         <div className="space-y-0.5 mb-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-slate-500">Giá</span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-100 text-xs">
+                            <span className="text-[10px] text-pin-gray-500">Giá</span>
+                            <span className="font-semibold text-pin-gray-800 dark:text-pin-gray-100 text-xs">
                               {formatCurrency(
                                 (product as any).retailPrice ?? product.sellingPrice ?? 0
                               )}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-slate-500">Kho</span>
-                            <span className="font-medium text-slate-700 dark:text-slate-300 text-xs">
+                            <span className="text-[10px] text-pin-gray-500">Kho</span>
+                            <span className="font-medium text-pin-gray-700 dark:text-pin-gray-300 text-xs">
                               {product.stock}
                             </span>
                           </div>
@@ -1044,7 +844,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                 e.stopPropagation();
                                 addToCart(product, "wholesale");
                               }}
-                              className="flex-1 bg-sky-500 hover:bg-sky-600 text-white rounded px-1.5 py-1.5 flex items-center justify-center gap-0.5 transition-colors text-xs font-medium"
+                              className="flex-1 bg-pin-blue-500 hover:bg-pin-blue-600 text-white rounded px-1.5 py-1.5 flex items-center justify-center gap-0.5 transition-colors text-xs font-medium"
                             >
                               <PlusIcon className="w-3 h-3" />
                               <span>Sỉ</span>
@@ -1062,7 +862,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 <div className="mt-3 text-center">
                   <button
                     onClick={() => setShowAllProducts(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900/30 dark:hover:bg-sky-800/50 text-sky-700 dark:text-sky-300 rounded-lg transition-colors text-sm font-medium"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-pin-blue-100 hover:bg-pin-blue-200 dark:bg-pin-blue-900/30 dark:hover:bg-pin-blue-800/50 text-pin-blue-700 dark:text-pin-blue-300 rounded-lg transition-colors text-sm font-medium"
                   >
                     📦 Xem thêm {allAvailableItems.length - PRODUCTS_LIMIT} sản phẩm khác
                   </button>
@@ -1080,39 +880,33 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               )}
 
               {availableProducts.length === 0 && (
-                <div className="text-center py-16 text-slate-500 dark:text-slate-400">
-                  <CubeIcon className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-500" />
-                  <p className="mt-4 font-semibold">
-                    {salesCategory === "products"
+                <EmptyState
+                  title={
+                    salesCategory === "products"
                       ? "Không có thành phẩm nào"
                       : salesCategory === "materials"
                         ? "Không có nguyên liệu nào"
-                        : "Không có sản phẩm nào"}
-                  </p>
-                  <p className="text-sm">
-                    {salesCategory === "products"
+                        : "Không có sản phẩm nào"
+                  }
+                  description={
+                    salesCategory === "products"
                       ? "Hãy hoàn thành sản xuất để có thành phẩm bán."
                       : salesCategory === "materials"
                         ? "Hãy nhập kho nguyên liệu để bán lẻ."
-                        : "Thành phẩm và nguyên liệu có tồn kho sẽ hiện ở đây."}
-                  </p>
-                  {salesCategory === "products" && products.length === 0 && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-700 dark:text-blue-300">
-                      <p className="text-sm font-medium">💡 Gợi ý:</p>
-                      <p className="text-xs mt-1">
-                        1. Tạo BOM → 2. Tạo lệnh sản xuất → 3. Hoàn thành sản xuất
-                      </p>
-                    </div>
-                  )}
-                  {salesCategory === "materials" && (pinMaterials || []).length === 0 && (
-                    <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-700 dark:text-orange-300">
-                      <p className="text-sm font-medium">💡 Gợi ý:</p>
-                      <p className="text-xs mt-1">
-                        Vào trang Nguyên liệu để nhập kho các vật tư cần bán
-                      </p>
-                    </div>
-                  )}
-                </div>
+                        : "Thành phẩm và nguyên liệu có tồn kho sẽ hiện ở đây."
+                  }
+                  icon="cube"
+                  action={
+                    salesCategory === "products" && products.length === 0 ? (
+                      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-700 dark:text-blue-300">
+                        <p className="text-sm font-medium">💡 Gợi ý:</p>
+                        <p className="text-xs mt-1">
+                          1. Tạo BOM → 2. Tạo lệnh sản xuất → 3. Hoàn thành sản xuất
+                        </p>
+                      </div>
+                    ) : null
+                  }
+                />
               )}
             </div>
           </div>
@@ -1121,17 +915,17 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           {(cartItems.length > 0 || mobileView === "cart") && (
             <div
               className={`${mobileView === "cart" ? "flex" : "hidden lg:flex"
-                } w-full lg:w-auto flex-col bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700/50 mt-6 lg:mt-0 lg:col-span-1 animate-in slide-in-from-right-5 duration-300 h-fit sticky top-4`}
+                } w-full lg:w-auto flex-col bg-white/90 dark:bg-pin-gray-800/90 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-pin-gray-100 dark:border-pin-gray-700/50 mt-6 lg:mt-0 lg:col-span-1 animate-in slide-in-from-right-5 duration-300 h-fit sticky top-4`}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
                   <button
                     onClick={() => setMobileView("products")}
-                    className="lg:hidden p-2 mr-2 -ml-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    className="lg:hidden p-2 mr-2 -ml-2 text-pin-gray-600 dark:text-pin-gray-300 hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 rounded-lg transition-colors"
                   >
                     <ArrowUturnLeftIcon className="w-5 h-5" />
                   </button>
-                  <h2 className="text-xl font-bold flex items-center text-slate-800 dark:text-slate-100">
+                  <h2 className="text-xl font-bold flex items-center text-pin-gray-800 dark:text-pin-gray-100">
                     <span className="bg-orange-100 dark:bg-orange-500/20 p-2 rounded-lg mr-3">
                       <ShoppingCartIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                     </span>
@@ -1139,7 +933,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   </h2>
                 </div>
                 {cartItems.length > 0 && (
-                  <span className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                  <span className="bg-pin-gray-100 text-pin-gray-600 dark:bg-pin-gray-700 dark:text-pin-gray-300 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
                     {cartItems.length} SP
                   </span>
                 )}
@@ -1150,48 +944,48 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               {/* 1. Customer Section */}
               <div className="mb-6">
                 {/* 0. Sale Date/Time - Styled */}
-                <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                <div className="mb-4 p-4 bg-pin-gray-50 dark:bg-pin-gray-700/30 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700/50">
                   <div className="flex gap-4">
                     {/* Date Picker */}
                     <div className="flex-1 group">
-                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-pin-gray-500 dark:text-pin-gray-400 mb-1.5 uppercase tracking-wider">
                         Ngày bán
                       </label>
                       <div className="relative flex items-center">
-                        <div className="absolute left-3 text-slate-400 group-focus-within:text-sky-500 transition-colors pointer-events-none">
+                        <div className="absolute left-3 text-pin-gray-400 group-focus-within:text-pin-blue-500 transition-colors pointer-events-none">
                           <CalendarIcon className="w-5 h-5" />
                         </div>
                         <input
                           type="date"
                           value={saleDate}
                           onChange={(e) => setSaleDate(e.target.value)}
-                          className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm group-hover:border-slate-300 dark:group-hover:border-slate-500"
+                          className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-600 rounded-lg text-sm font-medium text-pin-gray-700 dark:text-pin-gray-200 focus:ring-2 focus:ring-pin-blue-500/20 focus:border-pin-blue-500 transition-all shadow-sm group-hover:border-pin-gray-300 dark:group-hover:border-pin-gray-500"
                         />
                       </div>
                     </div>
 
                     {/* Time Picker */}
                     <div className="w-1/3 group">
-                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-pin-gray-500 dark:text-pin-gray-400 mb-1.5 uppercase tracking-wider">
                         Giờ
                       </label>
                       <div className="relative flex items-center">
-                        <div className="absolute left-3 text-slate-400 group-focus-within:text-sky-500 transition-colors pointer-events-none">
+                        <div className="absolute left-3 text-pin-gray-400 group-focus-within:text-pin-blue-500 transition-colors pointer-events-none">
                           <ClockIcon className="w-5 h-5" />
                         </div>
                         <input
                           type="time"
                           value={saleTime}
                           onChange={(e) => setSaleTime(e.target.value)}
-                          className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm group-hover:border-slate-300 dark:group-hover:border-slate-500"
+                          className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-600 rounded-lg text-sm font-medium text-pin-gray-700 dark:text-pin-gray-200 focus:ring-2 focus:ring-pin-blue-500/20 focus:border-pin-blue-500 transition-all shadow-sm group-hover:border-pin-gray-300 dark:group-hover:border-pin-gray-500"
                         />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div ref={customerInputRef} className="pb-4 border-b border-slate-200 dark:border-slate-700">
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <div ref={customerInputRef} className="pb-4 border-b border-pin-gray-200 dark:border-pin-gray-700">
+                  <label className="block text-sm font-semibold text-pin-gray-700 dark:text-pin-gray-300 mb-2">
                     👤 Khách hàng
                   </label>
 
@@ -1245,11 +1039,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             }
                           }}
                           onFocus={() => setIsCustomerListOpen(true)}
-                          className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-l-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          className="w-full pl-10 pr-4 py-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-l-md bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         />
 
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <MagnifyingGlassIcon className="w-5 h-5 text-slate-400" />
+                          <MagnifyingGlassIcon className="w-5 h-5 text-pin-gray-400" />
                         </div>
                       </div>
                       <button
@@ -1263,16 +1057,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         }
                         className={`px-4 py-2 border-t border-b border-r rounded-r-md h-[42px] flex items-center justify-center transition-colors ${currentUser
                           ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 border-blue-300 dark:border-blue-600"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed border-slate-300 dark:border-slate-600"
+                          : "bg-pin-gray-200 dark:bg-pin-gray-700 text-pin-gray-400 cursor-not-allowed border-pin-gray-300 dark:border-pin-gray-600"
                           }`}
                       >
                         <PlusIcon className="w-4 h-4" />
                       </button>
                     </div>
                     {isCustomerListOpen && (customerSearch || filteredCustomers.length > 0) && (
-                      <div className="absolute bottom-full mb-2 z-20 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-                        <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                          <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      <div className="absolute bottom-full mb-2 z-20 w-full bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                        <div className="p-2 border-b border-pin-gray-100 dark:border-pin-gray-700 bg-pin-gray-50 dark:bg-pin-gray-700/50">
+                          <p className="text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400">
                             📋 Danh bạ khách hàng ({filteredCustomers.length} kết quả)
                           </p>
                         </div>
@@ -1283,27 +1077,27 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                               <div
                                 key={c.id}
                                 onClick={() => handleSelectCustomer(c)}
-                                className={`p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-slate-100 dark:border-slate-700 transition-colors group ${index === filteredCustomers.length - 1 ? "border-b-0" : ""
+                                className={`p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer border-b border-pin-gray-100 dark:border-pin-gray-700 transition-colors group ${index === filteredCustomers.length - 1 ? "border-b-0" : ""
                                   }`}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1">
-                                    <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                                    <p className="font-semibold text-pin-gray-800 dark:text-pin-gray-200 text-sm group-hover:text-blue-700 dark:group-hover:text-blue-300">
                                       👤 {c.name}
                                     </p>
                                     <div className="mt-1 space-y-1">
-                                      <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                      <p className="text-xs text-pin-gray-600 dark:text-pin-gray-400 flex items-center gap-1">
                                         📞 {c.phone}
                                       </p>
                                       {c.address && (
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                        <p className="text-xs text-pin-gray-600 dark:text-pin-gray-400 flex items-center gap-1">
                                           📍 {c.address}
                                         </p>
                                       )}
                                     </div>
                                   </div>
                                   <div className="flex items-center">
-                                    <ChevronRightIcon className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
+                                    <ChevronRightIcon className="w-4 h-4 text-pin-gray-400 group-hover:text-blue-500" />
                                   </div>
                                 </div>
                               </div>
@@ -1311,13 +1105,13 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           </div>
                         ) : (
                           <div className="p-6 text-center">
-                            <div className="text-slate-400 mb-2">
+                            <div className="text-pin-gray-400 mb-2">
                               <UsersIcon className="w-12 h-12 mx-auto" />
                             </div>
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                            <p className="text-sm font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                               Không tìm thấy khách hàng
                             </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-500">
+                            <p className="text-xs text-pin-gray-500 dark:text-pin-gray-500">
                               Thử tìm với từ khóa khác hoặc thêm khách hàng mới
                             </p>
                             <button
@@ -1326,7 +1120,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                 setIsCustomerListOpen(false);
                               }}
                               disabled={!currentUser}
-                              className="mt-3 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                              className="mt-3 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 disabled:bg-pin-gray-300 disabled:cursor-not-allowed transition-colors"
                             >
                               ➕ Thêm khách hàng mới
                             </button>
@@ -1349,7 +1143,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         setCustomerSearch("");
                         setIsCustomerListOpen(false);
                       }}
-                      className="flex-1 px-3 py-2 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600"
+                      className="flex-1 px-3 py-2 text-xs bg-pin-gray-100 dark:bg-pin-gray-700 text-pin-gray-600 dark:text-pin-gray-300 rounded-lg hover:bg-pin-gray-200 dark:hover:bg-pin-gray-600 transition-colors flex items-center justify-center gap-2 border border-pin-gray-200 dark:border-pin-gray-600"
                     >
                       🚶 Khách vãng lai
                     </button>
@@ -1370,19 +1164,19 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
               {/* 2. Cart Items List - Compact */}
               {cartItems.length > 0 && (
-                <div className="space-y-1.5 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                <div className="space-y-1.5 mb-3 pb-3 border-b border-pin-gray-200 dark:border-pin-gray-700">
+                  <p className="text-sm font-semibold text-pin-gray-700 dark:text-pin-gray-300 mb-1.5">
                     🛒 Sản phẩm trong giỏ:
                   </p>
                   <div className="space-y-1.5">
                     {cartItems.map((item) => (
                       <div
                         key={`${item.productId}-${item.priceType || "retail"}`}
-                        className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-2"
+                        className="bg-pin-gray-50 dark:bg-pin-gray-700/50 rounded-lg p-2"
                       >
                         {/* Row 1: Name + Price Type */}
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <span className="font-medium text-slate-800 dark:text-slate-100 text-sm leading-tight">
+                          <span className="font-medium text-pin-gray-800 dark:text-pin-gray-100 text-sm leading-tight">
                             {item.name}
                           </span>
                           <span
@@ -1395,26 +1189,26 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           </span>
                         </div>
                         {/* Row 2: Price calculation + Quantity controls */}
-                        <div className="flex items-center justify-between mt-2 pl-2 border-l-2 border-slate-200 dark:border-slate-600">
+                        <div className="flex items-center justify-between mt-2 pl-2 border-l-2 border-pin-gray-200 dark:border-pin-gray-600">
                           <div className="flex flex-col items-start gap-1">
                             <div className="flex items-baseline gap-1">
-                              <span className="text-xs text-slate-400">Giá:</span>
+                              <span className="text-xs text-pin-gray-400">Giá:</span>
                               <SmartPriceInput
                                 value={item.sellingPrice}
                                 onUpdate={(val) => updatePrice(item.productId, val, item.priceType)}
                                 priceType={item.priceType || 'retail'}
                               />
                             </div>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-pin-gray-400">
                               Thành tiền: <span className="font-semibold text-orange-600 dark:text-orange-400">{formatCurrency(item.sellingPrice * item.quantity)}</span>
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                          <div className="flex items-center gap-1 bg-pin-gray-100 dark:bg-pin-gray-800 rounded-lg p-1">
                             <button
                               onClick={() =>
                                 updateQuantity(item.productId, item.quantity - 1, item.priceType)
                               }
-                              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-slate-600 dark:text-slate-300 hover:text-red-500 active:scale-95 transition-all"
+                              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-pin-gray-700 rounded-md shadow-sm text-pin-gray-600 dark:text-pin-gray-300 hover:text-red-500 active:scale-95 transition-all"
                             >
                               <MinusIcon className="w-4 h-4" />
                             </button>
@@ -1426,13 +1220,13 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                                 const newQty = parseInt(e.target.value) || 1;
                                 updateQuantity(item.productId, newQty, item.priceType);
                               }}
-                              className="w-10 text-center text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-slate-800 dark:text-slate-200"
+                              className="w-10 text-center text-sm font-bold bg-transparent border-none p-0 focus:ring-0 text-pin-gray-800 dark:text-pin-gray-200"
                             />
                             <button
                               onClick={() =>
                                 updateQuantity(item.productId, item.quantity + 1, item.priceType)
                               }
-                              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-slate-600 dark:text-slate-300 hover:text-green-500 active:scale-95 transition-all"
+                              className="w-8 h-8 flex items-center justify-center bg-white dark:bg-pin-gray-700 rounded-md shadow-sm text-pin-gray-600 dark:text-pin-gray-300 hover:text-green-500 active:scale-95 transition-all"
                             >
                               <PlusIcon className="w-4 h-4" />
                             </button>
@@ -1445,22 +1239,22 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               )}
 
               {/* 3. Order Summary */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg space-y-3">
-                <h3 className="font-semibold text-slate-700 dark:text-slate-300 text-sm mb-3">
+              <div className="bg-pin-gray-50 dark:bg-pin-gray-800/50 p-4 rounded-lg space-y-3">
+                <h3 className="font-semibold text-pin-gray-700 dark:text-pin-gray-300 text-sm mb-3">
                   📋 Tổng kết đơn hàng
                 </h3>
 
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">
+                  <span className="text-pin-gray-600 dark:text-pin-gray-400">
                     Tạm tính ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm)
                   </span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                  <span className="font-medium text-pin-gray-800 dark:text-pin-gray-200">
                     {formatCurrency(subtotal)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">💰 Giảm giá</span>
+                  <span className="text-pin-gray-600 dark:text-pin-gray-400">💰 Giảm giá</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -1469,7 +1263,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       placeholder="0"
                       min="0"
                       max={discountType === "%" ? 100 : undefined}
-                      className="w-20 p-2 border border-slate-300 dark:border-slate-600 rounded-l-md text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                      className="w-20 p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-l-md text-right bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100 text-sm"
                     />
                     <select
                       value={discountType}
@@ -1477,7 +1271,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         setDiscountType(e.target.value as "VND" | "%");
                         setDiscount(0); // Reset discount when changing type
                       }}
-                      className="p-2 border-t border-r border-b border-slate-300 dark:border-slate-600 rounded-r-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                      className="p-2 border-t border-r border-b border-pin-gray-300 dark:border-pin-gray-600 rounded-r-md bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100 text-sm"
                     >
                       <option value="VND">₫</option>
                       <option value="%">%</option>
@@ -1487,16 +1281,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
                 {discountAmount > 0 && (
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 dark:text-slate-500 text-xs">Số tiền giảm</span>
+                    <span className="text-pin-gray-500 dark:text-pin-gray-500 text-xs">Số tiền giảm</span>
                     <span className="text-red-600 dark:text-red-400 font-medium">
                       -{formatCurrency(discountAmount)}
                     </span>
                   </div>
                 )}
 
-                <div className="border-t border-slate-200 dark:border-slate-600 pt-3 mt-3">
+                <div className="border-t border-pin-gray-200 dark:border-pin-gray-600 pt-3 mt-3">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-lg text-slate-800 dark:text-slate-200">
+                    <span className="font-bold text-lg text-pin-gray-800 dark:text-pin-gray-200">
                       Tổng cộng
                     </span>
                     <span className="font-bold text-xl text-orange-600 dark:text-orange-400">
@@ -1508,18 +1302,18 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
               {/* Payment Method */}
               <div className="space-y-3 pb-4 md:pb-0">
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                <label className="block text-xs font-bold text-pin-gray-500 dark:text-pin-gray-400 uppercase tracking-wider mb-3">
                   Phương thức thanh toán
                 </label>
-                <div className="grid grid-cols-2 gap-3 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-xl">
+                <div className="grid grid-cols-2 gap-3 p-1 bg-pin-gray-100 dark:bg-pin-gray-700/50 rounded-xl">
                   <button
                     onClick={() => setPaymentMethod("cash")}
                     className={`flex items-center justify-center gap-2 py-3 rounded-lg transition-all text-sm font-semibold relative overflow-hidden ${paymentMethod === "cash"
-                      ? "bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                      : "text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700"
+                      ? "bg-white dark:bg-pin-gray-600 text-green-600 dark:text-green-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      : "text-pin-gray-500 dark:text-pin-gray-400 hover:bg-white/50 dark:hover:bg-pin-gray-700"
                       }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-1 ${paymentMethod === "cash" ? "bg-green-100 dark:bg-green-900/30" : "bg-slate-200 dark:bg-slate-700"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-1 ${paymentMethod === "cash" ? "bg-green-100 dark:bg-green-900/30" : "bg-pin-gray-200 dark:bg-pin-gray-700"}`}>
                       <BanknotesIcon className="w-4 h-4" />
                     </div>
                     Tiền mặt
@@ -1527,11 +1321,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   <button
                     onClick={() => setPaymentMethod("bank")}
                     className={`flex items-center justify-center gap-2 py-3 rounded-lg transition-all text-sm font-semibold relative overflow-hidden ${paymentMethod === "bank"
-                      ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                      : "text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700"
+                      ? "bg-white dark:bg-pin-gray-600 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      : "text-pin-gray-500 dark:text-pin-gray-400 hover:bg-white/50 dark:hover:bg-pin-gray-700"
                       }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-1 ${paymentMethod === "bank" ? "bg-blue-100 dark:bg-blue-900/30" : "bg-slate-200 dark:bg-slate-700"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-1 ${paymentMethod === "bank" ? "bg-blue-100 dark:bg-blue-900/30" : "bg-pin-gray-200 dark:bg-pin-gray-700"}`}>
                       <span className="text-xs font-bold">🏦</span>
                     </div>
                     Chuyển khoản
@@ -1540,8 +1334,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
                 {/* Payment Mode - Only show when payment method is selected */}
                 {paymentMethod && (
-                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  <div className="mt-3 pt-3 border-t border-pin-gray-200 dark:border-pin-gray-700">
+                    <label className="block text-sm font-semibold text-pin-gray-700 dark:text-pin-gray-300 mb-2">
                       📌 Hình thức
                     </label>
                     <div className="grid grid-cols-4 gap-2">
@@ -1549,7 +1343,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         onClick={() => setPaymentMode("full")}
                         className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "full"
                           ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
-                          : "border-slate-300 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-600"
+                          : "border-pin-gray-300 dark:border-pin-gray-600 hover:border-emerald-300 dark:hover:border-emerald-600"
                           }`}
                       >
                         Đủ
@@ -1561,7 +1355,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         }}
                         className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "partial"
                           ? "border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
-                          : "border-slate-300 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-600"
+                          : "border-pin-gray-300 dark:border-pin-gray-600 hover:border-amber-300 dark:hover:border-amber-600"
                           }`}
                       >
                         1 phần
@@ -1573,7 +1367,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         }}
                         className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "debt"
                           ? "border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                          : "border-slate-300 dark:border-slate-600 hover:border-red-300 dark:hover:border-red-600"
+                          : "border-pin-gray-300 dark:border-pin-gray-600 hover:border-red-300 dark:hover:border-red-600"
                           }`}
                       >
                         Ghi nợ
@@ -1589,7 +1383,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         }}
                         className={`p-2 border-2 rounded-lg text-xs font-medium text-center ${paymentMode === "installment"
                           ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                          : "border-slate-300 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600"
+                          : "border-pin-gray-300 dark:border-pin-gray-600 hover:border-purple-300 dark:hover:border-purple-600"
                           }`}
                       >
                         Trả góp
@@ -1598,7 +1392,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
                     {paymentMode === "partial" && (
                       <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <label className="text-sm text-slate-600 dark:text-slate-400">
+                        <label className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                           Số tiền khách trả
                         </label>
                         <div className="flex items-center gap-2">
@@ -1608,9 +1402,9 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             max={total - 1}
                             value={paidAmount || ""}
                             onChange={(e) => setPaidAmount(Number(e.target.value || 0))}
-                            className="flex-1 md:w-36 p-2 border border-slate-300 dark:border-slate-600 rounded-md text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                            className="flex-1 md:w-36 p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-right bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100 text-sm"
                           />
-                          <span className="text-xs text-slate-500 whitespace-nowrap">
+                          <span className="text-xs text-pin-gray-500 whitespace-nowrap">
                             Còn: {formatCurrency(Math.max(0, total - (paidAmount || 0)))}
                           </span>
                         </div>
@@ -1618,14 +1412,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     )}
                     {paymentMode === "debt" && (
                       <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <label className="text-sm text-slate-600 dark:text-slate-400">
+                        <label className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                           Hạn thanh toán
                         </label>
                         <input
                           type="date"
                           value={dueDate}
                           onChange={(e) => setDueDate(e.target.value)}
-                          className="p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm [color-scheme:light] dark:[color-scheme:dark]"
+                          className="p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100 text-sm [color-scheme:light] dark:[color-scheme:dark]"
                         />
                       </div>
                     )}
@@ -1644,25 +1438,25 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <span className="text-slate-500">Trả trước:</span>{" "}
+                            <span className="text-pin-gray-500">Trả trước:</span>{" "}
                             <span className="font-medium text-green-600">
                               {formatCurrency(installmentPlan.downPayment)}
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Số kỳ:</span>{" "}
+                            <span className="text-pin-gray-500">Số kỳ:</span>{" "}
                             <span className="font-medium">
                               {installmentPlan.numberOfInstallments} tháng
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Mỗi tháng:</span>{" "}
+                            <span className="text-pin-gray-500">Mỗi tháng:</span>{" "}
                             <span className="font-medium text-red-600">
                               {formatCurrency(installmentPlan.monthlyPayment)}
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Tổng trả:</span>{" "}
+                            <span className="text-pin-gray-500">Tổng trả:</span>{" "}
                             <span className="font-medium">
                               {formatCurrency(
                                 installmentPlan.remainingAmount + installmentPlan.downPayment
@@ -1677,8 +1471,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               </div>
 
               {/* Delivery Section */}
-              <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <div className="space-y-3 pt-3 border-t border-pin-gray-200 dark:border-pin-gray-700">
+                <label className="block text-sm font-semibold text-pin-gray-700 dark:text-pin-gray-300">
                   🚚 Giao hàng
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1692,7 +1486,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     }}
                     className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${deliveryMethod === 'pickup'
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-md'
-                      : 'border-slate-300 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600'
+                      : 'border-pin-gray-300 dark:border-pin-gray-600 hover:border-blue-300 dark:hover:border-blue-600'
                       }`}
                   >
                     <span className="text-base">🏪</span>
@@ -1709,7 +1503,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     }}
                     className={`flex items-center justify-center gap-2 p-2.5 border-2 rounded-lg transition-all text-sm ${deliveryMethod === 'delivery'
                       ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 shadow-md'
-                      : 'border-slate-300 dark:border-slate-600 hover:border-orange-300 dark:hover:border-orange-600'
+                      : 'border-pin-gray-300 dark:border-pin-gray-600 hover:border-orange-300 dark:hover:border-orange-600'
                       }`}
                   >
                     <span className="text-base">🚚</span>
@@ -1720,7 +1514,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 {deliveryMethod === 'delivery' && (
                   <div className="mt-3 space-y-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                         Địa chỉ giao hàng *
                       </label>
                       <input
@@ -1728,11 +1522,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="Nhập địa chỉ giao hàng"
-                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-sm bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                         SĐT nhận hàng
                       </label>
                       <input
@@ -1740,17 +1534,17 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         value={deliveryPhone}
                         onChange={(e) => setDeliveryPhone(e.target.value)}
                         placeholder={selectedCustomer?.phone || "Số điện thoại"}
-                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-sm bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                         Đơn vị vận chuyển
                       </label>
                       <select
                         value={shippingCarrier}
                         onChange={(e) => setShippingCarrier(e.target.value)}
-                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-sm bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100"
                       >
                         <option value="">-- Chọn đơn vị --</option>
                         <option value="GHN">Giao Hàng Nhanh (GHN)</option>
@@ -1765,7 +1559,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                         Mã vận đơn
                       </label>
                       <input
@@ -1773,11 +1567,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         value={trackingNumber}
                         onChange={(e) => setTrackingNumber(e.target.value)}
                         placeholder="Nhập mã vận đơn (nếu có)"
-                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-sm bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                         Phí ship
                       </label>
                       <input
@@ -1786,11 +1580,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         onChange={(e) => setShippingFee(Number(e.target.value) || 0)}
                         placeholder="0"
                         min="0"
-                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-sm bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-medium text-pin-gray-600 dark:text-pin-gray-400 mb-1">
                         Ghi chú
                       </label>
                       <textarea
@@ -1798,12 +1592,12 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         onChange={(e) => setDeliveryNote(e.target.value)}
                         placeholder="Ghi chú giao hàng (tùy chọn)"
                         rows={2}
-                        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full p-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-md text-sm bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-pin-gray-100"
                       />
                     </div>
                     {shippingFee > 0 && (
                       <div className="flex justify-between items-center text-sm pt-2 border-t border-orange-200 dark:border-orange-700">
-                        <span className="text-slate-600 dark:text-slate-400">Tổng + phí ship:</span>
+                        <span className="text-pin-gray-600 dark:text-pin-gray-400">Tổng + phí ship:</span>
                         <span className="font-bold text-orange-600 dark:text-orange-400">
                           {formatCurrency(total + shippingFee)}
                         </span>
@@ -1811,7 +1605,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     )}
                     {deliveryMethod === 'delivery' && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-600 dark:text-slate-400">COD cần thu:</span>
+                        <span className="text-pin-gray-600 dark:text-pin-gray-400">COD cần thu:</span>
                         <span className="font-bold text-red-600 dark:text-red-400">
                           {formatCurrency(total + shippingFee - (paymentMode === 'full' ? total : (paidAmount || 0)))}
                         </span>
@@ -1822,8 +1616,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               </div>
 
               {/* Checkout Options */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
-                <label className="flex items-center text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+              <div className="bg-pin-gray-50 dark:bg-pin-gray-800/50 p-3 rounded-lg">
+                <label className="flex items-center text-sm text-pin-gray-700 dark:text-pin-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={printReceipt}
@@ -1855,8 +1649,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   className={`w-full font-semibold py-3 md:py-4 rounded-lg text-base md:text-lg flex items-center justify-center gap-2 transition-all ${!currentUser ||
                     cartItems.length === 0 ||
                     (paymentMode === "partial" && !(paidAmount > 0 && paidAmount < total))
-                    ? "bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
+                    ? "bg-pin-gray-300 dark:bg-pin-gray-600 text-pin-gray-500 dark:text-pin-gray-400 cursor-not-allowed"
+                    : "bg-pin-gray-900 text-white hover:bg-pin-gray-800"
                     }`}
                 >
                   {!currentUser ? (
@@ -1881,7 +1675,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       )}
 
       {activeTab === "history" && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200/60 dark:border-slate-700 p-3 md:p-4">
+        <div className="bg-white dark:bg-pin-gray-800 rounded-lg border border-pin-gray-200/60 dark:border-pin-gray-700 p-3 md:p-4">
           <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">
             Lịch sử bán hàng (50 gần nhất)
           </h3>
@@ -1889,7 +1683,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           {/* Mobile view - Cards */}
           <div className="md:hidden space-y-2">
             {recentSales.length === 0 && (
-              <div className="p-4 text-center text-slate-500">Chưa có hoá đơn nào.</div>
+              <div className="p-4 text-center text-pin-gray-500">Chưa có hoá đơn nào.</div>
             )}
             {recentSales.map((s: PinSale) => {
               // Tìm installment plan từ database nếu có
@@ -1949,19 +1743,19 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               return (
                 <div
                   key={s.id}
-                  className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
+                  className="bg-white dark:bg-pin-gray-800 rounded-lg p-3 border border-pin-gray-200 dark:border-pin-gray-700"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+                      <span className="text-xs font-mono font-semibold text-pin-gray-700 dark:text-pin-gray-300">
                         {s.code || s.id.slice(0, 8)}
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-pin-gray-500">
                         {new Date(s.date).toLocaleString("vi-VN")}
                       </span>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                      <span className="font-bold text-sm text-pin-gray-800 dark:text-pin-gray-100">
                         {formatCurrency(s.total)}
                       </span>
                       <button
@@ -2049,16 +1843,16 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         {statusConfig.label}
                       </button>
                       {statusConfig.detail && (
-                        <span className="text-[9px] text-slate-500 dark:text-slate-400">
+                        <span className="text-[9px] text-pin-gray-500 dark:text-pin-gray-400">
                           {statusConfig.detail}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100 mb-1">
+                  <div className="text-sm font-medium text-pin-gray-800 dark:text-pin-gray-100 mb-1">
                     {s.customer?.name || "Khách lẻ"}
                   </div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">
+                  <div className="text-xs text-pin-gray-600 dark:text-pin-gray-400 mb-2 line-clamp-2">
                     {(s.items || [])
                       .map((it: PinCartItem) => `${it.name} x${it.quantity}`)
                       .join(", ")}
@@ -2077,7 +1871,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     <button
                       onClick={() => openEdit(s)}
                       disabled={!currentUser}
-                      className={`p-1.5 rounded ${currentUser ? "text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/30" : "text-slate-400 cursor-not-allowed"}`}
+                      className={`p-1.5 rounded ${currentUser ? "text-pin-blue-600 hover:bg-pin-blue-50 dark:hover:bg-pin-blue-900/30" : "text-pin-gray-400 cursor-not-allowed"}`}
                     >
                       <PencilSquareIcon className="w-4 h-4" />
                     </button>
@@ -2109,7 +1903,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           {/* Desktop view - Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left min-w-max">
-              <thead className="border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+              <thead className="border-b dark:border-pin-gray-700 bg-pin-gray-50 dark:bg-pin-gray-700/50">
                 <tr>
                   <th className="p-3">Số phiếu</th>
                   <th className="p-3">Ngày</th>
@@ -2123,7 +1917,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               <tbody>
                 {recentSales.length === 0 && (
                   <tr>
-                    <td className="p-4 text-center text-slate-500" colSpan={7}>
+                    <td className="p-4 text-center text-pin-gray-500" colSpan={7}>
                       Chưa có hoá đơn nào.
                     </td>
                   </tr>
@@ -2189,11 +1983,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   }[paymentStatus];
 
                   return (
-                    <tr key={s.id} className="border-t dark:border-slate-700">
+                    <tr key={s.id} className="border-t dark:border-pin-gray-700">
                       <td className="p-3 text-sm font-mono font-semibold text-blue-600 dark:text-blue-400">
                         {s.code || s.id.slice(0, 8)}
                       </td>
-                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
+                      <td className="p-3 text-sm text-pin-gray-600 dark:text-pin-gray-400">
                         {new Date(s.date).toLocaleString("vi-VN")}
                       </td>
                       <td className="p-3 text-sm font-medium">{s.customer?.name || "Khách lẻ"}</td>
@@ -2201,12 +1995,12 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         <div className="space-y-0.5">
                           {(s.items || []).slice(0, 3).map((it: PinCartItem, idx: number) => (
                             <div key={idx} className="flex items-center gap-1">
-                              <span className="text-slate-800 dark:text-slate-200">{it.name}</span>
-                              <span className="text-slate-500 text-xs">x{it.quantity}</span>
+                              <span className="text-pin-gray-800 dark:text-pin-gray-200">{it.name}</span>
+                              <span className="text-pin-gray-500 text-xs">x{it.quantity}</span>
                             </div>
                           ))}
                           {(s.items || []).length > 3 && (
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-pin-gray-500">
                               +{(s.items || []).length - 3} sản phẩm khác
                             </div>
                           )}
@@ -2304,7 +2098,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           )}
                         </button>
                       </td>
-                      <td className="p-3 text-right font-semibold text-slate-800 dark:text-slate-100">
+                      <td className="p-3 text-right font-semibold text-pin-gray-800 dark:text-pin-gray-100">
                         {formatCurrency(s.total)}
                       </td>
                       <td className="p-3 text-right">
@@ -2322,7 +2116,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           onClick={() => openEdit(s)}
                           disabled={!currentUser}
                           title={!currentUser ? "Bạn phải đăng nhập để sửa" : "Sửa hoá đơn"}
-                          className={`mr-2 ${currentUser ? "text-sky-600" : "text-slate-400 cursor-not-allowed"
+                          className={`mr-2 ${currentUser ? "text-pin-blue-600" : "text-pin-gray-400 cursor-not-allowed"
                             }`}
                         >
                           <PencilSquareIcon className="w-5 h-5" />
@@ -2359,8 +2153,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       )}
       {isEditModalOpen && editingSale && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center">
+          <div className="bg-white dark:bg-pin-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-4 border-b dark:border-pin-gray-700 flex justify-between items-center">
               <h3 className="text-lg font-bold">Sửa hoá đơn</h3>
               <button onClick={() => setIsEditModalOpen(false)}>
                 <XMarkIcon className="w-6 h-6" />
@@ -2380,7 +2174,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       setEditingSale({ ...editingSale, date: newDate });
                     }
                   }}
-                  className="w-full p-2 border rounded-md bg-white dark:bg-slate-700"
+                  className="w-full p-2 border rounded-md bg-white dark:bg-pin-gray-700"
                 />
               </div>
               <div>
@@ -2392,7 +2186,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     onChange={(e) => setEditDiscount(Number(e.target.value))}
                     min="0"
                     max={editDiscountType === "%" ? 100 : undefined}
-                    className="flex-1 p-2 border rounded-l-md bg-white dark:bg-slate-700 text-right"
+                    className="flex-1 p-2 border rounded-l-md bg-white dark:bg-pin-gray-700 text-right"
                   />
                   <select
                     value={editDiscountType}
@@ -2400,14 +2194,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       setEditDiscountType(e.target.value as "VND" | "%");
                       setEditDiscount(0);
                     }}
-                    className="p-2 border-t border-r border-b rounded-r-md bg-white dark:bg-slate-700"
+                    className="p-2 border-t border-r border-b rounded-r-md bg-white dark:bg-pin-gray-700"
                   >
                     <option value="VND">₫</option>
                     <option value="%">%</option>
                   </select>
                 </div>
                 {editDiscountType === "%" && editDiscount > 0 && editingSale && (
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-pin-gray-500 mt-1">
                     Số tiền giảm:{" "}
                     {formatCurrency(Math.round((editingSale.subtotal * editDiscount) / 100))}
                   </p>
@@ -2416,32 +2210,29 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               <div>
                 <label className="block text-sm font-medium">Phương thức</label>
                 <div className="flex gap-2 mt-1">
-                  <button
+                  <Button
+                    variant={editPayment === "cash" ? "primary" : "secondary"}
                     onClick={() => setEditPayment("cash")}
-                    className={`flex-1 p-2 border rounded ${editPayment === "cash" ? "border-sky-500" : "border-slate-300"
-                      }`}
+                    className="flex-1"
                   >
                     Tiền mặt
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={editPayment === "bank" ? "primary" : "secondary"}
                     onClick={() => setEditPayment("bank")}
-                    className={`flex-1 p-2 border rounded ${editPayment === "bank" ? "border-sky-500" : "border-slate-300"
-                      }`}
+                    className="flex-1"
                   >
                     Chuyển khoản
-                  </button>
+                  </Button>
                 </div>
               </div>
-              <div className="text-right">
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="mr-2 bg-slate-200 dark:bg-slate-700 px-4 py-2 rounded"
-                >
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
                   Hủy
-                </button>
-                <button onClick={saveEdit} className="bg-sky-600 text-white px-4 py-2 rounded">
+                </Button>
+                <Button variant="primary" onClick={saveEdit}>
                   Lưu
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -2480,7 +2271,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       {/* Payment Detail Modal */}
       {showPaymentDetail && paymentDetailSale && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+          <div className="bg-white dark:bg-pin-gray-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
               <h3 className="text-xl font-bold text-white">Chi tiết thanh toán</h3>
               <button
@@ -2495,8 +2286,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl">
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Số phiếu</div>
+              <div className="bg-pin-gray-50 dark:bg-pin-gray-700/50 p-4 rounded-xl">
+                <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400 mb-1">Số phiếu</div>
                 <div className="font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
                   {paymentDetailSale.code || paymentDetailSale.id.slice(0, 8)}
                 </div>
@@ -2504,20 +2295,20 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Ngày bán</div>
+                  <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400 mb-1">Ngày bán</div>
                   <div className="text-sm font-medium">
                     {new Date(paymentDetailSale.date).toLocaleDateString("vi-VN")}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Khách hàng</div>
+                  <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400 mb-1">Khách hàng</div>
                   <div className="text-sm font-medium">
                     {paymentDetailSale.customer?.name || "Khách lẻ"}
                   </div>
                 </div>
               </div>
 
-              <div className="border-t dark:border-slate-600 pt-4">
+              <div className="border-t dark:border-pin-gray-600 pt-4">
                 <div className="text-sm font-semibold mb-3">Thông tin thanh toán</div>
 
                 {(paymentDetailSale.isInstallment || paymentDetailSale.installmentPlan) &&
@@ -2525,19 +2316,19 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   // Trả góp
                   <div className="space-y-3 bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                         Tổng đơn hàng
                       </span>
                       <span className="font-bold">{formatCurrency(paymentDetailSale.total)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Trả trước</span>
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">Trả trước</span>
                       <span className="font-semibold text-green-600 dark:text-green-400">
                         {formatCurrency(paymentDetailSale.installmentPlan.downPayment)}
                       </span>
                     </div>
                     <div className="border-t dark:border-purple-700/30 pt-2 flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                         Còn phải trả (góp)
                       </span>
                       <span className="font-bold text-purple-600 dark:text-purple-400">
@@ -2548,19 +2339,19 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     </div>
                     <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t dark:border-purple-700/30">
                       <div className="text-center">
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Số kỳ</div>
+                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">Số kỳ</div>
                         <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
                           {paymentDetailSale.installmentPlan.numberOfInstallments}
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Lãi suất</div>
+                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">Lãi suất</div>
                         <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
                           {paymentDetailSale.installmentPlan.interestRate}%
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Mỗi kỳ</div>
+                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">Mỗi kỳ</div>
                         <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                           {formatCurrency(paymentDetailSale.installmentPlan.monthlyPayment)}
                         </div>
@@ -2576,7 +2367,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           /{paymentDetailSale.installmentPlan.numberOfInstallments} kỳ
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                      <div className="w-full bg-pin-gray-200 dark:bg-pin-gray-700 rounded-full h-2">
                         <div
                           className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all"
                           style={{
@@ -2586,7 +2377,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-3 pt-3 border-t dark:border-purple-700/30">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Còn lại</span>
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">Còn lại</span>
                       <span className="font-bold text-lg text-rose-600 dark:text-rose-400">
                         {formatCurrency(paymentDetailSale.installmentPlan.remainingAmount || 0)}
                       </span>
@@ -2598,13 +2389,13 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   // Trả 1 phần
                   <div className="space-y-3 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                         Tổng đơn hàng
                       </span>
                       <span className="font-bold">{formatCurrency(paymentDetailSale.total)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                         Đã thanh toán
                       </span>
                       <span className="font-semibold text-green-600 dark:text-green-400">
@@ -2613,7 +2404,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     </div>
                     <div className="mt-2">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Tiến độ</span>
+                        <span className="text-xs text-pin-gray-500 dark:text-pin-gray-400">Tiến độ</span>
                         <span className="text-xs font-medium">
                           {Math.round(
                             (paymentDetailSale.paidAmount / paymentDetailSale.total) * 100
@@ -2621,7 +2412,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           %
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                      <div className="w-full bg-pin-gray-200 dark:bg-pin-gray-700 rounded-full h-2">
                         <div
                           className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-2 rounded-full transition-all"
                           style={{
@@ -2631,7 +2422,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-3 pt-3 border-t dark:border-yellow-700/30">
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                      <span className="text-sm font-medium text-pin-gray-600 dark:text-pin-gray-400">
                         Còn nợ
                       </span>
                       <span className="font-bold text-lg text-rose-600 dark:text-rose-400">
@@ -2640,7 +2431,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     </div>
                     {paymentDetailSale.dueDate && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-500 dark:text-slate-400">Hạn thanh toán</span>
+                        <span className="text-pin-gray-500 dark:text-pin-gray-400">Hạn thanh toán</span>
                         <span className="font-medium text-orange-600 dark:text-orange-400">
                           {new Date(paymentDetailSale.dueDate).toLocaleDateString("vi-VN")}
                         </span>
@@ -2651,13 +2442,13 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   // Công nợ (chưa trả gì)
                   <div className="space-y-3 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="text-sm text-pin-gray-600 dark:text-pin-gray-400">
                         Tổng đơn hàng
                       </span>
                       <span className="font-bold">{formatCurrency(paymentDetailSale.total)}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t dark:border-rose-700/30">
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                      <span className="text-sm font-medium text-pin-gray-600 dark:text-pin-gray-400">
                         Công nợ
                       </span>
                       <span className="font-bold text-lg text-rose-600 dark:text-rose-400">
@@ -2666,7 +2457,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     </div>
                     {paymentDetailSale.dueDate && (
                       <div className="flex justify-between items-center text-sm pt-2 border-t dark:border-rose-700/30">
-                        <span className="text-slate-500 dark:text-slate-400">Hạn thanh toán</span>
+                        <span className="text-pin-gray-500 dark:text-pin-gray-400">Hạn thanh toán</span>
                         <span className="font-medium text-orange-600 dark:text-orange-400">
                           {new Date(paymentDetailSale.dueDate).toLocaleDateString("vi-VN")}
                         </span>
@@ -2677,7 +2468,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               </div>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-4">
+            <div className="bg-pin-gray-50 dark:bg-pin-gray-900/50 px-6 py-4">
               <button
                 onClick={() => {
                   setShowPaymentDetail(false);
@@ -2730,17 +2521,17 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       {/* Confirm Dialog Modal */}
       {confirmDialog?.isOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-pin-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-pin-gray-900 dark:text-white mb-4">
               {confirmDialog.title}
             </h3>
-            <p className="text-slate-600 dark:text-slate-300 mb-6 whitespace-pre-line">
+            <p className="text-pin-gray-600 dark:text-pin-gray-300 mb-6 whitespace-pre-line">
               {confirmDialog.message}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={closeConfirmDialog}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+                className="px-4 py-2 bg-pin-gray-200 dark:bg-pin-gray-700 text-pin-gray-700 dark:text-pin-gray-300 rounded-lg hover:bg-pin-gray-300 dark:hover:bg-pin-gray-600 transition"
               >
                 Hủy
               </button>

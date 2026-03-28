@@ -30,7 +30,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-pin-gray-50 dark:bg-pin-gray-900">
       {/* Tết 2026 Banner */}
       <TetBanner />
 

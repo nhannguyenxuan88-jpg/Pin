@@ -15,7 +15,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   onSwitchApp,
 }) => {
   return (
-    <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-900 font-sans">
+    <div className="flex flex-col h-screen bg-pin-gray-100 dark:bg-pin-gray-900 font-sans">
       {/* Tết 2026 Banner */}
       <div className="print:hidden">
         <TetBanner />
