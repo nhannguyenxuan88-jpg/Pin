@@ -455,7 +455,7 @@ const ProductModal: React.FC<{
             <input
               type="number"
               name="purchasePrice"
-              value={formData.purchasePrice || ""}
+              value={formData.purchasePrice === 0 ? 0 : formData.purchasePrice || ""}
               onChange={handleChange}
               placeholder="0"
               className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-orange-300 dark:border-orange-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold text-sm md:text-base"
@@ -470,7 +470,7 @@ const ProductModal: React.FC<{
               <input
                 type="number"
                 name="retailPrice"
-                value={formData.retailPrice || ""}
+                value={formData.retailPrice === 0 ? 0 : formData.retailPrice || ""}
                 onChange={handleChange}
                 placeholder="Tự động +40%"
                 className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm md:text-base"
@@ -484,7 +484,7 @@ const ProductModal: React.FC<{
               <input
                 type="number"
                 name="wholesalePrice"
-                value={formData.wholesalePrice || ""}
+                value={formData.wholesalePrice === 0 ? 0 : formData.wholesalePrice || ""}
                 onChange={handleChange}
                 placeholder="Tự động +20%"
                 className="w-full px-3 md:px-4 py-2 md:py-2.5 border-2 border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm md:text-base"
@@ -856,8 +856,8 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
       return;
     }
 
-    if (receiptItems.some((item) => item.purchasePrice <= 0)) {
-      showToast("Thông báo", "Vui lòng nhập giá nhập cho tất cả sản phẩm", "warn");
+    if (receiptItems.some((item) => item.purchasePrice < 0)) {
+      showToast("Thông báo", "Giá nhập không được nhỏ hơn 0", "warn");
       return;
     }
 
@@ -1614,7 +1614,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                         </label>
                         <input
                           type="number"
-                          value={item.purchasePrice || ""}
+                          value={item.purchasePrice === 0 ? 0 : item.purchasePrice || ""}
                           onChange={(e) =>
                             handleUpdateItem(
                               item.internalId,
@@ -1635,7 +1635,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                         </label>
                         <input
                           type="number"
-                          value={item.retailPrice || ""}
+                          value={item.retailPrice === 0 ? 0 : item.retailPrice || ""}
                           onChange={(e) =>
                             handleUpdateItem(item.internalId, "retailPrice", Number(e.target.value))
                           }
@@ -1711,7 +1711,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                         </label>
                         <input
                           type="number"
-                          value={item.purchasePrice || ""}
+                          value={item.purchasePrice === 0 ? 0 : item.purchasePrice || ""}
                           onChange={(e) =>
                             handleUpdateItem(
                               item.internalId,
@@ -1729,7 +1729,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
                         </label>
                         <input
                           type="number"
-                          value={item.retailPrice || ""}
+                          value={item.retailPrice === 0 ? 0 : item.retailPrice || ""}
                           onChange={(e) =>
                             handleUpdateItem(item.internalId, "retailPrice", Number(e.target.value))
                           }

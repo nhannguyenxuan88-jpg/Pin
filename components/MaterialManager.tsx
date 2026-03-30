@@ -381,7 +381,7 @@ const MaterialForm: React.FC<{
 
     // Kiểm tra có ít nhất 1 sản phẩm hợp lệ
     const validMaterials = materials.filter(
-      (m: MaterialItem) => m.name.trim() && m.purchasePrice > 0 && m.quantity > 0
+      (m: MaterialItem) => m.name.trim() && m.purchasePrice >= 0 && m.quantity > 0
     );
     if (validMaterials.length === 0) {
       showToast("Thông báo", "Vui lòng nhập ít nhất một sản phẩm hợp lệ!", "warn");
@@ -3363,7 +3363,7 @@ const MaterialManager: React.FC<{
     }>
   ) => {
     for (const it of items) {
-      if (!it.name || !(it.purchasePrice && it.purchasePrice > 0)) continue;
+      if (!it.name || it.purchasePrice === undefined || it.purchasePrice < 0) continue;
       const quantity = Math.max(1, Number(it.quantity ?? 1));
       const purchasePrice = Number(it.purchasePrice ?? 0);
       const payload = {
