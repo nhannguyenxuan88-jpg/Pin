@@ -1171,7 +1171,7 @@ const PinGoodsReceiptNew: React.FC<PinGoodsReceiptNewProps> = ({
             purchasePrice: Number(row.purchase_price ?? row.purchaseprice ?? 0),
             retailPrice: Number(row.retail_price ?? row.retailprice ?? 0),
             wholesalePrice: Number(row.wholesale_price ?? row.wholesaleprice ?? 0),
-            stock: Number(row.stock ?? 0),
+            stock: Number(row.stock ?? row.quantity ?? 0),
             committedQuantity: Number(row.committed_quantity ?? row.committedquantity ?? 0),
             supplier: row.supplier || undefined,
             supplierPhone: row.supplier_phone || undefined,

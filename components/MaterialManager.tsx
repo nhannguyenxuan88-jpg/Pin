@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { PinMaterial, EnhancedMaterial, Supplier, PinMaterialHistory } from "../types";
+import type { PinMaterial, EnhancedMaterial, Supplier, PinMaterialHistory, PinProduct } from "../types";
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
 import { useMaterialStock } from "../lib/hooks/useMaterialStock";
 import { usePinContext } from "../contexts/PinContext";
@@ -1642,6 +1642,7 @@ const MaterialEditModal: React.FC<{
     name: "",
     sku: "",
     unit: "cái",
+    stock: 0,
     purchasePrice: 0,
     retailPrice: 0,
     wholesalePrice: 0,
@@ -1658,6 +1659,7 @@ const MaterialEditModal: React.FC<{
         name: material.name || "",
         sku: material.sku || "",
         unit: material.unit || "cái",
+        stock: Number(material.stock || 0),
         purchasePrice: material.purchasePrice || 0,
         retailPrice: material.retailPrice || 0,
         wholesalePrice: material.wholesalePrice || 0,
@@ -1695,6 +1697,7 @@ const MaterialEditModal: React.FC<{
         name: formData.name.trim(),
         sku: formData.sku.trim(),
         unit: formData.unit,
+        stock: Math.max(0, Number(formData.stock || 0)),
         purchasePrice: formData.purchasePrice,
         retailPrice: formData.retailPrice,
         wholesalePrice: formData.wholesalePrice,
@@ -1812,8 +1815,21 @@ const MaterialEditModal: React.FC<{
               </div>
             </div>
 
-            {/* Giá nhập */}
+            {/* Tồn kho và Giá nhập */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tồn kho
+                </label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Giá nhập (VNĐ)
@@ -2875,7 +2891,7 @@ const MaterialManager: React.FC<{
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
 }> = ({ materials, setMaterials, productionOrders = [], suppliers, setSuppliers }) => {
   // Get pinMaterialHistory from context to update it
-  const { pinMaterialHistory, setPinMaterialHistory, reloadPinMaterialHistory, currentUser, addToast } =
+  const { pinMaterialHistory, setPinMaterialHistory, reloadPinMaterialHistory, currentUser, addToast, setPinProducts } =
     usePinContext();
 
   const navigate = useNavigate();
@@ -4882,6 +4898,7 @@ const MaterialManager: React.FC<{
                     .update({
                       name: updatedMaterial.name,
                       unit: updatedMaterial.unit,
+                      stock: Number(updatedMaterial.stock || 0),
                       purchase_price: updatedMaterial.purchasePrice,
                       retail_price: updatedMaterial.retailPrice,
                       wholesale_price: updatedMaterial.wholesalePrice,
@@ -4894,6 +4911,41 @@ const MaterialManager: React.FC<{
                     .eq("id", updatedMaterial.id);
 
                   if (error) throw error;
+
+                  // Keep product inventory synced for finished goods/product rows.
+                  if (
+                    updatedMaterial.category === "finished_goods" ||
+                    updatedMaterial.category === "product"
+                  ) {
+                    const { error: productSyncError } = await supabase
+                      .from("pin_products")
+                      .update({
+                        name: updatedMaterial.name,
+                        stock: Number(updatedMaterial.stock || 0),
+                        cost_price: Number(updatedMaterial.purchasePrice || 0),
+                        retail_price: Number(updatedMaterial.retailPrice || 0),
+                        wholesale_price: Number(updatedMaterial.wholesalePrice || 0),
+                      })
+                      .eq("sku", updatedMaterial.sku);
+
+                    if (!productSyncError) {
+                      setPinProducts((prev: PinProduct[]) =>
+                        prev.map((p) =>
+                          p.sku === updatedMaterial.sku
+                            ? {
+                              ...p,
+                              name: updatedMaterial.name,
+                              stock: Number(updatedMaterial.stock || 0),
+                              costPrice: Number(updatedMaterial.purchasePrice || 0),
+                              retailPrice: Number(updatedMaterial.retailPrice || 0),
+                              wholesalePrice: Number(updatedMaterial.wholesalePrice || 0),
+                              sellingPrice: Number(updatedMaterial.retailPrice || 0),
+                            }
+                            : p
+                        )
+                      );
+                    }
+                  }
 
                   // Update local state
                   setMaterials((prev) =>

@@ -412,7 +412,8 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             retailPrice:
               Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0) || undefined,
             wholesalePrice: Number(row.wholesaleprice ?? row.wholesale_price ?? 0) || undefined,
-            stock: Number(row.stock ?? 0),
+            // Backward compatibility: some legacy rows still store on-hand qty in `quantity`.
+            stock: Number(row.stock ?? row.quantity ?? 0),
             committedQuantity:
               Number(row.committedquantity ?? row.committed_quantity ?? 0) || undefined,
             supplier: (row.supplier || undefined) as string | undefined,
@@ -429,7 +430,8 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             id: row.id as string,
             name: row.name as string,
             sku: row.sku as string,
-            stock: Number(row.stock ?? 0),
+            // Backward compatibility: some legacy rows still store on-hand qty in `quantity`.
+            stock: Number(row.stock ?? row.quantity ?? 0),
             costPrice: Number(row.costprice ?? row.cost_price ?? 0),
             retailPrice: Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0),
             wholesalePrice: Number(
@@ -444,6 +446,70 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
             created_at: (row.created_at || row.createdat || undefined) as string | undefined,
           });
           setPinProducts(((prodsRes.data as DBRow[]) || []).map(mapDbProdToUi));
+        }
+
+        // Reconcile legacy data: some finished goods exist in pin_products but not in pin_materials.
+        // This keeps Warehouse page in sync with Product page for old records.
+        if (!matsRes.error && !prodsRes.error) {
+          const materialRows = ((matsRes.data as DBRow[]) || []);
+          const productRows = ((prodsRes.data as DBRow[]) || []);
+          const materialSkus = new Set(
+            materialRows
+              .map((r) => String(r.sku || "").trim())
+              .filter(Boolean)
+          );
+
+          const missingProducts = productRows.filter((p) => {
+            const sku = String(p.sku || "").trim();
+            return !!sku && !materialSkus.has(sku);
+          });
+
+          if (missingProducts.length > 0) {
+            const payload = missingProducts.map((p) => ({
+              name: String(p.name || ""),
+              sku: String(p.sku || ""),
+              unit: "cái",
+              category: "finished_goods",
+              category_id: (p.category_id || p.categoryid || null) as string | null,
+              purchase_price: Number(p.costprice ?? p.cost_price ?? 0),
+              retail_price: Number(p.retailprice ?? p.retail_price ?? p.sellingprice ?? 0),
+              wholesale_price: Number(p.wholesaleprice ?? p.wholesale_price ?? 0),
+              stock: Number(p.stock ?? p.quantity ?? 0),
+              committed_quantity: 0,
+              updated_at: new Date().toISOString(),
+            }));
+
+            const { data: syncedRows, error: syncErr } = await supabase
+              .from("pin_materials")
+              .upsert(payload, { onConflict: "sku" })
+              .select("*");
+
+            if (!syncErr && Array.isArray(syncedRows) && syncedRows.length > 0) {
+              const mappedSynced = syncedRows.map((row: DBRow): PinMaterial => ({
+                id: row.id as string,
+                name: row.name as string,
+                sku: row.sku as string,
+                unit: row.unit as string,
+                category: (row.category || undefined) as PinMaterial["category"],
+                category_id: (row.category_id || row.categoryid || undefined) as string | undefined,
+                purchasePrice: Number(row.purchaseprice ?? row.purchase_price ?? 0),
+                retailPrice: Number(row.retailprice ?? row.retail_price ?? row.sellingprice ?? 0) || undefined,
+                wholesalePrice: Number(row.wholesaleprice ?? row.wholesale_price ?? 0) || undefined,
+                stock: Number(row.stock ?? row.quantity ?? 0),
+                committedQuantity: Number(row.committedquantity ?? row.committed_quantity ?? 0) || undefined,
+                supplier: (row.supplier || undefined) as string | undefined,
+                supplierPhone: (row.supplierphone || row.supplier_phone || undefined) as string | undefined,
+                description: (row.description || undefined) as string | undefined,
+                created_at: (row.created_at || row.createdat || undefined) as string | undefined,
+              }));
+
+              setPinMaterials((prev: PinMaterial[]) => {
+                const bySku = new Map(prev.map((m) => [m.sku, m]));
+                mappedSynced.forEach((m) => bySku.set(m.sku, m));
+                return Array.from(bySku.values());
+              });
+            }
+          }
         }
         if (!ordersRes.error) {
           const mapDbOrderToUi = (row: DBRow): ProductionOrder => ({

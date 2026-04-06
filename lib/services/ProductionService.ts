@@ -142,6 +142,66 @@ export function createProductionService(ctx: PinContextType): ProductionService 
     console.log(`🔧 [persistProduct] Saving "${product.name}" stock=${product.stock}`);
     console.log(`   - IS_OFFLINE_MODE=${IS_OFFLINE_MODE}, currentUser=${!!ctx.currentUser}`);
 
+    const syncProductToInventoryLocal = (nextProduct: PinProduct) => {
+      ctx.setPinMaterials((prev: PinMaterial[]) => {
+        const idx = prev.findIndex((m) => m.sku === nextProduct.sku);
+        const existing = idx >= 0 ? prev[idx] : undefined;
+        const inventoryRow: PinMaterial = {
+          id: existing?.id || nextProduct.id,
+          name: nextProduct.name,
+          sku: nextProduct.sku,
+          unit: existing?.unit || "cái",
+          category: "finished_goods",
+          category_id: nextProduct.category_id || existing?.category_id,
+          purchasePrice: Number(nextProduct.costPrice ?? existing?.purchasePrice ?? 0),
+          retailPrice: Number(nextProduct.retailPrice ?? nextProduct.sellingPrice ?? existing?.retailPrice ?? 0),
+          wholesalePrice: Number(nextProduct.wholesalePrice ?? existing?.wholesalePrice ?? 0),
+          stock: Number(nextProduct.stock ?? 0),
+          committedQuantity: Number(existing?.committedQuantity ?? 0),
+          supplier: existing?.supplier,
+          supplierPhone: existing?.supplierPhone,
+          description: existing?.description,
+          created_at: existing?.created_at,
+        };
+
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...inventoryRow };
+          return next;
+        }
+        return [inventoryRow, ...prev];
+      });
+    };
+
+    const syncProductToInventoryDb = async (nextProduct: PinProduct): Promise<void> => {
+      const existingMat = ctx.pinMaterials.find((m) => m.sku === nextProduct.sku);
+      const payload = {
+        id: existingMat?.id && isValidUUID(existingMat.id) ? existingMat.id : undefined,
+        name: nextProduct.name,
+        sku: nextProduct.sku,
+        unit: existingMat?.unit || "cái",
+        category: "finished_goods",
+        category_id: nextProduct.category_id || existingMat?.category_id || null,
+        purchase_price: Number(nextProduct.costPrice ?? existingMat?.purchasePrice ?? 0),
+        retail_price: Number(nextProduct.retailPrice ?? nextProduct.sellingPrice ?? existingMat?.retailPrice ?? 0),
+        wholesale_price: Number(nextProduct.wholesalePrice ?? existingMat?.wholesalePrice ?? 0),
+        stock: Number(nextProduct.stock ?? 0),
+        committed_quantity: Number(existingMat?.committedQuantity ?? 0),
+        supplier: existingMat?.supplier || null,
+        supplier_phone: existingMat?.supplierPhone || null,
+        description: existingMat?.description || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from("pin_materials")
+        .upsert(payload, { onConflict: "sku" });
+
+      if (error) {
+        throw error;
+      }
+    };
+
     if (IS_OFFLINE_MODE || !ctx.currentUser) {
       console.log(`   - Using OFFLINE mode (no DB save)`);
       ctx.setPinProducts((prev: PinProduct[]) => {
@@ -153,6 +213,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
         }
         return [product, ...prev];
       });
+      syncProductToInventoryLocal(product);
       return true;
     }
     // Minimal payload to fit current schema (snake_case)
@@ -185,6 +246,15 @@ export function createProductionService(ctx: PinContextType): ProductionService 
       }
       return [product, ...prev];
     });
+
+    // Keep Warehouse list in sync with finished products.
+    try {
+      await syncProductToInventoryDb(product);
+      syncProductToInventoryLocal(product);
+    } catch (syncErr) {
+      console.warn("Failed syncing finished product into pin_materials:", syncErr);
+    }
+
     return true;
   };
 

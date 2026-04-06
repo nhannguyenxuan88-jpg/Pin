@@ -30,6 +30,24 @@ const formatCurrencyInput = (value: number | string): string => {
   return new Intl.NumberFormat("vi-VN").format(num);
 };
 
+// For outsourcing price fields: allow signed values (negative or positive).
+const parseSignedCurrencyInput = (value: string): number => {
+  const raw = String(value || "").trim();
+  const isNegative = raw.startsWith("-");
+  const digits = raw.replace(/[^0-9]/g, "");
+  if (!digits) return 0;
+  const num = Number(digits);
+  return isNegative ? -num : num;
+};
+
+const formatSignedCurrencyInput = (value: number | string): string => {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num) || num === 0) return "";
+  const abs = Math.abs(Math.trunc(num));
+  const formatted = new Intl.NumberFormat("vi-VN").format(abs);
+  return num < 0 ? `-${formatted}` : formatted;
+};
+
 interface PinRepairModalNewProps {
   isOpen: boolean;
   onClose: () => void;
@@ -984,14 +1002,18 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                     onFocus={() => setActiveItemTab("outsourcing")}
                     disabled={isCompleted}
                     className="flex-1 px-3 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900 disabled:opacity-50" />
+                  <input type="number" placeholder="SL" min="1" value={outsourcingInput.quantity}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
+                    disabled={isCompleted}
+                    className="w-14 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-center bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50" />
                   <input type="text" placeholder="Giá vốn"
-                    value={outsourcingInput.costPrice ? formatCurrencyInput(outsourcingInput.costPrice) : ""}
-                    onChange={(e) => setOutsourcingInput(p => ({ ...p, costPrice: parseCurrencyInput(e.target.value) }))}
+                    value={outsourcingInput.costPrice ? formatSignedCurrencyInput(outsourcingInput.costPrice) : ""}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, costPrice: parseSignedCurrencyInput(e.target.value) }))}
                     disabled={isCompleted}
                     className="w-24 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none disabled:opacity-50" />
                   <input type="text" placeholder="Đơn giá"
-                    value={outsourcingInput.sellingPrice ? formatCurrencyInput(outsourcingInput.sellingPrice) : ""}
-                    onChange={(e) => setOutsourcingInput(p => ({ ...p, sellingPrice: parseCurrencyInput(e.target.value) }))}
+                    value={outsourcingInput.sellingPrice ? formatSignedCurrencyInput(outsourcingInput.sellingPrice) : ""}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, sellingPrice: parseSignedCurrencyInput(e.target.value) }))}
                     disabled={isCompleted}
                     className="w-24 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none disabled:opacity-50" />
                   <button type="button" onClick={handleAddOutsourcing} disabled={isCompleted}
@@ -1060,7 +1082,15 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                         <span>{item.quantity} × {formatCurrency(item.sellingPrice)}</span>
                         <span className="text-slate-300 dark:text-slate-600">=</span>
                         <span className="font-bold text-orange-600 dark:text-orange-400">{formatCurrency(item.total)}</span>
-                        <span className="ml-1 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">+{formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lời</span>
+                        {((item.sellingPrice - item.costPrice) * item.quantity) >= 0 ? (
+                          <span className="ml-1 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
+                            +{formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lời
+                          </span>
+                        ) : (
+                          <span className="ml-1 text-rose-600 dark:text-rose-400 text-[10px] font-semibold">
+                            {formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lỗ
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button type="button" onClick={() => handleRemoveOutsourcing(idx)} disabled={isCompleted}
