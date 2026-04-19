@@ -18,6 +18,7 @@ import {
   ArrowsLeftRightIcon,
   ArrowRightOnRectangleIcon,
   SparklesIcon,
+  ShieldCheckIcon,
 } from "./common/Icons";
 import { ThemeToggle } from "./ThemeToggle";
 import type { CurrentUser } from "../contexts/types";
@@ -109,6 +110,12 @@ export const PinTopNav: React.FC<{
       icon: <WrenchScrewdriverIcon />,
       label: "Sửa chữa",
       color: "text-pink-400",
+    },
+    {
+      to: "/warranty",
+      icon: <ShieldCheckIcon />,
+      label: "Bảo hành",
+      color: "text-blue-400",
     },
 
     // 3. FINANCIAL & ANALYTICS - Tài chính & Báo cáo (gộp tất cả báo cáo)
@@ -207,6 +214,15 @@ export const PinTopNav: React.FC<{
                       >
                         <SparklesIcon className="w-4 h-4" />
                         Phân tích
+                      </NavLink>
+
+                      <NavLink
+                        to="/warranty"
+                        onClick={() => setShowLogoMenu(false)}
+                        className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-pin-gray-100 dark:hover:bg-pin-gray-700 text-sm"
+                      >
+                        <ShieldCheckIcon className="w-4 h-4" />
+                        Bảo hành
                       </NavLink>
 
                       <NavLink

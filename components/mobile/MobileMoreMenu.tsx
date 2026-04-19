@@ -7,6 +7,7 @@ import {
   SparklesIcon,
   CpuChipIcon,
   DocumentChartBarIcon,
+  ShieldCheckIcon,
   CogIcon,
   XMarkIcon,
 } from "../common/Icons";
@@ -34,6 +35,14 @@ export const MobileMoreMenu: React.FC<MoreMenuProps> = ({ isOpen, onClose }) => 
       description: "Quản lý phiếu sửa chữa",
       color: "text-pink-500",
       bgColor: "bg-pink-50 dark:bg-pink-900/20",
+    },
+    {
+      to: "/warranty",
+      icon: <ShieldCheckIcon className="w-6 h-6 text-blue-500" />,
+      label: "Bảo hành",
+      description: "Theo dõi tình trạng bảo hành",
+      color: "text-blue-500",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
     },
     {
       to: "/products",

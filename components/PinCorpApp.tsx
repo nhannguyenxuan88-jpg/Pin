@@ -22,6 +22,7 @@ const AdvancedAnalyticsDashboard = lazy(() => import("./AdvancedAnalyticsDashboa
 const BusinessSettings = lazy(() => import("./BusinessSettings"));
 const TaxReportPage = lazy(() => import("./TaxReportPage").then(m => ({ default: m.TaxReportPage })));
 const DeliveryOrdersView = lazy(() => import("./DeliveryOrdersView"));
+const PinWarrantyManager = lazy(() => import("./PinWarrantyManager"));
 
 // Loading fallback component
 const PageLoader: React.FC = () => (
@@ -177,6 +178,7 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
           />
           <Route path="/financial" element={<PinFinancialManager />} />
           <Route path="/receivables" element={<Receivables />} />
+          <Route path="/warranty" element={<PinWarrantyManager />} />
           <Route path="/delivery" element={<DeliveryOrdersView />} />
           <Route path="/settings" element={<PinSettings />} />
           <Route path="/business-settings" element={<BusinessSettings />} />
