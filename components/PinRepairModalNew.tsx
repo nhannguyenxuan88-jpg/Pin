@@ -729,235 +729,497 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] w-full max-w-6xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200 dark:border-slate-800">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh]">
 
-        {/* ── HEADER: Tối giản, sang trọng ── */}
-        <div className="px-8 py-6 flex justify-between items-center flex-shrink-0">
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-              <span className="w-2 h-8 bg-blue-600 rounded-full" />
-              {getHeaderTitle().toUpperCase()}
-            </h2>
-            {initialOrder && <p className="text-[10px] font-bold text-slate-400 mt-1 tracking-[0.2em] uppercase opacity-60">Reference: {initialOrder.id}</p>}
+        {/* ── HEADER ── */}
+        <div className="px-5 py-3 bg-gradient-to-r from-blue-700 to-cyan-600 flex justify-between items-center flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+              {initialOrder ? "✏" : "+"}
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white leading-tight">{getHeaderTitle()}</h2>
+              {initialOrder && <p className="text-xs text-blue-200">{initialOrder.id}</p>}
+            </div>
           </div>
-          <button onClick={onClose} className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all duration-300 group" type="button">
-            <XMarkIcon className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
+          <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors" type="button">
+            <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
 
-            {/* ════════ CỘT TRÁI: Nhập liệu chính (4/12) ════════ */}
-            <div className="lg:col-span-4 overflow-y-auto p-8 space-y-8 bg-slate-50/50 dark:bg-slate-900/30 border-r border-slate-100 dark:border-slate-800/50">
+          {/* ── BANNER hoàn tất ── */}
+          {isCompleted && (
+            <div className="mx-4 mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 rounded-r-xl flex items-center gap-3 flex-shrink-0">
+              <span className="text-xl flex-shrink-0">🔒</span>
+              <p className="font-semibold text-emerald-800 dark:text-emerald-300 text-sm">Đơn đã hoàn tất & thanh toán — chỉ đọc</p>
+            </div>
+          )}
 
-              {/* Section: Khách hàng */}
-              <div className="space-y-4">
-                <label className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em] pl-1">01. Thông tin khách hàng</label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    value={formData.customerName || customerSearch}
-                    onChange={(e) => {
-                      if (formData.customerName) return;
-                      setCustomerSearch(e.target.value);
-                      setShowCustomerDropdown(!!e.target.value.trim());
-                    }}
-                    className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                      formData.customerName 
-                      ? "bg-blue-50/50 dark:bg-blue-500/5 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300"
-                      : "bg-white dark:bg-slate-800 border-transparent dark:border-transparent focus:border-blue-500 shadow-sm"
-                    }`}
-                    placeholder="Tên khách hàng hoặc số điện thoại..."
-                  />
-                  {!formData.customerName && (
-                    <button type="button" onClick={() => setShowAddCustomerModal(true)} 
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-900 dark:bg-blue-600 text-white rounded-xl hover:scale-110 active:scale-95 transition-all">
-                      <PlusIcon className="w-4 h-4" />
+          {/* ── BODY: 2 CỘT ── */}
+          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-5 min-h-0 divide-x divide-slate-200 dark:divide-slate-700">
+
+            {/* ════════ CỘT TRÁI (40%) ════════ */}
+            <div className="lg:col-span-2 overflow-y-auto p-4 space-y-3 bg-white dark:bg-slate-900">
+
+              {/* ── Khách hàng ── */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-blue-500 rounded-full flex-shrink-0" />
+                  <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide">Khách hàng</span>
+                  <span className="text-red-500 text-xs ml-auto">*</span>
+                </div>
+                <div className="p-3 space-y-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={formData.customerName || customerSearch}
+                        onChange={(e) => {
+                          if (formData.customerName) return;
+                          setCustomerSearch(e.target.value);
+                          setShowCustomerDropdown(!!e.target.value.trim());
+                        }}
+                        onFocus={() => { if (!formData.customerName) setShowCustomerDropdown(!!customerSearch.trim()); }}
+                        onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                        disabled={isCompleted}
+                        readOnly={!!formData.customerName || isCompleted}
+                        className={`w-full px-3 py-2.5 rounded-xl text-sm border-2 transition-all focus:outline-none disabled:opacity-50 ${
+                          formData.customerName
+                            ? "border-blue-400 bg-blue-50 dark:bg-blue-900/30 font-semibold pr-9 text-slate-900 dark:text-slate-100"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+                        }`}
+                        placeholder="Tìm tên hoặc SĐT..."
+                        autoComplete="off"
+                      />
+                      {formData.customerName && (
+                        <button type="button"
+                          onClick={() => { setFormData(p => ({ ...p, customerName: "", customerPhone: "" })); setCustomerSearch(""); }}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors">
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                      {showCustomerDropdown && !formData.customerName && filteredCustomers.length > 0 && (
+                        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                          {filteredCustomers.map((c: any) => (
+                            <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 border-b dark:border-slate-700 last:border-0 transition-colors">
+                              <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{c.name}</div>
+                              <div className="text-xs text-slate-500 mt-0.5">📞 {c.phone}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => setShowAddCustomerModal(true)} disabled={isCompleted}
+                      className="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:scale-95 text-white rounded-xl shadow-md shadow-blue-200 dark:shadow-blue-900 transition-all disabled:opacity-40 flex-shrink-0"
+                      title="Thêm khách mới">
+                      <PlusIcon className="w-5 h-5" />
                     </button>
+                  </div>
+                  {formData.customerName && formData.customerPhone && (
+                    <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <span className="text-blue-400 text-sm">📞</span>
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{formData.customerPhone}</span>
+                    </div>
                   )}
-                  {formData.customerName && (
-                    <button type="button" onClick={() => { setFormData(p => ({ ...p, customerName: "", customerPhone: "" })); setCustomerSearch(""); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500">
-                      <XMarkIcon className="w-5 h-5" />
-                    </button>
+                  <input type="hidden" name="customerName" value={formData.customerName || ""} required />
+                  <input type="hidden" name="customerPhone" value={formData.customerPhone || ""} required />
+                </div>
+              </div>
+
+              {/* ── Thiết bị & KTV ── */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-3 py-2 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-800 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-violet-500 rounded-full flex-shrink-0" />
+                  <span className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Thiết bị & Kỹ thuật viên</span>
+                </div>
+                <div className="p-3 grid grid-cols-2 gap-2">
+                  <div>
+                    <input type="text" name="deviceName" value={formData.deviceName || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900 disabled:opacity-50"
+                      placeholder="iPhone 15, Laptop..." />
+                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Tên thiết bị</span>
+                  </div>
+                  <div>
+                    <input type="text" name="technicianName" value={formData.technicianName || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900 disabled:opacity-50"
+                      placeholder="Tên KTV..." />
+                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Kỹ thuật viên</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Mô tả sự cố ── */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-3 py-2 bg-rose-50 dark:bg-rose-900/20 border-b border-rose-100 dark:border-rose-800 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-rose-500 rounded-full flex-shrink-0" />
+                  <span className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wide">Mô tả sự cố</span>
+                  <span className="text-red-500 text-xs ml-auto">*</span>
+                </div>
+                <div className="p-3">
+                  <textarea name="issueDescription" value={formData.issueDescription || ""} onChange={handleInputChange} disabled={isCompleted}
+                    rows={2} required
+                    className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900 disabled:opacity-50"
+                    placeholder="Mô tả chi tiết tình trạng hư hỏng..." />
+                </div>
+              </div>
+
+              {/* ── Trạng thái — 3×2 grid ── */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-amber-500 rounded-full flex-shrink-0" />
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">Trạng thái</span>
+                  {formData.status && (
+                    <span className="ml-auto text-[11px] font-semibold text-amber-600 dark:text-amber-400">{formData.status}</span>
                   )}
                 </div>
-                {formData.customerPhone && (
-                  <div className="flex items-center gap-3 px-5 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">📞</div>
-                    <span className="text-sm font-black text-slate-700 dark:text-slate-200">{formData.customerPhone}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Section: Thiết bị */}
-              <div className="space-y-4">
-                <label className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em] pl-1">02. Thiết bị & Kỹ thuật</label>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="relative">
-                    <input type="text" name="deviceName" value={formData.deviceName || ""} onChange={handleInputChange}
-                      className="w-full px-5 py-3.5 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-2xl text-sm font-bold shadow-sm outline-none transition-all dark:text-white"
-                      placeholder="VD: iPhone 15 Pro Max..." />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase">Thiết bị</span>
-                  </div>
-                  <div className="relative">
-                    <input type="text" name="technicianName" value={formData.technicianName || ""} onChange={handleInputChange}
-                      className="w-full px-5 py-3.5 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-2xl text-sm font-bold shadow-sm outline-none transition-all dark:text-white"
-                      placeholder="Người đảm nhận..." />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase">Kỹ thuật</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section: Tình trạng */}
-              <div className="space-y-4">
-                <label className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em] pl-1">03. Triệu chứng hư hỏng</label>
-                <textarea name="issueDescription" value={formData.issueDescription || ""} onChange={handleInputChange}
-                  rows={3} className="w-full px-5 py-4 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-2xl text-sm font-bold shadow-sm outline-none transition-all resize-none dark:text-white"
-                  placeholder="Mô tả chi tiết lỗi của máy..." />
-              </div>
-
-              {/* Section: Trạng thái */}
-              <div className="space-y-4">
-                <label className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.15em] pl-1">04. Tiến độ xử lý</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 grid grid-cols-3 gap-1.5">
                   {([
-                    { value: "Tiếp nhận", icon: "💎", color: "blue" },
-                    { value: "Đang sửa", icon: "⚡", color: "blue" },
-                    { value: "Xong", icon: "✅", color: "emerald" },
-                    { value: "Trả máy", icon: "📦", color: "slate" },
+                    { value: "Tiếp nhận",    icon: "🆕", color: "blue"   },
+                    { value: "Chờ vật liệu", icon: "📦", color: "orange" },
+                    { value: "Đang sửa",     icon: "🔧", color: "amber"  },
+                    { value: "Đã sửa xong",  icon: "✅", color: "green"  },
+                    { value: "Trả máy",      icon: "📤", color: "slate"  },
+                    { value: "Đã hủy",       icon: "❌", color: "red"    },
                   ] as const).map(({ value, icon, color }) => {
                     const active = formData.status === value;
+                    const styles: Record<string, { on: string; off: string }> = {
+                      blue:   { on: "bg-blue-600 text-white shadow-blue-200 dark:shadow-blue-900",     off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-300 hover:text-blue-600 dark:hover:text-blue-400" },
+                      orange: { on: "bg-orange-500 text-white shadow-orange-200 dark:shadow-orange-900", off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400" },
+                      amber:  { on: "bg-amber-500 text-white shadow-amber-200 dark:shadow-amber-900",   off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300 hover:text-amber-600 dark:hover:text-amber-400" },
+                      green:  { on: "bg-emerald-600 text-white shadow-emerald-200 dark:shadow-emerald-900", off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300 hover:text-emerald-600 dark:hover:text-emerald-400" },
+                      slate:  { on: "bg-slate-600 text-white shadow-slate-200 dark:shadow-slate-900",   off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:text-slate-700 dark:hover:text-slate-200" },
+                      red:    { on: "bg-red-500 text-white shadow-red-200 dark:shadow-red-900",         off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-red-300 hover:text-red-600 dark:hover:text-red-400" },
+                    };
                     return (
-                      <button key={value} type="button"
+                      <button key={value} type="button" disabled={isCompleted}
                         onClick={() => setFormData(p => ({ ...p, status: value as any }))}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all group ${
-                          active 
-                          ? "bg-slate-900 border-slate-900 text-white dark:bg-blue-600 dark:border-blue-600"
-                          : "bg-white dark:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-slate-400"
-                        }`}>
-                        <span className={`text-sm ${active ? "opacity-100" : "opacity-40"}`}>{icon}</span>
-                        <span className="text-[11px] font-black uppercase tracking-wider">{value}</span>
+                        className={`py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${active ? `${styles[color].on} shadow-md` : styles[color].off}`}>
+                        <span>{icon}</span>
+                        <span className="leading-tight text-center">{value}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
-            </div>
 
-            {/* ════════ CỘT PHẢI: Vật tư & Thanh toán (8/12) ════════ */}
-            <div className="lg:col-span-8 flex flex-col min-h-0 bg-white dark:bg-[#0f172a]">
-              
-              {/* Toolbar: Thêm vật tư dạng hiện đại */}
-              <div className="p-8 pb-0">
-                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] p-2 flex gap-2 border border-slate-100 dark:border-slate-800">
-                  <div className="flex-1 relative">
-                    <MagnifyingGlassIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input type="text" placeholder="Tìm kiếm linh kiện thay thế..."
-                      value={materialSearch}
-                      onChange={(e) => { setMaterialSearch(e.target.value); setShowMaterialDropdown(true); }}
-                      className="w-full pl-14 pr-4 py-4 bg-transparent text-sm font-bold outline-none dark:text-white" />
+              {/* ── Hẹn trả & Ghi chú ── */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-slate-400 rounded-full flex-shrink-0" />
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Hẹn trả & Ghi chú</span>
+                </div>
+                <div className="p-3 grid grid-cols-2 gap-2">
+                  <div>
+                    <input type="datetime-local" name="dueDate" value={formData.dueDate?.slice(0, 16) || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50" />
+                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Ngày hẹn trả</span>
                   </div>
-                  <div className="w-24 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center overflow-hidden">
-                    <input type="number" min="1" value={materialInput.quantity}
-                      onChange={(e) => setMaterialInput(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
-                      className="w-full text-center text-sm font-black bg-transparent outline-none dark:text-white" />
+                  <div>
+                    <input type="text" name="notes" placeholder="Ghi chú..." value={formData.notes || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50" />
+                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Ghi chú nội bộ</span>
                   </div>
-                  <button type="button" onClick={handleAddMaterial}
-                    className="px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95">
-                    Thêm vào đơn
-                  </button>
                 </div>
               </div>
 
-              {/* List: Items */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-3">
-                {(formData.materialsUsed || []).length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
-                    <div className="w-24 h-24 mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-4xl">🛠️</div>
-                    <p className="font-black uppercase tracking-[0.3em] text-[10px]">Chưa có hạng mục sửa chữa</p>
+            </div>{/* end cột trái */}
+
+            {/* ════════ CỘT PHẢI (60%) ════════ */}
+            <div className="lg:col-span-3 flex flex-col min-h-0 bg-slate-50 dark:bg-slate-900">
+
+              {/* ── Thanh thêm (sticky top) ── */}
+              <div className="flex-shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-3 space-y-2.5">
+
+                {/* Vật liệu row */}
+                <div className={`flex gap-2 items-center transition-opacity ${activeItemTab !== "materials" ? "opacity-40" : ""}`}>
+                  <button type="button" onClick={() => setActiveItemTab("materials")}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                      activeItemTab === "materials"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200 dark:shadow-indigo-900"
+                        : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300"
+                    }`}>
+                    <span>📦</span>
+                    <span>VL {(formData.materialsUsed || []).length > 0 && `(${(formData.materialsUsed || []).length})`}</span>
+                  </button>
+                  <div className="flex-1 relative">
+                    <input type="text" placeholder="Tìm vật liệu..."
+                      value={materialSearch}
+                      onChange={(e) => { setMaterialSearch(e.target.value); setShowMaterialDropdown(true); setMaterialInput(p => ({ ...p, materialName: e.target.value })); }}
+                      onFocus={() => { setActiveItemTab("materials"); setShowMaterialDropdown(true); }}
+                      onBlur={() => setTimeout(() => setShowMaterialDropdown(false), 200)}
+                      disabled={isCompleted}
+                      className="w-full px-3 py-2 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 disabled:opacity-50" />
+                    {showMaterialDropdown && filteredMaterials.length > 0 && (
+                      <div className="absolute z-30 w-full left-0 mt-1 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded-xl shadow-2xl max-h-52 overflow-y-auto">
+                        {filteredMaterials.map((m: any) => (
+                          <button key={m.id} type="button"
+                            onClick={() => { setMaterialInput({ materialName: m.name, quantity: 1, price: m.retailPrice || m.purchasePrice || 0 }); setMaterialSearch(m.name); setShowMaterialDropdown(false); }}
+                            className="w-full text-left px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b dark:border-slate-700 last:border-0 transition-colors">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium text-sm text-slate-900 dark:text-slate-100">{m.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${(m.stock || 0) <= 0 ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"}`}>
+                                {(m.stock || 0) <= 0 ? "Hết hàng" : `Tồn: ${m.stock}`}
+                              </span>
+                            </div>
+                            <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">{formatCurrency(m.retailPrice || 0)}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <input type="number" placeholder="SL" min="1" value={materialInput.quantity}
+                    onChange={(e) => setMaterialInput(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
+                    disabled={isCompleted}
+                    className="w-14 px-2 py-2 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl text-sm text-center bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                  <input type="text" placeholder="Đơn giá"
+                    value={materialInput.price ? formatCurrencyInput(materialInput.price) : ""}
+                    onChange={(e) => setMaterialInput(p => ({ ...p, price: parseCurrencyInput(e.target.value) }))}
+                    disabled={isCompleted}
+                    className="w-28 px-2 py-2 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                  <button type="button" onClick={handleAddMaterial} disabled={isCompleted}
+                    className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl shadow-md shadow-indigo-200 dark:shadow-indigo-900 transition-all disabled:opacity-40">
+                    <PlusIcon className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Gia công row */}
+                <div className={`flex gap-2 items-center transition-opacity ${activeItemTab !== "outsourcing" ? "opacity-40" : ""}`}>
+                  <button type="button" onClick={() => setActiveItemTab("outsourcing")}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                      activeItemTab === "outsourcing"
+                        ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200 dark:shadow-orange-900"
+                        : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-orange-300"
+                    }`}>
+                    <span>🔩</span>
+                    <span>GC {(formData.outsourcingItems || []).length > 0 && `(${(formData.outsourcingItems || []).length})`}</span>
+                  </button>
+                  <input type="text" placeholder="Mô tả công việc gia công..." value={outsourcingInput.description}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, description: e.target.value }))}
+                    onFocus={() => setActiveItemTab("outsourcing")}
+                    disabled={isCompleted}
+                    className="flex-1 px-3 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900 disabled:opacity-50" />
+                  <input type="number" placeholder="SL" min="1" value={outsourcingInput.quantity}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
+                    disabled={isCompleted}
+                    className="w-14 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-center bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50" />
+                  <input type="text" placeholder="Giá vốn"
+                    value={outsourcingInput.costPrice ? formatSignedCurrencyInput(outsourcingInput.costPrice) : ""}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, costPrice: parseSignedCurrencyInput(e.target.value) }))}
+                    disabled={isCompleted}
+                    className="w-24 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none disabled:opacity-50" />
+                  <input type="text" placeholder="Đơn giá"
+                    value={outsourcingInput.sellingPrice ? formatSignedCurrencyInput(outsourcingInput.sellingPrice) : ""}
+                    onChange={(e) => setOutsourcingInput(p => ({ ...p, sellingPrice: parseSignedCurrencyInput(e.target.value) }))}
+                    disabled={isCompleted}
+                    className="w-24 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none disabled:opacity-50" />
+                  <button type="button" onClick={handleAddOutsourcing} disabled={isCompleted}
+                    className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-orange-500 hover:bg-orange-600 active:scale-95 text-white rounded-xl shadow-md shadow-orange-200 dark:shadow-orange-900 transition-all disabled:opacity-40">
+                    <PlusIcon className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>{/* end thanh thêm */}
+
+              {/* ── Danh sách (cuộn) ── */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+
+                {/* Thiếu hàng cảnh báo */}
+                {materialShortageInfo.hasShortage && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-xl">
+                    <p className="font-bold text-red-700 dark:text-red-400 text-xs mb-1.5">⚠️ Thiếu vật liệu — cần đặt hàng NCC</p>
+                    {materialShortageInfo.shortages.map((s, i) => (
+                      <p key={i} className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                        {s.isNew
+                          ? <><span className="font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400 px-1 rounded">MỚI</span> &ldquo;{s.materialName}&rdquo; — cần mua <strong>{s.shortage}</strong></>
+                          : <><strong>{s.materialName}</strong>: cần {s.needed}, tồn {s.inStock}, <strong className="text-red-700 dark:text-red-300">thiếu {s.shortage}</strong></>
+                        }
+                      </p>
+                    ))}
                   </div>
                 )}
-                
-                {(formData.materialsUsed || []).map((m, i) => (
-                  <div key={i} className="group flex items-center gap-6 px-6 py-4 bg-white dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-blue-500/30 transition-all">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 font-black">
-                      {i + 1}
+
+                {/* Items vật liệu */}
+                {(formData.materialsUsed || []).map((m, i) => {
+                  const mat = (pinMaterials || []).find((x: any) => x.name.toLowerCase() === m.materialName.toLowerCase());
+                  const isNew = !mat;
+                  const isShort = !isNew && m.quantity > (mat?.stock || 0);
+                  return (
+                    <div key={i} className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl border text-sm transition-all group ${
+                      isNew   ? "border-purple-200 dark:border-purple-700/60 bg-purple-50 dark:bg-purple-900/10" :
+                      isShort ? "border-red-200 dark:border-red-700/60 bg-red-50 dark:bg-red-900/10" :
+                                "border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800"
+                    }`}>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-black bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 flex-shrink-0 tracking-wide">VL</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{m.materialName}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                          <span>{m.quantity} × {formatCurrency(m.price)}</span>
+                          <span className="text-slate-300 dark:text-slate-600">=</span>
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(m.quantity * m.price)}</span>
+                          {isNew   && <span className="ml-1 px-1 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 rounded text-[9px] font-bold">🆕 CẦN MUA</span>}
+                          {isShort && <span className="ml-1 px-1 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded text-[9px] font-bold">⚠️ THIẾU {m.quantity - (mat?.stock || 0)}</span>}
+                          {!isNew && !isShort && <span className="ml-1 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">✓ ĐỦ</span>}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => handleRemoveMaterial(i)} disabled={isCompleted}
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 p-1.5 rounded-lg transition-all disabled:opacity-20 flex-shrink-0">
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
                     </div>
+                  );
+                })}
+
+                {/* Items gia công */}
+                {(formData.outsourcingItems || []).map((item, idx) => (
+                  <div key={item.id} className="flex items-center gap-3 px-3.5 py-3 rounded-2xl border border-orange-200 dark:border-orange-700/60 bg-orange-50 dark:bg-orange-900/10 text-sm group">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-black bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300 flex-shrink-0 tracking-wide">GC</span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-slate-800 dark:text-slate-200">{m.materialName}</div>
-                      <div className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-widest">
-                        {m.quantity} ITEM × {formatCurrency(m.price)}
+                      <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{item.description}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <span>{item.quantity} × {formatCurrency(item.sellingPrice)}</span>
+                        <span className="text-slate-300 dark:text-slate-600">=</span>
+                        <span className="font-bold text-orange-600 dark:text-orange-400">{formatCurrency(item.total)}</span>
+                        {((item.sellingPrice - item.costPrice) * item.quantity) >= 0 ? (
+                          <span className="ml-1 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
+                            +{formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lời
+                          </span>
+                        ) : (
+                          <span className="ml-1 text-rose-600 dark:text-rose-400 text-[10px] font-semibold">
+                            {formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lỗ
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-black text-slate-900 dark:text-white">{formatCurrency(m.quantity * m.price)}</div>
-                    </div>
-                    <button type="button" onClick={() => handleRemoveMaterial(i)}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-red-50 hover:text-red-500 text-slate-300 transition-all opacity-0 group-hover:opacity-100">
-                      <TrashIcon className="w-5 h-5" />
+                    <button type="button" onClick={() => handleRemoveOutsourcing(idx)} disabled={isCompleted}
+                      className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 p-1.5 rounded-lg transition-all disabled:opacity-20 flex-shrink-0">
+                      <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
-              </div>
 
-              {/* Footer Panel: Tổng kết & Thanh toán */}
-              <div className="p-8 bg-slate-50/50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Phí công sửa</label>
-                    <input type="text" value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
-                      onChange={(e) => setFormData(p => ({ ...p, laborCost: parseCurrencyInput(e.target.value) }))}
-                      className="w-full px-5 py-3 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-sm shadow-sm outline-none transition-all dark:text-white" placeholder="0" />
+                {/* Empty state */}
+                {(formData.materialsUsed || []).length === 0 && (formData.outsourcingItems || []).length === 0 && (
+                  <div className="text-center py-12 text-slate-400 dark:text-slate-600">
+                    <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-3xl">🔧</div>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Chưa có mặt hàng nào</p>
+                    <p className="text-xs mt-1 text-slate-400 dark:text-slate-600">Dùng thanh tìm kiếm phía trên để thêm</p>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tiền đặt cọc</label>
-                    <input type="text" value={formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""}
-                      onChange={(e) => setFormData(p => ({ ...p, depositAmount: parseCurrencyInput(e.target.value) }))}
-                      className="w-full px-5 py-3 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-emerald-500 rounded-2xl font-black text-sm shadow-sm outline-none transition-all dark:text-white" placeholder="0" />
+                )}
+              </div>{/* end list */}
+
+              {/* ── Chi phí & Thanh toán (sticky bottom) ── */}
+              <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+
+                {/* Cost breakdown row */}
+                <div className="grid grid-cols-4 divide-x divide-slate-100 dark:divide-slate-700 border-b border-slate-100 dark:border-slate-700">
+                  <div className="px-3 py-2.5 text-center">
+                    <div className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider mb-0.5">📦 Vật liệu</div>
+                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{formatCurrency(materialsTotal)}</div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Trạng thái tiền</label>
-                    <select value={formData.paymentStatus || "unpaid"} onChange={handleInputChange} name="paymentStatus"
-                      className="w-full px-5 py-3 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-sm outline-none transition-all dark:text-white appearance-none">
-                      <option value="unpaid">Chưa thu</option>
-                      <option value="partial">Thu một phần</option>
-                      <option value="paid">Đã thu đủ</option>
-                    </select>
+                  <div className="px-3 py-2.5 text-center">
+                    <div className="text-[10px] text-orange-500 dark:text-orange-400 font-bold uppercase tracking-wider mb-0.5">🔩 Gia công</div>
+                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      {formatCurrency((formData.outsourcingItems || []).reduce((s, i) => s + i.total, 0))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Phương thức</label>
-                    <select value={formData.paymentMethod || ""} onChange={handleInputChange} name="paymentMethod"
-                      className="w-full px-5 py-3 bg-white dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-sm outline-none transition-all dark:text-white appearance-none">
-                      <option value="">Chọn loại</option>
-                      <option value="cash">Tiền mặt</option>
-                      <option value="bank">Chuyển khoản</option>
-                    </select>
+                  <div className="px-3 py-2.5">
+                    <div className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider mb-0.5">🛠 Phí công</div>
+                    <input type="text" name="laborCost" placeholder="0 ₫"
+                      value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
+                      onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full text-sm font-bold text-slate-800 dark:text-slate-200 bg-transparent focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 rounded px-1 -mx-1 text-right disabled:opacity-50 placeholder:text-slate-300 dark:placeholder:text-slate-600" />
+                  </div>
+                  <div className="px-3 py-2.5">
+                    <div className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold uppercase tracking-wider mb-0.5">💰 Đã cọc</div>
+                    <input type="text" name="depositAmount" placeholder="0 ₫"
+                      value={formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""}
+                      onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full text-sm font-bold text-yellow-600 dark:text-yellow-400 bg-transparent focus:outline-none focus:bg-yellow-50 dark:focus:bg-yellow-900/20 rounded px-1 -mx-1 text-right disabled:opacity-50 placeholder:text-slate-300 dark:placeholder:text-slate-600" />
                   </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="flex-1 flex gap-8">
-                    <div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Tống phí dịch vụ</div>
-                      <div className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(total)}</div>
-                    </div>
-                    <div className="w-px h-12 bg-slate-200 dark:bg-slate-800" />
-                    <div>
-                      <div className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Còn lại cần thu</div>
-                      <div className="text-3xl font-black text-blue-600">{formatCurrency(remaining)}</div>
-                    </div>
+                {/* Tổng bar */}
+                <div className="grid grid-cols-2 divide-x divide-emerald-500/30">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-500 px-4 py-2.5">
+                    <div className="text-[10px] text-emerald-100 font-semibold uppercase tracking-wider">Tổng cộng</div>
+                    <div className="text-xl font-black text-white leading-tight">{formatCurrency(total)}</div>
                   </div>
-                  <button type="submit" disabled={isSubmitting}
-                    className="w-full md:w-auto px-12 py-5 bg-slate-900 dark:bg-blue-600 hover:scale-[1.02] active:scale-95 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] transition-all shadow-2xl shadow-blue-500/20 flex items-center justify-center gap-3">
-                    {isSubmitting ? "Processing..." : getButtonText()}
+                  <div className="bg-gradient-to-br from-teal-500 to-cyan-500 px-4 py-2.5 text-right">
+                    <div className="text-[10px] text-teal-100 font-semibold uppercase tracking-wider">Khách cần trả</div>
+                    <div className="text-xl font-black text-white leading-tight">{formatCurrency(remaining)}</div>
+                  </div>
+                </div>
+
+                {/* Thanh toán row */}
+                <div className="flex gap-2 px-3 py-2.5 items-center">
+                  <select name="paymentStatus" value={formData.paymentStatus || "unpaid"} onChange={handleInputChange} disabled={isCompleted}
+                    className="flex-1 px-2.5 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50">
+                    <option value="unpaid">⬜ Chưa thanh toán</option>
+                    <option value="partial">🔷 Một phần</option>
+                    <option value="paid">✅ Đã thanh toán</option>
+                  </select>
+                  {formData.paymentStatus === "partial" ? (
+                    <input type="text" placeholder="Số tiền đã trả..."
+                      value={formData.partialPaymentAmount ? formatCurrencyInput(formData.partialPaymentAmount) : ""}
+                      onChange={(e) => setFormData(p => ({ ...p, partialPaymentAmount: parseCurrencyInput(e.target.value) }))}
+                      disabled={isCompleted}
+                      className="flex-1 px-2.5 py-2 border-2 border-teal-200 dark:border-teal-700 rounded-xl text-xs text-right font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-400 disabled:opacity-50" />
+                  ) : (
+                    <select name="paymentMethod" value={formData.paymentMethod || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="flex-1 px-2.5 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50">
+                      <option value="">-- Hình thức --</option>
+                      <option value="cash">💵 Tiền mặt</option>
+                      <option value="bank">🏦 Chuyển khoản</option>
+                      <option value="card">💳 Thẻ</option>
+                    </select>
+                  )}
+                  <label className="flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none">
+                    <input type="checkbox" checked={formData.quoteApproved || false}
+                      onChange={(e) => setFormData(p => ({ ...p, quoteApproved: e.target.checked, quoteApprovedAt: e.target.checked ? new Date().toISOString() : undefined }))}
+                      className="w-4 h-4 rounded border-amber-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">Duyệt giá</span>
+                  </label>
+                  <button type="button" onClick={() => setShowQuotePrint(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 hover:bg-amber-100 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold transition-all active:scale-95 flex-shrink-0">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    In BG
                   </button>
                 </div>
-              </div>
-            </div>
+
+              </div>{/* end cost panel */}
+            </div>{/* end cột phải */}
+
+          </div>{/* end grid */}
+
+          {/* ── FOOTER ── */}
+          <div className="flex-shrink-0 px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
+            <button type="button" onClick={onClose} disabled={isSubmitting}
+              className="px-5 py-2.5 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 transition-all disabled:opacity-50 text-sm active:scale-95">
+              Hủy
+            </button>
+            <button type="submit" disabled={isSubmitting || isCompleted}
+              className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm active:scale-[0.99]">
+              {isCompleted ? (
+                <><span>🔒</span><span>Đã hoàn tất</span></>
+              ) : isSubmitting ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Đang lưu...</span>
+                </>
+              ) : (
+                <><span>✅</span><span>{getButtonText()}</span></>
+              )}
+            </button>
           </div>
+
         </form>
       </div>
 
