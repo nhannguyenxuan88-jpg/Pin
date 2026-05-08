@@ -733,17 +733,17 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh]">
 
         {/* ── HEADER ── */}
-        <div className="px-5 py-3 bg-gradient-to-r from-blue-700 to-cyan-600 flex justify-between items-center flex-shrink-0">
+        <div className="px-5 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold flex-shrink-0">
               {initialOrder ? "✏" : "+"}
             </div>
             <div>
-              <h2 className="text-base font-bold text-white leading-tight">{getHeaderTitle()}</h2>
-              {initialOrder && <p className="text-xs text-blue-200">{initialOrder.id}</p>}
+              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">{getHeaderTitle()}</h2>
+              {initialOrder && <p className="text-[10px] font-medium text-slate-400 mt-0.5 tracking-wider uppercase">{initialOrder.id}</p>}
             </div>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors" type="button">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg p-1.5 transition-all" type="button">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
@@ -765,141 +765,131 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
             <div className="lg:col-span-2 overflow-y-auto p-4 space-y-3 bg-white dark:bg-slate-900">
 
               {/* ── Khách hàng ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-blue-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide">Khách hàng</span>
-                  <span className="text-red-500 text-xs ml-auto">*</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Khách hàng</span>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
-                <div className="p-3 space-y-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={formData.customerName || customerSearch}
-                        onChange={(e) => {
-                          if (formData.customerName) return;
-                          setCustomerSearch(e.target.value);
-                          setShowCustomerDropdown(!!e.target.value.trim());
-                        }}
-                        onFocus={() => { if (!formData.customerName) setShowCustomerDropdown(!!customerSearch.trim()); }}
-                        onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-                        disabled={isCompleted}
-                        readOnly={!!formData.customerName || isCompleted}
-                        className={`w-full px-3 py-2.5 rounded-xl text-sm border-2 transition-all focus:outline-none disabled:opacity-50 ${
-                          formData.customerName
-                            ? "border-blue-400 bg-blue-50 dark:bg-blue-900/30 font-semibold pr-9 text-slate-900 dark:text-slate-100"
-                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
-                        }`}
-                        placeholder="Tìm tên hoặc SĐT..."
-                        autoComplete="off"
-                      />
-                      {formData.customerName && (
-                        <button type="button"
-                          onClick={() => { setFormData(p => ({ ...p, customerName: "", customerPhone: "" })); setCustomerSearch(""); }}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors">
-                          <XMarkIcon className="w-4 h-4" />
-                        </button>
-                      )}
-                      {showCustomerDropdown && !formData.customerName && filteredCustomers.length > 0 && (
-                        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                          {filteredCustomers.map((c: any) => (
-                            <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
-                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 border-b dark:border-slate-700 last:border-0 transition-colors">
-                              <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{c.name}</div>
-                              <div className="text-xs text-slate-500 mt-0.5">📞 {c.phone}</div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button type="button" onClick={() => setShowAddCustomerModal(true)} disabled={isCompleted}
-                      className="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:scale-95 text-white rounded-xl shadow-md shadow-blue-200 dark:shadow-blue-900 transition-all disabled:opacity-40 flex-shrink-0"
-                      title="Thêm khách mới">
-                      <PlusIcon className="w-5 h-5" />
-                    </button>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={formData.customerName || customerSearch}
+                      onChange={(e) => {
+                        if (formData.customerName) return;
+                        setCustomerSearch(e.target.value);
+                        setShowCustomerDropdown(!!e.target.value.trim());
+                      }}
+                      onFocus={() => { if (!formData.customerName) setShowCustomerDropdown(!!customerSearch.trim()); }}
+                      onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                      disabled={isCompleted}
+                      readOnly={!!formData.customerName || isCompleted}
+                      className={`w-full px-3 py-2.5 rounded-xl text-sm border transition-all focus:outline-none disabled:opacity-50 ${
+                        formData.customerName
+                          ? "border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-900/10 font-semibold pr-9 text-slate-900 dark:text-slate-100"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5"
+                      }`}
+                      placeholder="Tìm tên hoặc SĐT..."
+                      autoComplete="off"
+                    />
+                    {formData.customerName && (
+                      <button type="button"
+                        onClick={() => { setFormData(p => ({ ...p, customerName: "", customerPhone: "" })); setCustomerSearch(""); }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors">
+                        <XMarkIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    {showCustomerDropdown && !formData.customerName && filteredCustomers.length > 0 && (
+                      <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                        {filteredCustomers.map((c: any) => (
+                          <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b dark:border-slate-700 last:border-0 transition-colors">
+                            <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{c.name}</div>
+                            <div className="text-[10px] font-medium text-slate-500 mt-0.5">{c.phone}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {formData.customerName && formData.customerPhone && (
-                    <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <span className="text-blue-400 text-sm">📞</span>
-                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{formData.customerPhone}</span>
-                    </div>
-                  )}
-                  <input type="hidden" name="customerName" value={formData.customerName || ""} required />
-                  <input type="hidden" name="customerPhone" value={formData.customerPhone || ""} required />
+                  <button type="button" onClick={() => setShowAddCustomerModal(true)} disabled={isCompleted}
+                    className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-500 active:scale-95 text-slate-400 rounded-xl transition-all disabled:opacity-40 flex-shrink-0"
+                    title="Thêm khách mới">
+                    <PlusIcon className="w-5 h-5" />
+                  </button>
                 </div>
+                {formData.customerName && formData.customerPhone && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5 font-mono text-xs">
+                    <span className="text-slate-400">CONTACT:</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">{formData.customerPhone}</span>
+                  </div>
+                )}
+                <input type="hidden" name="customerName" value={formData.customerName || ""} required />
+                <input type="hidden" name="customerPhone" value={formData.customerPhone || ""} required />
               </div>
 
               {/* ── Thiết bị & KTV ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-violet-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Thiết bị & Kỹ thuật viên</span>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Thiết bị & Kỹ thuật</span>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
-                <div className="p-3 grid grid-cols-2 gap-2">
-                  <div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 ml-1">Tên thiết bị</label>
                     <input type="text" name="deviceName" value={formData.deviceName || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900 disabled:opacity-50"
-                      placeholder="iPhone 15, Laptop..." />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Tên thiết bị</span>
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 disabled:opacity-50"
+                      placeholder="iPhone, Laptop..." />
                   </div>
-                  <div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 ml-1">Kỹ thuật viên</label>
                     <input type="text" name="technicianName" value={formData.technicianName || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900 disabled:opacity-50"
-                      placeholder="Tên KTV..." />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Kỹ thuật viên</span>
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 disabled:opacity-50"
+                      placeholder="P. Kỹ thuật" />
                   </div>
                 </div>
               </div>
 
               {/* ── Mô tả sự cố ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-rose-50 dark:bg-rose-900/20 border-b border-rose-100 dark:border-rose-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-rose-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wide">Mô tả sự cố</span>
-                  <span className="text-red-500 text-xs ml-auto">*</span>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mô tả sự cố</span>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
-                <div className="p-3">
-                  <textarea name="issueDescription" value={formData.issueDescription || ""} onChange={handleInputChange} disabled={isCompleted}
-                    rows={2} required
-                    className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900 disabled:opacity-50"
-                    placeholder="Mô tả chi tiết tình trạng hư hỏng..." />
-                </div>
+                <textarea name="issueDescription" value={formData.issueDescription || ""} onChange={handleInputChange} disabled={isCompleted}
+                  rows={2} required
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 disabled:opacity-50"
+                  placeholder="Mô tả tình trạng hư hỏng..." />
               </div>
 
-              {/* ── Trạng thái — 3×2 grid ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-amber-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">Trạng thái</span>
-                  {formData.status && (
-                    <span className="ml-auto text-[11px] font-semibold text-amber-600 dark:text-amber-400">{formData.status}</span>
-                  )}
+              {/* ── Trạng thái ── */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trạng thái phiếu</span>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
-                <div className="p-3 grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {([
-                    { value: "Tiếp nhận",    icon: "🆕", color: "blue"   },
+                    { value: "Tiếp nhận", icon: "🆕", color: "blue" },
                     { value: "Chờ vật liệu", icon: "📦", color: "orange" },
-                    { value: "Đang sửa",     icon: "🔧", color: "amber"  },
-                    { value: "Đã sửa xong",  icon: "✅", color: "green"  },
-                    { value: "Trả máy",      icon: "📤", color: "slate"  },
-                    { value: "Đã hủy",       icon: "❌", color: "red"    },
+                    { value: "Đang sửa", icon: "🔧", color: "blue" },
+                    { value: "Đã sửa xong", icon: "✅", color: "emerald" },
+                    { value: "Trả máy", icon: "📤", color: "slate" },
+                    { value: "Đã hủy", icon: "❌", color: "red" },
                   ] as const).map(({ value, icon, color }) => {
                     const active = formData.status === value;
-                    const styles: Record<string, { on: string; off: string }> = {
-                      blue:   { on: "bg-blue-600 text-white shadow-blue-200 dark:shadow-blue-900",     off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-300 hover:text-blue-600 dark:hover:text-blue-400" },
-                      orange: { on: "bg-orange-500 text-white shadow-orange-200 dark:shadow-orange-900", off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400" },
-                      amber:  { on: "bg-amber-500 text-white shadow-amber-200 dark:shadow-amber-900",   off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300 hover:text-amber-600 dark:hover:text-amber-400" },
-                      green:  { on: "bg-emerald-600 text-white shadow-emerald-200 dark:shadow-emerald-900", off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300 hover:text-emerald-600 dark:hover:text-emerald-400" },
-                      slate:  { on: "bg-slate-600 text-white shadow-slate-200 dark:shadow-slate-900",   off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:text-slate-700 dark:hover:text-slate-200" },
-                      red:    { on: "bg-red-500 text-white shadow-red-200 dark:shadow-red-900",         off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-red-300 hover:text-red-600 dark:hover:text-red-400" },
+                    const colorStyles: Record<string, string> = {
+                      blue: active ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 dark:border-slate-700 text-slate-400 hover:border-blue-300 hover:text-blue-500",
+                      orange: active ? "bg-orange-500 text-white border-orange-500" : "border-slate-200 dark:border-slate-700 text-slate-400 hover:border-orange-300 hover:text-orange-500",
+                      emerald: active ? "bg-emerald-600 text-white border-emerald-600" : "border-slate-200 dark:border-slate-700 text-slate-400 hover:border-emerald-300 hover:text-emerald-500",
+                      slate: active ? "bg-slate-600 text-white border-slate-600" : "border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-400 hover:text-slate-600",
+                      red: active ? "bg-red-500 text-white border-red-500" : "border-slate-200 dark:border-slate-700 text-slate-400 hover:border-red-300 hover:text-red-500",
                     };
                     return (
                       <button key={value} type="button" disabled={isCompleted}
                         onClick={() => setFormData(p => ({ ...p, status: value as any }))}
-                        className={`py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${active ? `${styles[color].on} shadow-md` : styles[color].off}`}>
-                        <span>{icon}</span>
-                        <span className="leading-tight text-center">{value}</span>
+                        className={`py-2 rounded-xl text-[10px] font-bold transition-all border disabled:opacity-30 flex flex-col items-center justify-center gap-0.5 ${colorStyles[color]}`}>
+                        <span className="text-xs">{icon}</span>
+                        <span>{value.toUpperCase()}</span>
                       </button>
                     );
                   })}
@@ -907,21 +897,21 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               </div>
 
               {/* ── Hẹn trả & Ghi chú ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-slate-400 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Hẹn trả & Ghi chú</span>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Thông tin thêm</span>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
-                <div className="p-3 grid grid-cols-2 gap-2">
-                  <div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 ml-1">Ngày hẹn trả</label>
                     <input type="datetime-local" name="dueDate" value={formData.dueDate?.slice(0, 16) || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50" />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Ngày hẹn trả</span>
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50" />
                   </div>
-                  <div>
-                    <input type="text" name="notes" placeholder="Ghi chú..." value={formData.notes || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50" />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Ghi chú nội bộ</span>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 ml-1">Ghi chú</label>
+                    <input type="text" name="notes" placeholder="Ghi chú nội bộ..." value={formData.notes || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50" />
                   </div>
                 </div>
               </div>
@@ -1142,52 +1132,54 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                 </div>
 
                 {/* Tổng bar */}
-                <div className="grid grid-cols-2 divide-x divide-emerald-500/30">
-                  <div className="bg-gradient-to-br from-emerald-500 to-teal-500 px-4 py-2.5">
-                    <div className="text-[10px] text-emerald-100 font-semibold uppercase tracking-wider">Tổng cộng</div>
+                <div className="grid grid-cols-2 divide-x divide-white/10">
+                  <div className="bg-slate-900 dark:bg-black px-4 py-3">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">TỔNG CỘNG</div>
                     <div className="text-xl font-black text-white leading-tight">{formatCurrency(total)}</div>
                   </div>
-                  <div className="bg-gradient-to-br from-teal-500 to-cyan-500 px-4 py-2.5 text-right">
-                    <div className="text-[10px] text-teal-100 font-semibold uppercase tracking-wider">Khách cần trả</div>
+                  <div className="bg-blue-600 px-4 py-3 text-right">
+                    <div className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">KHÁCH CẦN TRẢ</div>
                     <div className="text-xl font-black text-white leading-tight">{formatCurrency(remaining)}</div>
                   </div>
                 </div>
 
                 {/* Thanh toán row */}
-                <div className="flex gap-2 px-3 py-2.5 items-center">
+                <div className="flex gap-2 px-3 py-3 items-center bg-white dark:bg-slate-800">
                   <select name="paymentStatus" value={formData.paymentStatus || "unpaid"} onChange={handleInputChange} disabled={isCompleted}
-                    className="flex-1 px-2.5 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50">
-                    <option value="unpaid">⬜ Chưa thanh toán</option>
-                    <option value="partial">🔷 Một phần</option>
-                    <option value="paid">✅ Đã thanh toán</option>
+                    className="flex-1 px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-blue-500 disabled:opacity-50 appearance-none text-center">
+                    <option value="unpaid">Chưa thanh toán</option>
+                    <option value="partial">Thanh toán 1 phần</option>
+                    <option value="paid">Đã thanh toán</option>
                   </select>
                   {formData.paymentStatus === "partial" ? (
-                    <input type="text" placeholder="Số tiền đã trả..."
+                    <input type="text" placeholder="Số tiền..."
                       value={formData.partialPaymentAmount ? formatCurrencyInput(formData.partialPaymentAmount) : ""}
                       onChange={(e) => setFormData(p => ({ ...p, partialPaymentAmount: parseCurrencyInput(e.target.value) }))}
                       disabled={isCompleted}
-                      className="flex-1 px-2.5 py-2 border-2 border-teal-200 dark:border-teal-700 rounded-xl text-xs text-right font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-400 disabled:opacity-50" />
+                      className="flex-1 px-3 py-2.5 border border-teal-200 dark:border-teal-900/50 rounded-xl text-xs text-right font-bold bg-teal-50/30 dark:bg-teal-900/10 text-teal-600 dark:text-teal-400 focus:outline-none focus:border-teal-500 disabled:opacity-50" />
                   ) : (
                     <select name="paymentMethod" value={formData.paymentMethod || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="flex-1 px-2.5 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50">
-                      <option value="">-- Hình thức --</option>
-                      <option value="cash">💵 Tiền mặt</option>
-                      <option value="bank">🏦 Chuyển khoản</option>
-                      <option value="card">💳 Thẻ</option>
+                      className="flex-1 px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-blue-500 disabled:opacity-50 appearance-none text-center">
+                      <option value="">Hình thức</option>
+                      <option value="cash">Tiền mặt</option>
+                      <option value="bank">Chuyển khoản</option>
+                      <option value="card">Thẻ/Ví</option>
                     </select>
                   )}
-                  <label className="flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none">
-                    <input type="checkbox" checked={formData.quoteApproved || false}
-                      onChange={(e) => setFormData(p => ({ ...p, quoteApproved: e.target.checked, quoteApprovedAt: e.target.checked ? new Date().toISOString() : undefined }))}
-                      className="w-4 h-4 rounded border-amber-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">Duyệt giá</span>
-                  </label>
+                  <div className="flex items-center gap-2 group">
+                    <label className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer select-none transition-all hover:border-amber-400">
+                      <input type="checkbox" checked={formData.quoteApproved || false}
+                        onChange={(e) => setFormData(p => ({ ...p, quoteApproved: e.target.checked, quoteApprovedAt: e.target.checked ? new Date().toISOString() : undefined }))}
+                        className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Duyệt giá</span>
+                    </label>
+                  </div>
                   <button type="button" onClick={() => setShowQuotePrint(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 hover:bg-amber-100 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold transition-all active:scale-95 flex-shrink-0">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-400 text-slate-400 dark:text-slate-500 rounded-xl transition-all active:scale-95 flex-shrink-0"
+                    title="In báo giá">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
-                    In BG
                   </button>
                 </div>
 
@@ -1197,25 +1189,25 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
           </div>{/* end grid */}
 
           {/* ── FOOTER ── */}
-          <div className="flex-shrink-0 px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
+          <div className="flex-shrink-0 px-4 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-3 shadow-inner">
             <button type="button" onClick={onClose} disabled={isSubmitting}
-              className="px-5 py-2.5 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 transition-all disabled:opacity-50 text-sm active:scale-95">
-              Hủy
+              className="px-6 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl font-bold uppercase tracking-wider hover:bg-white dark:hover:bg-slate-800 transition-all disabled:opacity-50 text-[11px] active:scale-95">
+              Hủy bỏ
             </button>
             <button type="submit" disabled={isSubmitting || isCompleted}
-              className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm active:scale-[0.99]">
+              className="flex-1 py-2.5 bg-slate-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-slate-200 dark:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-[11px] active:scale-[0.98]">
               {isCompleted ? (
-                <><span>🔒</span><span>Đã hoàn tất</span></>
+                <><span>🔒</span><span>ĐÃ HOÀN TẤT</span></>
               ) : isSubmitting ? (
                 <>
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>Đang lưu...</span>
+                  <span>MÁY ĐANG XỬ LÝ...</span>
                 </>
               ) : (
-                <><span>✅</span><span>{getButtonText()}</span></>
+                <>{getButtonText().toUpperCase()}</>
               )}
             </button>
           </div>

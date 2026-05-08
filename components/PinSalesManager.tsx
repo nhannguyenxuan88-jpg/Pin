@@ -741,30 +741,40 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           <SalesInvoiceTemplate sale={lastSaleData} onClose={() => setIsReceiptVisible(false)} />
         </InvoicePreviewModal>
       )}
-      {/* Modern Segmented Tab Navigation */}
-      <div className="mb-6 flex justify-center">
-        <div className="inline-flex p-1 bg-pin-gray-100/50 dark:bg-pin-gray-800/50 backdrop-blur-md rounded-xl border border-pin-gray-200/50 dark:border-pin-gray-700/30">
+      {/* Scientific Tab Navigation - Clean & Structured */}
+      <div className="border-b border-pin-gray-200 dark:border-pin-gray-700/50 mb-6">
+        <div className="flex gap-6">
           <button
             onClick={() => setActiveTab("pos")}
-            className={`flex items-center gap-2 py-2 px-6 rounded-lg font-semibold text-sm transition-all duration-300 ${
-              activeTab === "pos"
-                ? "bg-white dark:bg-pin-gray-700 text-pin-blue-600 dark:text-pin-blue-400 shadow-md scale-105"
-                : "text-pin-gray-500 dark:text-pin-gray-400 hover:text-pin-gray-700 dark:hover:text-pin-gray-200"
+            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all relative ${
+              activeTab === "pos" 
+                ? "text-blue-600 dark:text-blue-400" 
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             }`}
           >
-            <ShoppingCartIcon className="w-4 h-4" />
-            <span>Tạo đơn mới</span>
+            <div className="flex items-center gap-2">
+              <ShoppingCartIcon className="w-4 h-4" />
+              <span>Bán hàng</span>
+            </div>
+            {activeTab === "pos" && (
+              <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 py-2 px-6 rounded-lg font-semibold text-sm transition-all duration-300 ${
-              activeTab === "history"
-                ? "bg-white dark:bg-pin-gray-700 text-pin-blue-600 dark:text-pin-blue-400 shadow-md scale-105"
-                : "text-pin-gray-500 dark:text-pin-gray-400 hover:text-pin-gray-700 dark:hover:text-pin-gray-200"
+            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all relative ${
+              activeTab === "history" 
+                ? "text-blue-600 dark:text-blue-400" 
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             }`}
           >
-            <ClockIcon className="w-4 h-4" />
-            <span>Lịch sử giao dịch</span>
+            <div className="flex items-center gap-2">
+              <ClockIcon className="w-4 h-4" />
+              <span>Lịch sử giao dịch</span>
+            </div>
+            {activeTab === "history" && (
+              <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
           </button>
         </div>
       </div>
@@ -778,137 +788,101 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
             className={`${mobileView === "products" ? "flex" : "hidden"
               } lg:flex flex-col bg-white dark:bg-pin-gray-800 p-2 md:p-4 rounded-lg shadow-sm border dark:border-pin-gray-700 h-full ${cartItems.length > 0 ? "lg:col-span-2" : "lg:col-span-1"}`}
           >
-            {/* Modern Search Bar */}
-            <div className="relative mb-4 group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400 group-focus-within:text-pin-blue-500 transition-colors">
-                <MagnifyingGlassIcon className="w-5 h-5" />
+            {/* Scientific Search & Filter */}
+            <div className="flex flex-col gap-3 mb-5">
+              <div className="relative group">
+                <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên hoặc mã SKU sản phẩm..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Tìm tên sản phẩm hoặc mã SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-pin-gray-50 dark:bg-pin-gray-700/50 border border-pin-gray-200 dark:border-pin-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-pin-blue-500/20 focus:border-pin-blue-500 transition-all outline-none"
-              />
-            </div>
 
-            {/* Scientific Category Chips */}
-            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
-              <button
-                onClick={() => setSalesCategory("all")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
-                  salesCategory === "all"
-                    ? "bg-pin-blue-500 text-white border-pin-blue-500 shadow-md shadow-pin-blue-500/20"
-                    : "bg-transparent text-pin-gray-600 dark:text-pin-gray-300 border-pin-gray-200 dark:border-pin-gray-700 hover:bg-pin-gray-50 dark:hover:bg-pin-gray-700"
-                }`}
-              >
-                <span>Tất cả</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${salesCategory === "all" ? "bg-white/20" : "bg-pin-gray-100 dark:bg-pin-gray-800"}`}>{availableItems.length}</span>
-              </button>
-              <button
-                onClick={() => setSalesCategory("products")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
-                  salesCategory === "products"
-                    ? "bg-pin-blue-500 text-white border-pin-blue-500 shadow-md shadow-pin-blue-500/20"
-                    : "bg-transparent text-pin-gray-600 dark:text-pin-gray-300 border-pin-gray-200 dark:border-pin-gray-700 hover:bg-pin-gray-50 dark:hover:bg-pin-gray-700"
-                }`}
-              >
-                <span>Thành phẩm</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${salesCategory === "products" ? "bg-white/20" : "bg-pin-gray-100 dark:bg-pin-gray-800"}`}>{products.filter((p) => p.stock > 0).length}</span>
-              </button>
-              <button
-                onClick={() => setSalesCategory("materials")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
-                  salesCategory === "materials"
-                    ? "bg-pin-blue-500 text-white border-pin-blue-500 shadow-md shadow-pin-blue-500/20"
-                    : "bg-transparent text-pin-gray-600 dark:text-pin-gray-300 border-pin-gray-200 dark:border-pin-gray-700 hover:bg-pin-gray-50 dark:hover:bg-pin-gray-700"
-                }`}
-              >
-                <span>Nguyên vật liệu</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${salesCategory === "materials" ? "bg-white/20" : "bg-pin-gray-100 dark:bg-pin-gray-800"}`}>
-                  {(pinMaterials || []).filter((m: PinMaterial) => (m.stock || 0) > 0).length}
-                </span>
-              </button>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                {[
+                  { id: "all", label: "Tất cả", icon: "💎" },
+                  { id: "products", label: "Thành phẩm", icon: "📦" },
+                  { id: "materials", label: "Linh kiện", icon: "⚙️" }
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSalesCategory(cat.id as any)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                      salesCategory === cat.id
+                        ? "bg-slate-900 border-slate-900 text-white dark:bg-blue-600 dark:border-blue-600 shadow-md"
+                        : "bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto pr-1 -mr-1 pb-24 md:pb-0">
+              {/* Product Grid - Scientific & Structured */}
               {availableProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {availableProducts.map((product: PinProduct & { type?: string }) => (
                     <div
                       key={product.id}
-                      className="group relative bg-white dark:bg-pin-gray-800 p-4 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700/50 hover:border-pin-blue-400 dark:hover:border-pin-blue-500/50 transition-all duration-300"
+                      className="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 p-4 rounded-2xl flex flex-col hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 relative overflow-hidden"
                     >
-                      {/* Product Type Badge */}
-                      <div className="absolute top-3 right-3">
-                        <span
-                          className={`flex items-center justify-center p-1.5 rounded-lg border ${(product as any).type === "material"
-                            ? "bg-orange-50 text-orange-500 border-orange-100 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20"
-                            : "bg-emerald-50 text-emerald-500 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                            }`}
-                          title={(product as any).type === "material" ? "Nguyên vật liệu" : "Thành phẩm"}
-                        >
-                          {(product as any).type === "material" ? <ArchiveBoxIcon className="w-3.5 h-3.5" /> : <CubeIcon className="w-3.5 h-3.5" />}
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex flex-col h-full">
-                        <div className="mb-3 pr-8">
-                          <h3 className="font-bold text-pin-gray-800 dark:text-pin-gray-100 text-sm leading-tight line-clamp-2 group-hover:text-pin-blue-600 dark:group-hover:text-pin-blue-400 transition-colors">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 dark:bg-slate-700 group-hover:bg-blue-500 transition-colors" />
+                      
+                      <div className="mb-4 pl-1">
+                        <div className="flex justify-between items-start gap-2">
+                          <h3 className="text-[13px] font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug h-9">
                             {product.name}
                           </h3>
-                          <p className="text-[10px] font-mono text-pin-gray-400 mt-1">
+                          <span className={`p-1.5 rounded-lg shrink-0 ${(product as any).type === "material"
+                            ? "bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400"
+                            : "bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400"
+                            }`}>
+                            {(product as any).type === "material" ? <ArchiveBoxIcon className="w-3.5 h-3.5" /> : <CubeIcon className="w-3.5 h-3.5" />}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-tighter">
                             {product.sku}
                           </p>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-tighter border ${product.stock === 0
+                            ? "bg-red-50 text-red-600 border-red-100 dark:bg-red-500/10 dark:border-red-500/20"
+                            : product.stock <= 5
+                              ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20"
+                              : "bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600"
+                            }`}>
+                            {product.stock === 0 ? "HẾT" : `KHO: ${product.stock}`}
+                          </span>
                         </div>
+                      </div>
 
-                        <div className="mt-auto space-y-3">
-                          {/* Stock info */}
-                          <div className="flex justify-end">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${product.stock === 0
-                                ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20"
-                                : product.stock <= 5
-                                  ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
-                                  : "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                              }`}>
-                              {product.stock === 0 ? "HẾT HÀNG" : `Kho: ${product.stock}`}
-                            </span>
-                          </div>
-
-                          {/* Action Buttons with Prices */}
-                          <div className="grid grid-cols-2 gap-2">
+                      <div className="mt-auto space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); addToCart(product, "retail"); }}
+                            className="flex flex-col items-center py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl transition-all"
+                          >
+                            <span className="text-[8px] font-bold uppercase tracking-widest opacity-60 mb-0.5">Lẻ</span>
+                            <span className="text-xs font-black">{formatCurrency((product as any).retailPrice ?? product.sellingPrice ?? 0).replace('₫', '')}</span>
+                          </button>
+                          {((product as any).wholesalePrice || 0) > 0 ? (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToCart(product, "retail");
-                              }}
-                              className="group/btn flex flex-col items-center justify-center py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 dark:hover:text-white rounded-lg transition-all active:scale-95"
+                              onClick={(e) => { e.stopPropagation(); addToCart(product, "wholesale"); }}
+                              className="flex flex-col items-center py-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 hover:border-blue-500 text-blue-600 dark:text-blue-400 rounded-xl transition-all"
                             >
-                              <span className="text-[9px] uppercase tracking-wide opacity-80 mb-0.5">Giá lẻ</span>
-                              <span className="text-xs font-semibold">
-                                {formatCurrency((product as any).retailPrice ?? product.sellingPrice ?? 0).replace('₫', '')}
-                              </span>
+                              <span className="text-[8px] font-bold uppercase tracking-widest opacity-70 mb-0.5">Sỉ</span>
+                              <span className="text-xs font-black">{formatCurrency((product as any).wholesalePrice).replace('₫', '')}</span>
                             </button>
-                            {((product as any).wholesalePrice || 0) > 0 ? (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addToCart(product, "wholesale");
-                                }}
-                                className="group/btn flex flex-col items-center justify-center py-2 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 hover:bg-blue-500 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white rounded-lg transition-all active:scale-95"
-                              >
-                                <span className="text-[9px] uppercase tracking-wide opacity-80 mb-0.5">Giá sỉ</span>
-                                <span className="text-xs font-semibold">
-                                  {formatCurrency((product as any).wholesalePrice).replace('₫', '')}
-                                </span>
-                              </button>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center py-2 bg-pin-gray-50 dark:bg-pin-gray-800/50 text-pin-gray-400 rounded-lg text-[9px] uppercase tracking-wide opacity-60 border border-dashed border-pin-gray-200 dark:border-pin-gray-700">
-                                <span>Giá sỉ</span>
-                                <span className="text-xs">Trống</span>
-                              </div>
-                            )}
-                          </div>
+                          ) : (
+                            <div className="flex flex-col items-center py-2 bg-slate-100/50 dark:bg-slate-900/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl opacity-40">
+                              <span className="text-[8px] font-bold uppercase tracking-widest mb-0.5">Sỉ</span>
+                              <span className="text-xs font-black">---</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -916,24 +890,23 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 </div>
               ) : null}
 
-              {/* Nút xem thêm khi có nhiều hơn 20 sản phẩm */}
               {hasMoreProducts && !showAllProducts && (
-                <div className="mt-3 text-center">
+                <div className="mt-6 text-center">
                   <button
                     onClick={() => setShowAllProducts(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-pin-blue-100 hover:bg-pin-blue-200 dark:bg-pin-blue-900/30 dark:hover:bg-pin-blue-800/50 text-pin-blue-700 dark:text-pin-blue-300 rounded-lg transition-colors text-sm font-medium"
+                    className="px-6 py-2 border border-pin-blue-200 text-pin-blue-600 hover:bg-pin-blue-50 rounded-lg text-sm font-bold transition-all"
                   >
-                    📦 Xem thêm {allAvailableItems.length - PRODUCTS_LIMIT} sản phẩm khác
+                    Xem tất cả ({allAvailableItems.length} sản phẩm)
                   </button>
                 </div>
               )}
               {showAllProducts && hasMoreProducts && (
-                <div className="mt-3 text-center">
+                <div className="mt-6 text-center">
                   <button
                     onClick={() => setShowAllProducts(false)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
+                    className="px-6 py-2 border border-pin-gray-200 text-pin-gray-500 hover:bg-pin-gray-50 rounded-lg text-sm font-bold transition-all"
                   >
-                    ⬆️ Thu gọn
+                    Thu gọn
                   </button>
                 </div>
               )}
@@ -1092,8 +1065,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       )}
                     </div>
                   ) : (
-                    <div className="relative group">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400 group-focus-within:text-pin-blue-500 transition-colors">
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400">
                         <MagnifyingGlassIcon className="w-4 h-4" />
                       </div>
                       <input
@@ -1105,33 +1078,30 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           setIsCustomerListOpen(true);
                         }}
                         onFocus={() => setIsCustomerListOpen(true)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-pin-gray-50 dark:bg-pin-gray-700/50 border border-pin-gray-200 dark:border-pin-gray-600 rounded-xl text-sm focus:ring-4 focus:ring-pin-blue-500/10 focus:border-pin-blue-500 transition-all outline-none"
+                        className="scientific-input pl-9"
                       />
 
                       {/* Dropdown Results */}
                       {isCustomerListOpen && (customerSearch || filteredCustomers.length > 0) && (
-                        <div className="absolute top-full mt-2 z-50 w-full bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
-                          <div className="p-3 bg-pin-gray-50 dark:bg-pin-gray-700/50 border-b dark:border-pin-gray-700">
-                            <span className="text-[10px] font-bold text-pin-gray-400 uppercase tracking-widest">Kết quả tìm kiếm</span>
-                          </div>
-                          <div className="max-h-64 overflow-y-auto no-scrollbar">
+                        <div className="absolute top-full mt-1 z-50 w-full bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-lg shadow-xl overflow-hidden">
+                          <div className="max-h-64 overflow-y-auto">
                             {filteredCustomers.length > 0 ? (
                               filteredCustomers.map((c) => (
                                 <button
                                   key={c.id}
                                   onClick={() => handleSelectCustomer(c)}
-                                  className="w-full p-3 flex items-center justify-between hover:bg-pin-blue-50 dark:hover:bg-pin-blue-900/20 transition-colors border-b dark:border-pin-gray-700 last:border-0"
+                                  className="w-full p-3 flex items-center justify-between hover:bg-pin-gray-50 dark:hover:bg-pin-gray-700/50 transition-colors border-b dark:border-pin-gray-700 last:border-0"
                                 >
                                   <div className="text-left">
-                                    <p className="font-bold text-pin-gray-800 dark:text-pin-gray-100 text-sm">{c.name}</p>
+                                    <p className="font-semibold text-pin-gray-800 dark:text-pin-gray-100 text-sm">{c.name}</p>
                                     <p className="text-[11px] text-pin-gray-500">{c.phone}</p>
                                   </div>
                                   <ChevronRightIcon className="w-4 h-4 text-pin-gray-300" />
                                 </button>
                               ))
                             ) : (
-                              <div className="p-6 text-center">
-                                <p className="text-xs text-pin-gray-400">Không tìm thấy khách hàng này</p>
+                              <div className="p-4 text-center">
+                                <p className="text-xs text-pin-gray-400">Không tìm thấy khách hàng</p>
                               </div>
                             )}
                           </div>
@@ -1186,29 +1156,24 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   </div>
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
                     {cartItems.map((item) => (
-                      <div
-                        key={`${item.productId}-${item.priceType || "retail"}`}
-                        className="group relative bg-white dark:bg-pin-gray-700/50 p-3 rounded-2xl border border-pin-gray-100 dark:border-pin-gray-700/50 hover:border-pin-blue-200 dark:hover:border-pin-blue-800 transition-all"
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-2">
+                      <div key={`${item.productId}-${item.priceType || "retail"}`} className="p-3 border-b border-pin-gray-100 dark:border-pin-gray-700 last:border-0 hover:bg-pin-gray-50/50 transition-colors">
+                        <div className="flex justify-between items-start mb-3">
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-bold text-pin-gray-800 dark:text-pin-gray-100 truncate">
-                              {item.name}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                                item.priceType === "wholesale"
-                                  ? "bg-pin-blue-100 text-pin-blue-600 dark:bg-pin-blue-900/40"
-                                  : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40"
+                            <h4 className="text-sm font-bold text-pin-gray-800 dark:text-pin-gray-100 truncate">{item.name}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                item.priceType === "wholesale" 
+                                  ? "bg-pin-blue-50 text-pin-blue-600 dark:bg-pin-blue-900/30" 
+                                  : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30"
                               }`}>
-                                {item.priceType === "wholesale" ? "Giá sỉ" : "Giá lẻ"}
+                                {item.priceType === "wholesale" ? "Sỉ" : "Lẻ"}
                               </span>
-                              <span className="text-[10px] text-pin-gray-400">SKU: {item.sku}</span>
+                              <span className="text-[10px] text-pin-gray-400 font-mono">{item.sku}</span>
                             </div>
                           </div>
                           <button
-                            onClick={() => updateQuantity(item.productId, 0, item.priceType)}
-                            className="p-1 text-pin-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            onClick={() => removeFromCart(item.productId, item.priceType)}
+                            className="p-1 text-pin-gray-300 hover:text-red-500 transition-colors"
                           >
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -1221,27 +1186,22 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                               onUpdate={(val) => updatePrice(item.productId, val, item.priceType)}
                               priceType={item.priceType || 'retail'}
                             />
-                            <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1">
-                              Σ {formatCurrency(item.sellingPrice * item.quantity)}
-                            </span>
+                            <div className="mt-1 text-[11px] font-bold text-pin-blue-600 dark:text-pin-blue-400">
+                              Tổng: {formatCurrency(item.sellingPrice * item.quantity)}
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-1 bg-pin-gray-50 dark:bg-pin-gray-800 p-1 rounded-xl border dark:border-pin-gray-700">
+                          <div className="flex items-center bg-pin-gray-100 dark:bg-pin-gray-800 rounded-lg p-0.5 border dark:border-pin-gray-700">
                             <button
                               onClick={() => updateQuantity(item.productId, item.quantity - 1, item.priceType)}
-                              className="w-7 h-7 flex items-center justify-center bg-white dark:bg-pin-gray-700 rounded-lg shadow-sm text-pin-gray-400 hover:text-red-500 transition-all active:scale-90"
+                              className="w-6 h-6 flex items-center justify-center text-pin-gray-400 hover:text-red-500 transition-colors"
                             >
                               <MinusIcon className="w-3 h-3" />
                             </button>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 0, item.priceType)}
-                              className="w-8 text-center text-xs font-black bg-transparent border-none p-0 focus:ring-0 text-pin-gray-700 dark:text-pin-gray-200"
-                            />
+                            <span className="w-8 text-center text-xs font-bold text-pin-gray-700 dark:text-pin-gray-200">{item.quantity}</span>
                             <button
                               onClick={() => updateQuantity(item.productId, item.quantity + 1, item.priceType)}
-                              className="w-7 h-7 flex items-center justify-center bg-white dark:bg-pin-gray-700 rounded-lg shadow-sm text-pin-gray-400 hover:text-emerald-500 transition-all active:scale-90"
+                              className="w-6 h-6 flex items-center justify-center text-pin-gray-400 hover:text-emerald-500 transition-colors"
                             >
                               <PlusIcon className="w-3 h-3" />
                             </button>
@@ -1253,24 +1213,18 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 </div>
               )}
 
-              {/* 3. Modern Order Summary Card */}
-              <div className="bg-gradient-to-br from-pin-gray-50 to-pin-gray-100 dark:from-pin-gray-800/80 dark:to-pin-gray-900/80 p-5 rounded-3xl border border-pin-gray-200 dark:border-pin-gray-700 shadow-inner space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold text-pin-gray-500 dark:text-pin-gray-400">
-                    <span>Tạm tính ({totalCartItems} SP)</span>
-                    <span className="text-pin-gray-800 dark:text-pin-gray-200">{formatCurrency(subtotal)}</span>
-                  </div>
-
+              <div className="bg-pin-gray-50 dark:bg-pin-gray-900/30 p-5 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 space-y-4">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-pin-gray-500 dark:text-pin-gray-400">Giảm giá</span>
-                      <div className="flex items-center bg-white dark:bg-pin-gray-700 rounded-lg border dark:border-pin-gray-600 p-0.5 overflow-hidden">
+                      <span className="text-xs font-semibold text-pin-gray-500 uppercase">Giảm giá</span>
+                      <div className="flex items-center bg-white dark:bg-pin-gray-800 border dark:border-pin-gray-700 rounded p-0.5">
                         <input
                           type="number"
                           value={discount || ""}
                           onChange={(e) => setDiscount(Number(e.target.value))}
                           placeholder="0"
-                          className="w-16 px-2 py-1 text-xs text-right bg-transparent border-none focus:ring-0 text-pin-gray-800 dark:text-pin-gray-200 font-bold"
+                          className="w-16 px-2 py-1 text-xs text-right bg-transparent border-none focus:ring-0 text-pin-gray-800 dark:text-pin-gray-200 font-semibold"
                         />
                         <select
                           value={discountType}
@@ -1278,7 +1232,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             setDiscountType(e.target.value as "VND" | "%");
                             setDiscount(0);
                           }}
-                          className="bg-pin-gray-50 dark:bg-pin-gray-600 px-1 py-1 text-[10px] font-black border-none focus:ring-0 text-pin-gray-600 dark:text-pin-gray-300"
+                          className="bg-pin-gray-50 dark:bg-pin-gray-700 px-1 py-1 text-[10px] border-none focus:ring-0 text-pin-gray-600 dark:text-pin-gray-400"
                         >
                           <option value="VND">₫</option>
                           <option value="%">%</option>
@@ -1291,36 +1245,25 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-5 border-t-2 border-dashed border-pin-gray-200 dark:border-pin-gray-700">
-                  <div className="flex justify-between items-end mb-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-pin-gray-400 uppercase tracking-widest mb-1">Tổng tiền thanh toán</span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-400 dark:to-red-500">
-                          {formatCurrency(total).replace('₫', '')}
-                        </span>
-                        <span className="text-sm font-black text-orange-600 dark:text-orange-500 italic">VNĐ</span>
-                      </div>
+                <div className="pt-4 border-t border-pin-gray-200 dark:border-pin-gray-700">
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-pin-gray-500">Tạm tính ({totalCartItems} SP)</span>
+                      <span className="font-semibold text-pin-gray-700 dark:text-pin-gray-200">{formatCurrency(subtotal)}</span>
                     </div>
-                    <div className="bg-emerald-500/10 dark:bg-emerald-500/20 px-3 py-1.5 rounded-2xl border border-emerald-500/20">
-                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter flex items-center gap-1">
-                        <CheckCircleIcon className="w-3 h-3" /> Sẵn sàng
-                      </span>
+                    <div className="flex justify-between items-center pt-2 border-t border-pin-gray-100 dark:border-pin-gray-700/50">
+                      <span className="text-sm font-bold text-pin-gray-800 dark:text-pin-gray-100">Tổng thanh toán</span>
+                      <span className="text-xl font-black text-pin-blue-600 dark:text-pin-blue-400">{formatCurrency(total)}</span>
                     </div>
                   </div>
 
                   <button
                     onClick={finalizeSale}
                     disabled={!currentUser || cartItems.length === 0}
-                    className="relative w-full group overflow-hidden rounded-3xl"
+                    className="w-full py-4 bg-pin-blue-600 hover:bg-pin-blue-700 text-white rounded-lg font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:bg-pin-gray-200 disabled:dark:bg-pin-gray-700"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-pin-blue-600 via-indigo-600 to-pin-blue-700 group-hover:scale-105 transition-transform duration-500" />
-                    <div className="shimmer absolute inset-0 opacity-30" />
-                    <div className="relative py-5 px-6 flex items-center justify-center gap-3 text-white">
-                      <ShoppingCartIcon className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                      <span className="text-lg font-black tracking-tighter uppercase">Xác nhận thanh toán</span>
-                      <ChevronRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </div>
+                    <CheckCircleIcon className="w-5 h-5" />
+                    <span>XÁC NHẬN & XUẤT HÓA ĐƠN</span>
                   </button>
                 </div>
               </div>
@@ -1332,37 +1275,33 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setPaymentMethod("cash")}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all duration-300 ${
+                      className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
                         paymentMethod === "cash"
-                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 shadow-lg shadow-emerald-500/10"
-                          : "border-pin-gray-100 dark:border-pin-gray-700 hover:border-emerald-200 dark:hover:border-emerald-800 text-pin-gray-500"
+                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold"
+                          : "border-pin-gray-200 dark:border-pin-gray-700 text-pin-gray-500 hover:bg-pin-gray-50"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === "cash" ? "bg-emerald-500 text-white" : "bg-pin-gray-100 dark:bg-pin-gray-700"}`}>
-                        <BanknotesIcon className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold">Tiền mặt</span>
+                      <BanknotesIcon className="w-4 h-4" />
+                      <span className="text-xs">Tiền mặt</span>
                     </button>
                     <button
-                      onClick={() => setPaymentMethod("bank")}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all duration-300 ${
-                        paymentMethod === "bank"
-                          ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-900/20 text-pin-blue-700 dark:text-pin-blue-400 shadow-lg shadow-pin-blue-500/10"
-                          : "border-pin-gray-100 dark:border-pin-gray-700 hover:border-pin-blue-200 dark:hover:border-pin-blue-800 text-pin-gray-500"
+                      onClick={() => setPaymentMethod("transfer")}
+                      className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-all ${
+                        paymentMethod === "transfer"
+                          ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-500/10 text-pin-blue-700 dark:text-pin-blue-400 font-bold"
+                          : "border-pin-gray-200 dark:border-pin-gray-700 text-pin-gray-500 hover:bg-pin-gray-50"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === "bank" ? "bg-pin-blue-500 text-white" : "bg-pin-gray-100 dark:bg-pin-gray-700"}`}>
-                        <span className="text-sm">🏦</span>
-                      </div>
-                      <span className="text-xs font-bold">Chuyển khoản</span>
+                      <UsersIcon className="w-4 h-4" />
+                      <span className="text-xs">Chuyển khoản</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Modern Payment Modes */}
-                <div className="p-4 bg-pin-gray-50/50 dark:bg-pin-gray-800/50 rounded-3xl border border-pin-gray-200 dark:border-pin-gray-700">
-                  <label className="block text-[10px] font-bold text-pin-gray-400 uppercase tracking-widest mb-3 px-1">Hình thức</label>
-                  <div className="grid grid-cols-4 gap-1.5">
+                {/* Scientific Payment Modes */}
+                <div className="p-4 bg-pin-gray-50 dark:bg-pin-gray-900/50 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700">
+                  <label className="block text-[10px] font-bold text-pin-gray-400 uppercase tracking-wider mb-3">Hình thức</label>
+                  <div className="grid grid-cols-4 gap-2">
                     {[
                       { id: 'full', label: 'Đủ', color: 'emerald' },
                       { id: 'partial', label: '1 phần', color: 'amber' },
@@ -1373,7 +1312,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         key={mode.id}
                         onClick={() => {
                           if (mode.id === 'installment' && !selectedCustomer) {
-                            showToast("Vui lòng chọn khách hàng trước khi trả góp!", "warn");
+                            showToast("Vui lòng chọn khách hàng!", "warn");
                             return;
                           }
                           setPaymentMode(mode.id as any);
@@ -1381,10 +1320,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           if (mode.id === 'partial') setPaidAmount(total);
                           if (mode.id === 'debt') setPaidAmount(0);
                         }}
-                        className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all border-2 ${
+                        className={`py-2 px-1 rounded-lg text-[10px] font-bold transition-all border ${
                           paymentMode === mode.id
-                            ? `border-${mode.color}-500 bg-${mode.color}-50 dark:bg-${mode.color}-900/20 text-${mode.color}-700 dark:text-${mode.color}-400`
-                            : "border-transparent bg-white dark:bg-pin-gray-700 text-pin-gray-500 hover:bg-pin-gray-100"
+                            ? `bg-${mode.color === 'emerald' ? 'emerald-500' : mode.color === 'amber' ? 'amber-500' : mode.color === 'red' ? 'red-500' : 'purple-500'} text-white border-transparent`
+                            : "bg-white dark:bg-pin-gray-800 text-pin-gray-500 border-pin-gray-200 dark:border-pin-gray-700 hover:bg-pin-gray-50"
                         }`}
                       >
                         {mode.label}
@@ -1520,78 +1459,69 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
       {activeTab === "history" && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 animate-slideUp">
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-pin-blue-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-pin-blue-500 transition-colors">Doanh thu</span>
-                <span className="w-10 h-10 rounded-2xl bg-pin-blue-50 dark:bg-pin-blue-900/30 text-pin-blue-600 dark:text-pin-blue-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-pin-gray-800 p-6 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-pin-blue-50 dark:bg-pin-blue-900/30 rounded-lg text-pin-blue-600 dark:text-pin-blue-400">
                   <BanknotesIcon className="w-5 h-5" />
-                </span>
-              </div>
-              <div className="text-3xl font-black text-pin-gray-900 dark:text-white tracking-tight">{formatCurrency(historyMetrics.revenue)}</div>
-              <div className="mt-3 text-[11px] font-bold text-pin-gray-400 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {historyMetrics.count}/{recentSales.length} hóa đơn đang hiển thị
-              </div>
-            </div>
-
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-emerald-500 transition-colors">Lợi nhuận gộp</span>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-[10px] font-black text-emerald-600 dark:text-emerald-300">
-                    {historyMetrics.margin.toFixed(1)}%
-                  </span>
-                  <span className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ArrowTrendingUpIcon className="w-5 h-5" />
-                  </span>
                 </div>
+                <span className="text-xs font-bold text-pin-gray-500 uppercase tracking-wider">Doanh thu</span>
               </div>
-              <div className={`text-3xl font-black tracking-tight ${historyMetrics.profit >= 0 ? "text-emerald-500 dark:text-emerald-300" : "text-red-500"}`}>
-                {formatCurrency(historyMetrics.profit)}
-              </div>
-              <div className="mt-3 text-xs font-bold text-pin-gray-500 dark:text-pin-gray-300">Giá vốn: {formatCurrency(historyMetrics.cost)}</div>
+              <div className="text-2xl font-black text-pin-gray-900 dark:text-white">{formatCurrency(historyMetrics.revenue)}</div>
+              <div className="mt-2 text-[10px] text-pin-gray-400">{historyMetrics.count} giao dịch đã lọc</div>
             </div>
 
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-teal-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-teal-500 transition-colors">Đã thu</span>
-                <span className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="bg-white dark:bg-pin-gray-800 p-6 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400">
+                  <ArrowTrendingUpIcon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-pin-gray-500 uppercase tracking-wider">Lợi nhuận</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(historyMetrics.profit)}</div>
+                <div className="text-xs font-bold text-emerald-500/80">{historyMetrics.margin.toFixed(0)}%</div>
+              </div>
+              <div className="mt-2 text-[10px] text-pin-gray-400">Vốn: {formatCurrency(historyMetrics.cost)}</div>
+            </div>
+
+            <div className="bg-white dark:bg-pin-gray-800 p-6 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg text-teal-600 dark:text-teal-400">
                   <CheckCircleIcon className="w-5 h-5" />
-                </span>
+                </div>
+                <span className="text-xs font-bold text-pin-gray-500 uppercase tracking-wider">Đã thu</span>
               </div>
-              <div className="text-3xl font-black text-teal-600 dark:text-teal-400 tracking-tight">{formatCurrency(historyMetrics.paid)}</div>
-              <div className="mt-3 text-xs font-bold text-pin-gray-500 dark:text-pin-gray-300">{historyMetrics.completed} đơn đã/đang thu</div>
+              <div className="text-2xl font-black text-teal-600 dark:text-teal-400">{formatCurrency(historyMetrics.paid)}</div>
+              <div className="mt-2 text-[10px] text-pin-gray-400">{historyMetrics.completed} đơn hoàn tất</div>
             </div>
 
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-orange-500 transition-colors">Công nợ</span>
-                <span className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="bg-white dark:bg-pin-gray-800 p-6 rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400">
                   <ClockIcon className="w-5 h-5" />
-                </span>
+                </div>
+                <span className="text-xs font-bold text-pin-gray-500 uppercase tracking-wider">Công nợ</span>
               </div>
-              <div className="text-3xl font-black text-orange-500 dark:text-orange-300 tracking-tight">{formatCurrency(historyMetrics.debt)}</div>
-              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-pin-gray-200 dark:bg-pin-gray-600">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-orange-300 to-amber-400 transition-all"
-                  style={{
-                    width: `${historyMetrics.revenue > 0 ? Math.min(100, (historyMetrics.debt / historyMetrics.revenue) * 100) : 0}%`,
-                  }}
+              <div className="text-2xl font-black text-orange-600 dark:text-orange-400">{formatCurrency(historyMetrics.debt)}</div>
+              <div className="mt-3 w-full bg-pin-gray-100 dark:bg-pin-gray-700 h-1.5 rounded-full overflow-hidden">
+                <div 
+                  className="bg-orange-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${historyMetrics.revenue > 0 ? (historyMetrics.debt / historyMetrics.revenue) * 100 : 0}%` }}
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-pin-gray-200 bg-white p-3 shadow-sm dark:border-pin-gray-700 dark:bg-pin-gray-800 md:flex-row md:items-center">
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pin-gray-400 dark:text-pin-gray-300" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pin-gray-400" />
               <input
                 type="text"
                 value={historySearch}
                 onChange={(event) => setHistorySearch(event.target.value)}
                 placeholder="Tìm mã đơn, khách hàng hoặc sản phẩm..."
-                className="w-full rounded-xl border border-pin-gray-200 bg-pin-gray-50 py-2.5 pl-10 pr-3 text-sm font-semibold text-pin-gray-800 outline-none transition focus:border-pin-blue-500 dark:border-pin-gray-700 dark:bg-pin-gray-900/40 dark:text-pin-gray-100"
+                className="scientific-input pl-10"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1603,11 +1533,11 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               ].map(([value, label]) => (
                 <button
                   key={value}
-                  onClick={() => setHistoryDateFilter(value as typeof historyDateFilter)}
-                  className={`rounded-full px-4 py-2 text-xs font-black transition ${
+                  onClick={() => setHistoryDateFilter(value as any)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
                     historyDateFilter === value
-                      ? "bg-pin-blue-600 text-white shadow-lg shadow-pin-blue-600/20"
-                      : "bg-pin-gray-100 text-pin-gray-600 hover:bg-pin-gray-200 hover:text-pin-gray-800 dark:bg-pin-gray-700/60 dark:text-pin-gray-300 dark:hover:bg-pin-gray-700 dark:hover:text-white"
+                      ? "bg-pin-blue-600 text-white border-pin-blue-600"
+                      : "bg-white dark:bg-pin-gray-800 text-pin-gray-500 border-pin-gray-200 dark:border-pin-gray-700 hover:bg-pin-gray-50"
                   }`}
                 >
                   {label}
@@ -1615,8 +1545,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               ))}
               <select
                 value={historyStatusFilter}
-                onChange={(event) => setHistoryStatusFilter(event.target.value as typeof historyStatusFilter)}
-                className="rounded-xl border border-pin-gray-200 bg-white px-3.5 py-2 text-xs font-black text-pin-gray-700 outline-none dark:border-pin-gray-700 dark:bg-pin-gray-900 dark:text-pin-gray-100"
+                onChange={(event) => setHistoryStatusFilter(event.target.value as any)}
+                className="px-3 py-2 rounded-lg border border-pin-gray-200 dark:border-pin-gray-700 bg-white dark:bg-pin-gray-800 text-xs font-bold text-pin-gray-700 dark:text-pin-gray-300 outline-none"
               >
                 <option value="all">Mọi trạng thái</option>
                 <option value="paid">Hoàn tất</option>
