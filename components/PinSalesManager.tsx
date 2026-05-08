@@ -38,7 +38,6 @@ import { EmptyState } from "./ui/EmptyState";
 import { Button } from "./ui/Button";
 import { InstallmentService } from "../lib/services/InstallmentService";
 import { supabase } from "../supabaseClient";
-import { Search, Box, X, ShoppingCart, CheckCircle2, History, Printer, Trash2 } from "lucide-react";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
