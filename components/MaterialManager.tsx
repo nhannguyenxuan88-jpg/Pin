@@ -4493,9 +4493,9 @@ const MaterialManager: React.FC<{
             <div className="hidden md:block flex-1 overflow-auto bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                  <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 hidden sm:table-header-group">
                     <tr>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-center text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         <input
                           type="checkbox"
                           checked={
@@ -4507,54 +4507,54 @@ const MaterialManager: React.FC<{
                         />
                       </th>
                       <th
-                        className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        className="px-5 py-4 text-left text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                         onClick={() => handleSort("name")}
                       >
                         <div className="flex items-center gap-1">
-                          Tên
+                          Sản phẩm
                           {sortBy === "name" && (
                             <span className="text-slate-600">{sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </div>
                       </th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-left text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Đơn vị
                       </th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-left text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Danh mục
                       </th>
                       <th
-                        className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        className="px-5 py-4 text-right text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                         onClick={() => handleSort("purchasePrice")}
                       >
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-end gap-1">
                           Giá nhập
                           {sortBy === "purchasePrice" && (
                             <span className="text-slate-600">{sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </div>
                       </th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-right text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Giá bán lẻ
                       </th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-right text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Giá bán sỉ
                       </th>
                       <th
-                        className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        className="px-5 py-4 text-center text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                         onClick={() => handleSort("stock")}
                       >
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           Tồn kho
                           {sortBy === "stock" && (
                             <span className="text-slate-600">{sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </div>
                       </th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-left text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Nhà cung cấp
                       </th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <th className="px-5 py-4 text-center text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         Thao tác
                       </th>
                     </tr>
@@ -4564,7 +4564,7 @@ const MaterialManager: React.FC<{
                       <tr>
                         <td
                           colSpan={10}
-                          className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+                          className="px-5 py-8 text-center text-slate-500 dark:text-slate-400"
                         >
                           {loading ? (
                             <div className="flex items-center justify-center gap-2">
@@ -4580,48 +4580,48 @@ const MaterialManager: React.FC<{
                       filteredMaterials.map((material) => (
                         <tr
                           key={material.id}
-                          className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-150 ${selectedItems.has(material.id)
-                            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+                          className={`hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group ${selectedItems.has(material.id)
+                            ? "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50"
                             : ""
                             }`}
                         >
-                          <td className="px-3 py-2 text-center">
+                          <td className="px-5 py-4 text-center align-middle">
                             <input
                               type="checkbox"
                               checked={selectedItems.has(material.id)}
                               onChange={(e) => handleSelectItem(material.id, e.target.checked)}
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-800 dark:border-slate-700"
                             />
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-5 py-4 align-middle">
                             <button
                               onClick={() => handleShowMaterialDetail(material)}
-                              className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors cursor-pointer text-left"
+                              className="hover:text-pin-blue-500 dark:hover:text-pin-blue-400 transition-colors cursor-pointer text-left focus:outline-none"
                             >
-                              <div className="font-medium text-sm text-gray-900 dark:text-white">
+                              <div className="font-semibold text-sm text-slate-800 dark:text-slate-200">
                                 {material.name}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                              <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                                 {material.sku}
                               </div>
                             </button>
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                          <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-400 align-middle">
                             {material.unit}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-5 py-4 align-middle">
                             {(material as any).category_name ? (
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                              <span className="text-sm text-slate-600 dark:text-slate-400">
                                 {(material as any).category_name}
                               </span>
                             ) : (material as any).category ? (
                               <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${
                                   (material as any).category === "material"
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                                    ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400"
                                     : (material as any).category === "product"
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                                    : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                    : "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"
                                 }`}
                               >
                                 {(material as any).category === "material" && "Vật tư"}
@@ -4629,68 +4629,55 @@ const MaterialManager: React.FC<{
                                 {(material as any).category === "finished_goods" && "Thành phẩm"}
                               </span>
                             ) : (
-                              <span className="text-xs text-gray-400 italic">-</span>
+                              <span className="text-[10px] text-slate-400 italic">-</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 font-medium">
+                          <td className="px-5 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200 text-right align-middle">
                             {formatCurrency(material.purchasePrice)}
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                          <td className="px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 text-right align-middle">
                             {material.retailPrice ? formatCurrency(material.retailPrice) : "-"}
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                          <td className="px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 text-right align-middle">
                             {material.wholesalePrice
                               ? formatCurrency(material.wholesalePrice)
                               : "-"}
                           </td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="px-5 py-4 text-center align-middle">
                             {(() => {
                               const stockValue = material.availableStock || material.stock;
                               const hasCommitments = (material.committedQuantity || 0) > 0;
 
-                              // Color coding based on stock level
                               let badgeColor = "";
-                              let badgeIcon = "";
 
                               if (stockValue === 0) {
-                                badgeColor =
-                                  "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 ring-1 ring-rose-300 dark:ring-rose-700";
-                                badgeIcon = "🔴";
+                                badgeColor = "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400";
                               } else if (stockValue < 100) {
-                                badgeColor =
-                                  "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700";
-                                badgeIcon = "🟡";
+                                badgeColor = "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400";
                               } else if (stockValue < 500) {
-                                badgeColor =
-                                  "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700";
-                                badgeIcon = "🔵";
+                                badgeColor = "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400";
                               } else {
-                                badgeColor =
-                                  "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-700";
-                                badgeIcon = "🟢";
+                                badgeColor = "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
                               }
 
                               return (
-                                <div className="flex flex-col items-center gap-0.5">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs">{badgeIcon}</span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}
-                                    >
-                                      {hasCommitments ? (
-                                        <>
-                                          <span className="text-current">
-                                            {material.availableStock}
-                                          </span>
-                                          <span className="opacity-60">/{material.stock}</span>
-                                        </>
-                                      ) : (
-                                        stockValue
-                                      )}
-                                    </span>
-                                  </div>
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  <span
+                                    className={`inline-flex min-w-[36px] justify-center px-2.5 py-1 rounded-full text-xs font-bold tracking-wide ${badgeColor}`}
+                                  >
+                                    {hasCommitments ? (
+                                      <>
+                                        <span className="text-current">
+                                          {material.availableStock}
+                                        </span>
+                                        <span className="opacity-60 ml-0.5">/{material.stock}</span>
+                                      </>
+                                    ) : (
+                                      stockValue
+                                    )}
+                                  </span>
                                   {hasCommitments && (
-                                    <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                    <div className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">
                                       🔒 {material.committedQuantity}
                                     </div>
                                   )}
@@ -4698,33 +4685,37 @@ const MaterialManager: React.FC<{
                               );
                             })()}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-5 py-4 align-middle">
                             {material.supplier ? (
-                              <div>
-                                <div className="text-sm text-gray-700 dark:text-gray-300">
-                                  {material.supplier}
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
+                                  {material.supplier.charAt(0).toUpperCase()}
                                 </div>
-                                {material.supplierPhone && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    {material.supplierPhone}
-                                  </div>
-                                )}
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                    {material.supplier}
+                                  </span>
+                                  {material.supplierPhone && (
+                                    <span className="text-[11px] text-slate-400 mt-0.5">
+                                      {material.supplierPhone}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-slate-400 italic text-[10px] ml-8">-</span>
                             )}
                           </td>
-                          <td className="px-3 py-2">
-                            <div className="flex justify-center">
-                              <div className="relative group">
+                          <td className="px-5 py-4 text-center align-middle">
+                            <div className="flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <div className="relative group/action">
                                 <button
-                                  className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+                                  className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all focus:outline-none"
                                   title="Thao tác"
                                 >
                                   <Icon
                                     name="dots-three-vertical"
-                                    weight="bold"
-                                    className="w-5 h-5 text-slate-500 dark:text-slate-400"
+                                    className="w-5 h-5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                                   />
                                 </button>
                                 <div className="absolute right-0 top-full mt-1 w-40 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">

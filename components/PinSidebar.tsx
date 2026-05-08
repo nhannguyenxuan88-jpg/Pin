@@ -34,11 +34,11 @@ const PinNavItem: React.FC<{
   color?: string;
 }> = ({ to, icon, label, color = "text-pin-blue-600 dark:text-pin-blue-400" }) => {
   const baseItem =
-    "flex flex-col items-center justify-center text-center px-2 py-1.5 rounded-lg min-w-[4.5rem] w-auto transition-all duration-200 border";
+    "relative flex flex-col items-center justify-center text-center px-2 py-1.5 rounded-lg min-w-[4.5rem] w-auto transition-all duration-200";
   const activeClass =
-    "bg-white border-pin-gray-200 shadow-md shadow-pin-gray-200/60 dark:bg-pin-gray-800 dark:border-pin-gray-600 dark:shadow-none";
+    "bg-transparent";
   const inactiveClass =
-    "bg-transparent border-transparent hover:bg-pin-gray-50 hover:border-pin-gray-200 dark:hover:bg-pin-gray-700/40 dark:hover:border-pin-gray-600";
+    "bg-transparent hover:bg-pin-gray-50 dark:hover:bg-pin-gray-700/30";
 
   return (
     <NavLink
@@ -49,7 +49,7 @@ const PinNavItem: React.FC<{
         <>
           <div
             className={`w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${isActive
-              ? "bg-pin-gray-50 ring-pin-gray-200 dark:bg-pin-gray-700 dark:ring-pin-gray-500"
+              ? "bg-pin-gray-100 ring-transparent dark:bg-pin-gray-700/60"
               : "bg-pin-gray-100 ring-transparent dark:bg-pin-gray-800/40"
               }`}
           >
@@ -58,11 +58,12 @@ const PinNavItem: React.FC<{
             })}
           </div>
           <span
-            className={`text-[10px] font-medium mt-1 w-full whitespace-nowrap ${isActive ? "text-pin-gray-900 dark:text-pin-gray-100" : "text-pin-gray-500 dark:text-pin-gray-400"
+             className={`text-[10px] font-semibold mt-1 w-full whitespace-nowrap ${isActive ? "text-pin-gray-900 dark:text-pin-gray-100" : "text-pin-gray-500 dark:text-pin-gray-400"
               }`}
           >
             {label}
           </span>
+          {isActive && <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-emerald-400" />}
         </>
       )}
     </NavLink>

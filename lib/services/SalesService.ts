@@ -46,6 +46,23 @@ function inferItemType(
 }
 
 export function createSalesService(ctx: PinContextType): SalesService {
+  const syncFinishedGoodsStock = async (product: PinProduct, nextStock: number) => {
+    const sku = String(product.sku || "").trim();
+    if (!sku || !Number.isFinite(nextStock)) return;
+
+    ctx.setPinMaterials((prev: PinMaterial[]) =>
+      prev.map((m: PinMaterial) => (m.sku === sku ? { ...m, stock: nextStock } : m))
+    );
+
+    if (IS_OFFLINE_MODE) return;
+    try {
+      const { error } = await supabase.from("pin_materials").update({ stock: nextStock }).eq("sku", sku);
+      if (error) throw error;
+    } catch (e) {
+      console.warn("Failed syncing finished goods stock to pin_materials:", e);
+    }
+  };
+
   return {
     handlePinSale: async (saleData, newCashTx) => {
       if (!ctx.currentUser && !IS_OFFLINE_MODE) {
@@ -301,6 +318,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
               ctx.setPinProducts((prev: PinProduct[]) =>
                 prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: histNext } : p))
               );
+              await syncFinishedGoodsStock(prod, histNext);
               continue;
             }
 
@@ -309,6 +327,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
               ctx.setPinProducts((prev: PinProduct[]) =>
                 prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: rpcNext } : p))
               );
+              await syncFinishedGoodsStock(prod, rpcNext);
               continue;
             }
 
@@ -329,6 +348,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
             ctx.setPinProducts((prev: PinProduct[]) =>
               prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: remaining } : p))
             );
+            await syncFinishedGoodsStock(prod, remaining);
           }
 
           // Materials: subtract stock
@@ -438,16 +458,24 @@ export function createSalesService(ctx: PinContextType): SalesService {
               : p
           )
         );
-        ctx.setPinMaterials((prev: PinMaterial[]) =>
-          prev.map((m: PinMaterial) =>
-            usageByMaterial.has(m.id)
-              ? {
-                  ...m,
-                  stock: (m.stock || 0) + (usageByMaterial.get(m.id) || 0),
-                }
-              : m
-          )
-        );
+        ctx.setPinMaterials((prev: PinMaterial[]) => {
+          const byId = new Map(ctx.pinProducts.map((p: PinProduct) => [p.id, p]));
+          return prev.map((m: PinMaterial) => {
+            let next = m;
+            if (usageByMaterial.has(m.id)) {
+              next = {
+                ...next,
+                stock: (next.stock || 0) + (usageByMaterial.get(m.id) || 0),
+              };
+            }
+            const prod = Array.from(usageByProduct.keys())
+              .map((id) => byId.get(id))
+              .find((p) => p && p.sku === next.sku);
+            if (!prod) return next;
+            const delta = usageByProduct.get(prod.id) || 0;
+            return delta > 0 ? { ...next, stock: (next.stock || 0) + delta } : next;
+          });
+        });
         ctx.setPinSales((prev: PinSale[]) => prev.filter((s: PinSale) => s.id !== saleId));
         ctx.setCashTransactions?.((prev: CashTransaction[]) =>
           prev.filter((t: CashTransaction) => t.saleId !== saleId)
@@ -583,6 +611,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
             ctx.setPinProducts((prev: PinProduct[]) =>
               prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: histNext } : p))
             );
+            await syncFinishedGoodsStock(prod, histNext);
             continue;
           }
 
@@ -591,6 +620,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
             ctx.setPinProducts((prev: PinProduct[]) =>
               prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: rpcNext } : p))
             );
+            await syncFinishedGoodsStock(prod, rpcNext);
             continue;
           }
 
@@ -599,6 +629,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
           ctx.setPinProducts((prev: PinProduct[]) =>
             prev.map((p: PinProduct) => (p.id === productId ? { ...p, stock: remaining } : p))
           );
+          await syncFinishedGoodsStock(prod, remaining);
         }
 
         for (const [materialId, qty] of usageByMaterial.entries()) {
