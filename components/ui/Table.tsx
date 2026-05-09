@@ -8,7 +8,7 @@ export interface TableProps {
 
 export const Table: React.FC<TableProps> = ({ children, className }) => {
   return (
-    <div className="overflow-x-auto rounded-lg border border-pin-gray-200 dark:border-pin-dark-300 bg-white dark:bg-pin-dark-200">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
       <table className={cn("w-full", className)}>{children}</table>
     </div>
   );
@@ -23,8 +23,8 @@ export const TableHeader: React.FC<TableHeaderProps> = ({ children, className })
   return (
     <thead
       className={cn(
-        "bg-pin-gray-50 dark:bg-pin-dark-100",
-        "border-b border-pin-gray-200 dark:border-pin-dark-300",
+        "bg-slate-50 dark:bg-slate-950/60",
+        "border-b border-slate-200 dark:border-slate-700",
         className
       )}
     >
@@ -59,12 +59,12 @@ export const TableRow: React.FC<TableRowProps> = ({
     <tr
       onClick={onClick}
       className={cn(
-        "border-b border-pin-gray-200 dark:border-pin-dark-300",
+        "border-b border-slate-200 dark:border-slate-800",
         "transition-colors duration-150",
         onClick && "cursor-pointer",
         selected
-          ? "bg-pin-blue-50 dark:bg-pin-blue-900/20"
-          : "hover:bg-pin-gray-50 dark:hover:bg-pin-dark-100",
+          ? "bg-blue-50 dark:bg-blue-500/10"
+          : "hover:bg-slate-50 dark:hover:bg-slate-800/60",
         className
       )}
     >
@@ -107,12 +107,12 @@ export const TableHead: React.FC<TableHeadProps> = ({
   return (
     <th
       className={cn(
-        "px-6 py-4",
+        "px-5 py-3.5",
         alignClasses[align],
-        "text-xs font-semibold",
-        "text-pin-gray-600 dark:text-pin-dark-600",
-        "uppercase tracking-wider",
-        sortable && "cursor-pointer select-none hover:bg-pin-gray-100 dark:hover:bg-pin-dark-200",
+        "text-[11px] font-semibold",
+        "text-slate-500 dark:text-slate-400",
+        "uppercase tracking-wide",
+        sortable && "cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-800",
         className
       )}
       onClick={sortable ? onSort : undefined}
@@ -165,8 +165,8 @@ export const TableCell: React.FC<TableCellProps> = ({ children, className, align
   return (
     <td
       className={cn(
-        "px-6 py-4",
-        "text-sm text-pin-gray-900 dark:text-pin-dark-900",
+        "px-5 py-4",
+        "text-sm text-slate-800 dark:text-slate-100",
         alignClasses[align],
         className
       )}

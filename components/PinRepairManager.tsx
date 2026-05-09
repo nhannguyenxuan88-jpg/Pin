@@ -7,7 +7,19 @@ import { StatusBadge, PaymentBadge } from "./ui/Badge";
 import { DataTable, Column } from "./ui/Table";
 import { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from "./ui/Modal";
 import { Button } from "./ui/Button";
-import { WrenchScrewdriverIcon, PlusIcon, PrinterIcon, TrashIcon } from "./common/Icons";
+import {
+  BanknotesIcon,
+  CheckCircleIcon,
+  ClipboardDocumentListIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  PrinterIcon,
+  TrashIcon,
+  WrenchScrewdriverIcon,
+} from "./common/Icons";
 import { PinRepairModalNew } from "./PinRepairModalNew";
 import { Icon } from "./common/Icon";
 import { InvoicePreviewModal } from "./invoices/InvoicePreviewModal";
@@ -570,24 +582,24 @@ const PinRepairManagerNew: React.FC = () => {
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => handleOpenModal(order)}
-            className="p-2 text-pin-blue-600 hover:bg-pin-blue-50 dark:hover:bg-pin-blue-900/20 rounded-lg transition-colors"
+            className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:text-slate-400 dark:hover:text-blue-300 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
             title="Sửa"
           >
-            ✏️
+            <PencilSquareIcon className="w-4 h-4" />
           </button>
           <button
             onClick={() => {
               setInvoiceRepairOrder(order);
               setShowInvoicePreview(true);
             }}
-            className="p-2 text-pin-green-600 hover:bg-pin-green-50 dark:hover:bg-pin-green-900/20 rounded-lg transition-colors"
+            className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:text-slate-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
             title="Xem/In phiếu"
           >
             <PrinterIcon className="w-4 h-4" />
           </button>
           <button
             onClick={() => handleDeleteClick(order.id)}
-            className="p-2 text-pin-red-600 hover:bg-pin-red-50 dark:hover:bg-pin-red-900/20 rounded-lg transition-colors"
+            className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:text-slate-400 dark:hover:text-red-300 dark:hover:bg-red-500/10 rounded-lg transition-colors"
             title="Xóa"
           >
             <TrashIcon className="w-4 h-4" />
@@ -597,30 +609,82 @@ const PinRepairManagerNew: React.FC = () => {
     },
   ];
 
+  const statusOverview = [
+    {
+      key: "all",
+      label: "Tổng phiếu",
+      value: stats.total,
+      icon: ClipboardDocumentListIcon,
+      tone: "text-blue-600 dark:text-blue-300",
+      active: "border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10",
+    },
+    {
+      key: "pending",
+      label: "Chờ xử lý",
+      value: stats.pending,
+      icon: ClockIcon,
+      tone: "text-amber-600 dark:text-amber-300",
+      active: "border-amber-500 bg-amber-50 dark:border-amber-400 dark:bg-amber-500/10",
+    },
+    {
+      key: "inProgress",
+      label: "Đang sửa",
+      value: stats.inProgress,
+      icon: WrenchScrewdriverIcon,
+      tone: "text-cyan-600 dark:text-cyan-300",
+      active: "border-cyan-500 bg-cyan-50 dark:border-cyan-400 dark:bg-cyan-500/10",
+    },
+    {
+      key: "completed",
+      label: "Hoàn thành",
+      value: stats.completed,
+      icon: CheckCircleIcon,
+      tone: "text-emerald-600 dark:text-emerald-300",
+      active: "border-emerald-500 bg-emerald-50 dark:border-emerald-400 dark:bg-emerald-500/10",
+    },
+  ];
+
+  const dateOptions: Array<{ value: DateFilter; label: string }> = [
+    { value: "all", label: "Tất cả" },
+    { value: "today", label: "Hôm nay" },
+    { value: "week", label: "Tuần" },
+    { value: "month", label: "Tháng" },
+  ];
+
   return (
-    <div className="space-y-3 md:space-y-4 pb-20 md:pb-0">
+    <div className="space-y-4 pb-20 md:pb-0 text-slate-900 dark:text-slate-100">
       {/* Header + Filters */}
-      <div className="rounded-2xl border border-pin-gray-200 dark:border-pin-dark-400 bg-white dark:bg-pin-dark-200 p-3 md:p-4 shadow-sm space-y-3 md:space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <div>
-            <h1 className="text-lg md:text-2xl font-bold text-pin-gray-900 dark:text-pin-dark-900 flex items-center gap-2">
-              🔧 Quản lý Sửa chữa
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+              <WrenchScrewdriverIcon className="h-3.5 w-3.5" />
+              Service Operations
+            </div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-950 dark:text-white md:text-2xl">
+              Quản lý Sửa chữa
             </h1>
-            <p className="text-[11px] md:text-sm text-pin-gray-500 dark:text-pin-dark-500">
-              Theo dõi phiếu sửa chữa, tiến độ và thanh toán
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Theo dõi phiếu sửa chữa, tiến độ xử lý và thanh toán theo thời gian.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="hidden md:flex items-center gap-2">
-              <div className="px-2.5 py-1.5 rounded-lg border border-pin-emerald-200 dark:border-pin-emerald-700 bg-pin-emerald-50/70 dark:bg-pin-emerald-900/20">
-                <div className="text-[10px] text-pin-gray-500">Doanh thu</div>
-                <div className="text-sm font-semibold text-pin-emerald-600 dark:text-pin-emerald-400">
+          <div className="flex flex-wrap items-stretch gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="min-w-32 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/70">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase text-slate-500 dark:text-slate-400">
+                  <BanknotesIcon className="h-3.5 w-3.5" />
+                  Doanh thu
+                </div>
+                <div className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
                   {formatCurrency(stats.totalRevenue)}
                 </div>
               </div>
-              <div className="px-2.5 py-1.5 rounded-lg border border-pin-purple-200 dark:border-pin-purple-700 bg-pin-purple-50/70 dark:bg-pin-purple-900/20">
-                <div className="text-[10px] text-pin-gray-500">Lợi nhuận</div>
-                <div className="text-sm font-semibold text-pin-purple-600 dark:text-pin-purple-400">
+              <div className="min-w-32 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/70">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase text-slate-500 dark:text-slate-400">
+                  <CurrencyDollarIcon className="h-3.5 w-3.5" />
+                  Lợi nhuận
+                </div>
+                <div className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
                   {formatCurrency(stats.totalProfit)}
                 </div>
               </div>
@@ -630,7 +694,7 @@ const PinRepairManagerNew: React.FC = () => {
               size="md"
               leftIcon={<PlusIcon className="w-5 h-5" />}
               onClick={() => handleOpenModal()}
-              className="flex-shrink-0 whitespace-nowrap shadow-lg shadow-pin-blue-500/30"
+              className="h-full min-h-[58px] flex-shrink-0 whitespace-nowrap rounded-lg px-5 shadow-none"
             >
               <span className="hidden sm:inline">Tạo phiếu mới</span>
               <span className="sm:hidden">Tạo</span>
@@ -639,99 +703,65 @@ const PinRepairManagerNew: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2 md:gap-3">
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "all"
-              ? "border-pin-blue-300 ring-2 ring-pin-blue-200/40"
-              : "border-pin-gray-200 dark:border-pin-dark-400"
-              }`}
-          >
-            <div className="text-base md:text-lg font-semibold text-pin-blue-600 dark:text-pin-blue-400">
-              {stats.total}
-            </div>
-            <div className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">Tổng phiếu</div>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter("pending")}
-            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "pending"
-              ? "border-pin-amber-300 ring-2 ring-pin-amber-200/40"
-              : "border-pin-gray-200 dark:border-pin-dark-400"
-              }`}
-          >
-            <div className="text-base md:text-lg font-semibold text-pin-amber-600 dark:text-pin-amber-400">
-              {stats.pending}
-            </div>
-            <div className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">Chờ xử lý</div>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter("inProgress")}
-            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "inProgress"
-              ? "border-pin-cyan-300 ring-2 ring-pin-cyan-200/40"
-              : "border-pin-gray-200 dark:border-pin-dark-400"
-              }`}
-          >
-            <div className="text-base md:text-lg font-semibold text-pin-cyan-600 dark:text-pin-cyan-400">
-              {stats.inProgress}
-            </div>
-            <div className="text-[11px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">
-              Đang sửa
-            </div>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter("completed")}
-            className={`rounded-lg border bg-white dark:bg-pin-dark-100 p-2 md:p-2.5 text-left transition-all hover:shadow-sm ${statusFilter === "completed"
-              ? "border-pin-green-300 ring-2 ring-pin-green-200/40"
-              : "border-pin-gray-200 dark:border-pin-dark-400"
-              }`}
-          >
-            <div className="text-base md:text-lg font-semibold text-pin-green-600 dark:text-pin-green-400">
-              {stats.completed}
-            </div>
-            <div className="text-[10px] md:text-xs text-pin-gray-500 dark:text-pin-dark-500">Hoàn thành</div>
-          </button>
-
+        <div className="grid grid-cols-2 gap-px border-b border-slate-200 bg-slate-200 dark:border-slate-800 dark:bg-slate-800 sm:grid-cols-4">
+          {statusOverview.map((item) => {
+            const MetricIcon = item.icon;
+            const selected = statusFilter === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setStatusFilter(item.key)}
+                className={`bg-white px-4 py-3 text-left transition-colors dark:bg-slate-900 ${
+                  selected ? item.active : "hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className={`text-2xl font-semibold tabular-nums ${item.tone}`}>
+                      {item.value}
+                    </div>
+                    <div className="mt-1 text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+                      {item.label}
+                    </div>
+                  </div>
+                  <MetricIcon className={`mt-1 h-5 w-5 ${item.tone}`} />
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Search + Date Filter */}
-        <div className="flex flex-col lg:flex-row gap-2 md:gap-3">
+        <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center">
           <div className="flex-1 min-w-0">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400">🔍</span>
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Tìm theo tên, SĐT, thiết bị, mã phiếu..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full input-base pl-9 pr-10 text-sm"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-10 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-pin-gray-400 hover:text-pin-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
-                  ✕
+                  ×
                 </button>
               )}
             </div>
           </div>
 
-          <div className="inline-flex flex-wrap gap-1 rounded-xl border border-pin-gray-200 dark:border-pin-dark-400 bg-pin-gray-50 dark:bg-pin-dark-200 p-1">
-            {[
-              { value: "all", label: "Tất cả" },
-              { value: "today", label: "Hôm nay" },
-              { value: "week", label: "Tuần" },
-              { value: "month", label: "Tháng" },
-            ].map((opt) => (
+          <div className="inline-flex w-full rounded-lg border border-slate-300 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-950 lg:w-auto">
+            {dateOptions.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setDateFilter(opt.value as DateFilter)}
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${dateFilter === opt.value
-                  ? "bg-white dark:bg-pin-dark-100 text-pin-blue-600 shadow-sm"
-                  : "text-pin-gray-600 dark:text-pin-dark-600 hover:text-pin-blue-600"
+                onClick={() => setDateFilter(opt.value)}
+                className={`flex-1 rounded-md px-3 py-2 text-xs font-semibold transition-colors lg:flex-none ${dateFilter === opt.value
+                  ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-300"
+                  : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-slate-100"
                   }`}
               >
                 {opt.label}
@@ -743,18 +773,18 @@ const PinRepairManagerNew: React.FC = () => {
 
       {/* Results info bar */}
       <div className="flex items-center justify-between px-1">
-        <div className="text-sm text-pin-gray-500 dark:text-pin-dark-500">
-          Hiển thị <span className="font-semibold text-pin-blue-600">{filteredOrders.length}</span>{" "}
+        <div className="text-sm text-slate-500 dark:text-slate-400">
+          Hiển thị <span className="font-semibold text-blue-600 dark:text-blue-300">{filteredOrders.length}</span>{" "}
           phiếu
           {statusFilter !== "all" && (
-            <span className="ml-2 px-2 py-0.5 bg-pin-blue-100 dark:bg-pin-blue-900/30 text-pin-blue-600 rounded-full text-xs">
+            <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
               {statusFilter === "pending" && "Chờ xử lý"}
               {statusFilter === "inProgress" && "Đang sửa"}
               {statusFilter === "completed" && "Hoàn thành"}
             </span>
           )}
           {dateFilter !== "all" && (
-            <span className="ml-2 px-2 py-0.5 bg-pin-amber-100 dark:bg-pin-amber-900/30 text-pin-amber-600 rounded-full text-xs">
+            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
               {dateFilter === "today" && "Hôm nay"}
               {dateFilter === "week" && "7 ngày qua"}
               {dateFilter === "month" && "30 ngày qua"}
@@ -768,13 +798,14 @@ const PinRepairManagerNew: React.FC = () => {
       {/* Orders Table */}
       {/* Desktop Table View */}
       <div className="hidden md:block">
-        <Card padding="none">
-          <div className="p-4 overflow-x-auto">
+        <Card padding="none" className="rounded-xl border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="overflow-x-auto p-3">
             <DataTable
               columns={columns}
               data={filteredOrders}
               keyExtractor={(order) => order.id}
               emptyMessage="Chưa có phiếu sửa chữa nào"
+              className="text-[13px]"
             />
           </div>
         </Card>
@@ -862,9 +893,9 @@ const PinRepairManagerNew: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleOpenModal(order)}
-                    className="p-2 bg-pin-blue-50 text-pin-blue-600 rounded-lg"
+                    className="p-2 bg-blue-50 text-blue-600 rounded-lg"
                   >
-                    ✏️
+                    <PencilSquareIcon className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteClick(order.id)}
