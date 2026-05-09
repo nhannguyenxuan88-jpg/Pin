@@ -4130,43 +4130,43 @@ const MaterialManager: React.FC<{
         </div>
 
         {/* Row 5: Stock Filter Tabs - Horizontal scroll */}
-        <div className="flex gap-1 mt-2 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
           <button
             onClick={() => setStockFilter("")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "" ? "bg-slate-600 text-white" : "bg-slate-700 text-slate-300"
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "" ? "bg-slate-900 text-white shadow-lg" : "bg-slate-800 text-slate-400 hover:text-white"
               }`}
           >
-            Tất cả <span className="ml-1 opacity-70">{materials.length}</span>
+            Tất cả <span className="ml-1 opacity-50">{materials.length}</span>
           </button>
           <button
             onClick={() => setStockFilter("normal")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "normal"
-              ? "bg-emerald-500 text-white"
-              : "bg-emerald-900/50 text-emerald-300"
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "normal"
+              ? "bg-emerald-600 text-white shadow-lg"
+              : "bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40"
               }`}
           >
             Còn hàng{" "}
-            <span className="ml-1 opacity-70">
+            <span className="ml-1 opacity-50">
               {materials.filter((m) => (m.stock || 0) > 10).length}
             </span>
           </button>
           <button
             onClick={() => setStockFilter("low")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "low" ? "bg-amber-500 text-white" : "bg-amber-900/50 text-amber-300"
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "low" ? "bg-amber-600 text-white shadow-lg" : "bg-amber-900/20 text-amber-500 hover:bg-amber-900/40"
               }`}
           >
             Sắp hết{" "}
-            <span className="ml-1 opacity-70">
+            <span className="ml-1 opacity-50">
               {materials.filter((m) => (m.stock || 0) > 0 && (m.stock || 0) <= 10).length}
             </span>
           </button>
           <button
             onClick={() => setStockFilter("empty")}
-            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${stockFilter === "empty" ? "bg-red-500 text-white" : "bg-red-900/50 text-red-300"
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "empty" ? "bg-red-600 text-white shadow-lg" : "bg-red-900/20 text-red-500 hover:bg-red-900/40"
               }`}
           >
             Hết hàng{" "}
-            <span className="ml-1 opacity-70">
+            <span className="ml-1 opacity-50">
               {materials.filter((m) => (m.stock || 0) === 0).length}
             </span>
           </button>
@@ -4176,30 +4176,30 @@ const MaterialManager: React.FC<{
       {/* Desktop Header - Keep original */}
       <div className="hidden md:flex flex-col md:flex-row md:items-center md:justify-between gap-2 flex-shrink-0 sticky top-0 z-20 bg-slate-100 dark:bg-slate-900 py-1 px-1">
         {/* Tabs */}
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2">
           <button
             onClick={() => setActiveView("materials")}
-            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${activeView === "materials"
-              ? "bg-blue-500 text-white shadow-sm"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeView === "materials"
+              ? "bg-slate-900 dark:bg-blue-600 text-white shadow-lg"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
               }`}
           >
             📦 Danh sách Kho hàng
           </button>
           <button
             onClick={() => setActiveView("history")}
-            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${activeView === "history"
-              ? "bg-blue-500 text-white shadow-sm"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeView === "history"
+              ? "bg-slate-900 dark:bg-blue-600 text-white shadow-lg"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
               }`}
           >
             📊 Lịch sử
           </button>
           <button
             onClick={() => setActiveView("orders")}
-            className={`flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${activeView === "orders"
-              ? "bg-blue-500 text-white shadow-sm"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeView === "orders"
+              ? "bg-slate-900 dark:bg-blue-600 text-white shadow-lg"
+              : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
               }`}
           >
             📦 Đặt hàng NCC
@@ -4378,28 +4378,32 @@ const MaterialManager: React.FC<{
                 </select>
 
                 {/* Stats */}
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
-                      {filteredMaterials.length}
-                    </span>
-                    <span className="text-slate-600 dark:text-slate-400">
-                      {" "}
-                      / {materials.length} SP
-                    </span>
-                  </span>
-                  <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs">
-                    Tồn:{" "}
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
-                      {materials.reduce((sum, m) => sum + (m.stock || 0), 0).toLocaleString()}
-                    </span>
-                  </span>
-                  <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs">
-                    Giá trị:{" "}
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
-                      {formatCurrency(totalImportValue)}
-                    </span>
-                  </span>
+                {/* Stats Cards */}
+                <div className="flex items-center gap-3 ml-auto">
+                   <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-4">
+                      <div>
+                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Vật tư</div>
+                         <div className="text-sm font-black text-slate-800 dark:text-white leading-none">
+                            {filteredMaterials.length}<span className="text-xs text-slate-400 font-normal ml-1">/ {materials.length}</span>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-4">
+                      <div>
+                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tổng tồn kho</div>
+                         <div className="text-sm font-black text-slate-800 dark:text-white leading-none">
+                            {materials.reduce((sum, m) => sum + (m.stock || 0), 0).toLocaleString()}
+                         </div>
+                      </div>
+                   </div>
+                   <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-4">
+                      <div>
+                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Giá trị kho</div>
+                         <div className="text-sm font-black text-emerald-600 dark:text-emerald-400 leading-none">
+                            {formatCurrency(totalImportValue)}
+                         </div>
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>
@@ -4493,7 +4497,7 @@ const MaterialManager: React.FC<{
             <div className="hidden md:block flex-1 overflow-auto bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 hidden sm:table-header-group">
+                  <thead className="bg-slate-100 dark:bg-slate-800/80 border-b-2 border-slate-200 dark:border-slate-700 sticky top-0 z-10 hidden sm:table-header-group">
                     <tr>
                       <th className="px-5 py-4 text-center text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         <input
@@ -4632,13 +4636,13 @@ const MaterialManager: React.FC<{
                               <span className="text-[10px] text-slate-400 italic">-</span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200 text-right align-middle">
+                          <td className="px-5 py-4 text-sm font-semibold text-slate-600 dark:text-slate-400 text-right align-middle tabular-nums">
                             {formatCurrency(material.purchasePrice)}
                           </td>
-                          <td className="px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 text-right align-middle">
+                          <td className="px-5 py-4 text-sm font-medium text-slate-500 dark:text-slate-500 text-right align-middle tabular-nums">
                             {material.retailPrice ? formatCurrency(material.retailPrice) : "-"}
                           </td>
-                          <td className="px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 text-right align-middle">
+                          <td className="px-5 py-4 text-sm font-medium text-slate-500 dark:text-slate-500 text-right align-middle tabular-nums">
                             {material.wholesalePrice
                               ? formatCurrency(material.wholesalePrice)
                               : "-"}

@@ -291,19 +291,25 @@ const PinImportHistory: React.FC = () => {
       )}
 
       {/* Filters + actions */}
-      <div className="p-3 md:p-4 bg-gray-50 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 space-y-2 md:space-y-3">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4 md:gap-3">
-          <input
-            type="text"
-            placeholder="🔍 Tìm theo tên hoặc SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      <div className="p-4 bg-gray-50/50 border-b border-gray-200 dark:bg-slate-900/50 dark:border-slate-800 space-y-4">
+        {/* Filters Row */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm theo tên hoặc SKU..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all h-10"
+            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </span>
+          </div>
           <select
             value={supplier}
             onChange={(e) => setSupplier(e.target.value)}
-            className="px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all h-10 appearance-none"
           >
             <option value="">Tất cả nhà cung cấp</option>
             {suppliers.map((s) => (
@@ -316,62 +322,66 @@ const PinImportHistory: React.FC = () => {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all h-10"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all h-10"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleSyncMissingMaterials}
-            disabled={isLoading || rows.length === 0}
-            className="px-2.5 md:px-3 py-1.5 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm font-medium"
-            title="Tạo sản phẩm trong Danh sách từ các bản ghi Lịch sử bị thiếu"
-          >
-            🔄 Đồng bộ từ Lịch sử
-          </button>
-          <button
-            onClick={async () => {
-              if (
-                !confirm(
-                  "Bạn có chắc chắn muốn xóa TẤT CẢ lịch sử nhập kho? Hành động không thể hoàn tác."
-                )
-              )
-                return;
-              try {
-                setIsLoading(true);
-                setError(null);
-                const { error: delErr } = await supabase
-                  .from("pin_material_history")
-                  .delete()
-                  .gte("import_date", "0001-01-01");
-                if (delErr) throw delErr;
-              } catch (e: any) {
-                setError(
-                  (e?.message || String(e)) +
-                    " — cần quyền DELETE/RLS policy cho pin_material_history"
-                );
-              } finally {
-                await fetchRows();
-                setIsLoading(false);
-              }
-            }}
-            className="px-2.5 md:px-3 py-1.5 md:py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 text-xs md:text-sm font-medium"
-            title="Xóa toàn bộ lịch sử nhập kho"
-          >
-            🗑️ Xóa lịch sử nhập kho
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
-          <div className="px-2.5 md:px-3 py-1.5 md:py-2 bg-blue-100 text-blue-800 rounded-lg dark:bg-blue-900/30 dark:text-blue-200">
-            📦 Tổng lượt nhập: <strong>{filtered.length}</strong>
+
+        {/* Stats + Actions Row */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex gap-3">
+             <div className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-4 min-w-[160px] shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                </div>
+                <div>
+                   <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Tổng lượt nhập</div>
+                   <div className="text-xl font-black text-gray-900 dark:text-white leading-none">{filtered.length}</div>
+                </div>
+             </div>
+             <div className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-4 min-w-[200px] shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                   <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Tổng giá trị</div>
+                   <div className="text-xl font-black text-gray-900 dark:text-white leading-none">{fmtMoney(totals.cost)}</div>
+                </div>
+             </div>
           </div>
-          <div className="px-2.5 md:px-3 py-1.5 md:py-2 bg-green-100 text-green-800 rounded-lg dark:bg-green-900/30 dark:text-green-200">
-            💰 Tổng giá trị: <strong>{fmtMoney(totals.cost)}</strong>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncMissingMaterials}
+              disabled={isLoading || rows.length === 0}
+              className="flex-1 md:flex-none px-4 py-2.5 bg-slate-900 dark:bg-blue-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-all shadow-sm"
+            >
+              🔄 Đồng bộ từ Lịch sử
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm("Bạn có chắc chắn muốn xóa TẤT CẢ lịch sử nhập kho? Hành động không thể hoàn tác.")) return;
+                try {
+                  setIsLoading(true);
+                  setError(null);
+                  const { error: delErr } = await supabase.from("pin_material_history").delete().gte("import_date", "0001-01-01");
+                  if (delErr) throw delErr;
+                } catch (e: any) {
+                  setError((e?.message || String(e)) + " — cần quyền DELETE/RLS policy cho pin_material_history");
+                } finally {
+                  await fetchRows();
+                  setIsLoading(false);
+                }
+              }}
+              className="flex-1 md:flex-none px-4 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white text-xs font-bold transition-all"
+            >
+              🗑️ Xóa lịch sử
+            </button>
           </div>
         </div>
       </div>
@@ -439,7 +449,7 @@ const PinImportHistory: React.FC = () => {
                       <div className="text-gray-500 dark:text-gray-400 text-[10px] mb-0.5">
                         Đơn giá
                       </div>
-                      <div className="font-semibold text-yellow-600 dark:text-yellow-400">
+                      <div className="font-semibold text-gray-500 dark:text-gray-400">
                         {fmtMoney(r.purchasePrice)}
                       </div>
                     </div>
@@ -465,27 +475,27 @@ const PinImportHistory: React.FC = () => {
             {/* Desktop Table View */}
             <table className="hidden md:table w-full text-sm text-gray-800 dark:text-white">
               <thead className="sticky top-0 bg-gray-100 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <tr>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">
+                <tr className="bg-slate-100 dark:bg-slate-800/80 border-b-2 border-gray-200 dark:border-slate-700">
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     Ngày nhập
                   </th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">Vật liệu</th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">SKU</th>
-                  <th className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Vật liệu</th>
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">SKU</th>
+                  <th className="px-4 py-4 text-right text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     Số lượng
                   </th>
-                  <th className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">Đơn giá</th>
-                  <th className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">
+                  <th className="px-4 py-4 text-right text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Đơn giá</th>
+                  <th className="px-4 py-4 text-right text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     Thành tiền
                   </th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     Nhà cung cấp
                   </th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     Người nhập
                   </th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">Ghi chú</th>
-                  <th className="px-4 py-3 text-left text-gray-700 dark:text-gray-200">
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Ghi chú</th>
+                  <th className="px-4 py-4 text-center text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest w-20">
                     Hành động
                   </th>
                 </tr>
@@ -505,31 +515,38 @@ const PinImportHistory: React.FC = () => {
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">
                       {r.materialSku || "-"}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-700 dark:text-white">
+                    <td className="px-4 py-4 text-right font-mono text-gray-700 dark:text-slate-300 tabular-nums">
                       {r.quantity.toLocaleString("vi-VN")}
                     </td>
-                    <td className="px-4 py-3 text-right text-yellow-600 dark:text-yellow-400 font-mono">
+                    <td className="px-4 py-4 text-right text-gray-600 dark:text-slate-400 font-mono tabular-nums">
                       {fmtMoney(r.purchasePrice)}
                     </td>
-                    <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-mono font-bold">
+                    <td className="px-4 py-4 text-right text-gray-900 dark:text-white font-mono font-black tabular-nums">
                       {fmtMoney(r.totalCost)}
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
                       {r.supplier || "-"}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                      {r.userName || "-"}
+                    <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
+                      {r.userName ? (
+                        <div className="flex items-center gap-2">
+                           <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center text-[10px] font-bold text-blue-500 uppercase">
+                              {r.userName.split("@")[0].charAt(0)}
+                           </div>
+                           <span className="text-xs">{r.userName.split("@")[0]}</span>
+                        </div>
+                      ) : "-"}
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 text-xs max-w-xs truncate">
                       {r.notes || "-"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4 text-center">
                       <button
                         onClick={() => handleDeleteRow(r)}
-                        className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-500"
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all group/btn"
                         title="Xóa bản ghi này"
                       >
-                        Xóa
+                        <svg className="w-4 h-4 transition-transform group-hover/btn:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </td>
                   </tr>
