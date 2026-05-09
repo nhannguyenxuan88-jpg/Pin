@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "./common/Logo";
 import {
@@ -34,7 +34,7 @@ const PinNavItem: React.FC<{
   color?: string;
 }> = ({ to, icon, label, color = "text-pin-blue-600 dark:text-pin-blue-400" }) => {
   const baseItem =
-    "relative flex flex-col items-center justify-center text-center px-2 py-1.5 rounded-lg min-w-[4.5rem] w-auto transition-all duration-200";
+    "relative flex flex-col items-center justify-center text-center px-1.5 py-1 rounded-lg min-w-[4rem] w-auto transition-all duration-200";
   const activeClass =
     "bg-transparent";
   const inactiveClass =
@@ -48,22 +48,22 @@ const PinNavItem: React.FC<{
       {({ isActive }) => (
         <>
           <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${isActive
+            className={`w-6 h-6 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 ${isActive
               ? "bg-pin-gray-100 ring-transparent dark:bg-pin-gray-700/60"
               : "bg-pin-gray-100 ring-transparent dark:bg-pin-gray-800/40"
               }`}
           >
             {React.cloneElement(icon, {
-              className: `w-4 h-4 transition-opacity duration-200 ${isActive ? color + " opacity-100" : "text-pin-gray-500 dark:text-pin-gray-400 opacity-75"}`,
+              className: `w-3.5 h-3.5 transition-opacity duration-200 ${isActive ? color + " opacity-100" : "text-pin-gray-500 dark:text-pin-gray-400 opacity-60"}`,
             })}
           </div>
           <span
-             className={`text-[10px] font-semibold mt-1 w-full whitespace-nowrap ${isActive ? "text-pin-gray-900 dark:text-pin-gray-100" : "text-pin-gray-500 dark:text-pin-gray-400"
+             className={`text-[9px] font-bold mt-1.5 w-full whitespace-nowrap tracking-tight transition-opacity ${isActive ? "text-pin-gray-900 dark:text-pin-gray-100" : "text-pin-gray-500/70 dark:text-pin-gray-400/60"
               }`}
           >
             {label}
           </span>
-          {isActive && <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-emerald-400" />}
+          {isActive && <span className="absolute bottom-0 h-0.5 w-6 rounded-full bg-emerald-400" />}
         </>
       )}
     </NavLink>
