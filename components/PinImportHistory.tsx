@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { Icon } from "./common/Icon";
 
 // Minimal local type matching our UI needs
 interface ImportHistoryRow {
@@ -302,8 +303,8 @@ const PinImportHistory: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all h-10"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+               <Icon name="search" size="sm" tone="muted" />
             </span>
           </div>
           <select
@@ -336,8 +337,8 @@ const PinImportHistory: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex gap-3">
              <div className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-4 min-w-[160px] shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                   <Icon name="package" size="md" tone="primary" weight="bold" />
                 </div>
                 <div>
                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Tổng lượt nhập</div>
@@ -345,8 +346,8 @@ const PinImportHistory: React.FC = () => {
                 </div>
              </div>
              <div className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-3 flex items-center gap-4 min-w-[200px] shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                   <Icon name="money" size="md" tone="success" weight="bold" />
                 </div>
                 <div>
                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Tổng giá trị</div>
@@ -359,9 +360,10 @@ const PinImportHistory: React.FC = () => {
             <button
               onClick={handleSyncMissingMaterials}
               disabled={isLoading || rows.length === 0}
-              className="flex-1 md:flex-none px-4 py-2.5 bg-slate-900 dark:bg-blue-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-all shadow-sm"
+              className="flex-1 md:flex-none px-4 py-2.5 bg-slate-900 dark:bg-blue-600 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              🔄 Đồng bộ từ Lịch sử
+              <Icon name="arrows-clockwise" size="sm" />
+              Đồng bộ từ Lịch sử
             </button>
             <button
               onClick={async () => {
@@ -378,9 +380,10 @@ const PinImportHistory: React.FC = () => {
                   setIsLoading(false);
                 }
               }}
-              className="flex-1 md:flex-none px-4 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white text-xs font-bold transition-all"
+              className="flex-1 md:flex-none px-4 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 group"
             >
-              🗑️ Xóa lịch sử
+              <Icon name="trash" size="sm" className="group-hover:text-white" />
+              Xóa lịch sử
             </button>
           </div>
         </div>
@@ -391,7 +394,7 @@ const PinImportHistory: React.FC = () => {
         {filtered.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
             <div className="text-center">
-              <p className="text-2xl mb-2">📭</p>
+              <Icon name="package" size="xl" tone="muted" className="mx-auto mb-3 opacity-20" />
               <p className="text-sm">Không có lịch sử nhập kho phù hợp</p>
             </div>
           </div>
@@ -416,22 +419,10 @@ const PinImportHistory: React.FC = () => {
                     </div>
                     <button
                       onClick={() => handleDeleteRow(r)}
-                      className="ml-2 p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      className="ml-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       title="Xóa"
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
+                      <Icon name="trash" size="sm" />
                     </button>
                   </div>
 
@@ -465,8 +456,16 @@ const PinImportHistory: React.FC = () => {
 
                   {/* Footer */}
                   <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <span>📅 {fmtDateTime(r.importDate)}</span>
-                    {r.supplier && <span className="truncate ml-2">🏢 {r.supplier}</span>}
+                    <div className="flex items-center gap-1">
+                      <Icon name="calendar" size="sm" />
+                      {fmtDateTime(r.importDate)}
+                    </div>
+                    {r.supplier && (
+                      <div className="flex items-center gap-1 truncate ml-2">
+                        <Icon name="buildings" size="sm" />
+                        {r.supplier}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -546,7 +545,7 @@ const PinImportHistory: React.FC = () => {
                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all group/btn"
                         title="Xóa bản ghi này"
                       >
-                        <svg className="w-4 h-4 transition-transform group-hover/btn:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <Icon name="trash" size="sm" className="transition-transform group-hover/btn:scale-110" />
                       </button>
                     </td>
                   </tr>

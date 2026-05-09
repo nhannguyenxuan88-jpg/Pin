@@ -3,6 +3,8 @@ import { cn } from "../../lib/utils/cn";
 import type { IconProps as PhosphorIconProps } from "phosphor-react";
 import {
   ArrowsClockwise,
+  ArrowSquareDown,
+  ArrowSquareUp,
   Bank,
   Buildings,
   CalendarBlank,
@@ -11,11 +13,13 @@ import {
   CheckCircle,
   ClipboardText,
   Clock,
+  ClockCounterClockwise,
   Coins,
   Cube,
   CurrencyDollarSimple,
   DeviceMobile,
   DotsThreeVertical,
+  Eye,
   Gear,
   IdentificationCard,
   Info,
@@ -87,6 +91,10 @@ export const ICON_REGISTRY = {
   "check-circle": CheckCircle,
   "x-circle": XCircle,
   "dots-three-vertical": DotsThreeVertical,
+  eye: Eye,
+  import: ArrowSquareDown,
+  export: ArrowSquareUp,
+  history: ClockCounterClockwise,
 } as const satisfies Record<string, PhosphorIconComponent>;
 
 export type IconName = keyof typeof ICON_REGISTRY;

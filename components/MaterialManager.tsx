@@ -4,7 +4,7 @@ import type { PinMaterial, EnhancedMaterial, Supplier, PinMaterialHistory, PinPr
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
 import { useMaterialStock } from "../lib/hooks/useMaterialStock";
 import { usePinContext } from "../contexts/PinContext";
-import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon, EyeIcon } from "./common/Icons";
+// Standard icons
 import { Icon, type IconName } from "./common/Icon";
 import PinImportHistory from "./PinImportHistory";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
@@ -4065,20 +4065,24 @@ const MaterialManager: React.FC<{
                 onClick={() => navigate("/materials/goods-receipt/new")}
                 className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
               >
-                <PlusIcon className="w-5 h-5" />
+                <Icon name="add" size="sm" weight="bold" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Row 2: Search */}
-        <input
-          type="text"
-          placeholder="🔍 Tìm kiếm..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full input-base text-sm"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Tìm kiếm..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2">
+             <Icon name="search" size="sm" tone="muted" />
+          </span>
+        </div>
 
         {/* Row 3: Filters - Compact */}
         <div className="flex items-center gap-2 mt-2">
@@ -4184,7 +4188,10 @@ const MaterialManager: React.FC<{
               : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
               }`}
           >
-            📦 Danh sách Kho hàng
+            <div className="flex items-center gap-2">
+              <Icon name="package" size="sm" weight={activeView === "materials" ? "fill" : "bold"} />
+              Danh sách Kho hàng
+            </div>
           </button>
           <button
             onClick={() => setActiveView("history")}
@@ -4193,7 +4200,10 @@ const MaterialManager: React.FC<{
               : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
               }`}
           >
-            📊 Lịch sử
+            <div className="flex items-center gap-2">
+              <Icon name="history" size="sm" weight={activeView === "history" ? "fill" : "bold"} />
+              Lịch sử
+            </div>
           </button>
           <button
             onClick={() => setActiveView("orders")}
@@ -4202,7 +4212,10 @@ const MaterialManager: React.FC<{
               : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
               }`}
           >
-            📦 Đặt hàng NCC
+            <div className="flex items-center gap-2">
+              <Icon name="orders" size="sm" weight={activeView === "orders" ? "fill" : "bold"} />
+              Đặt hàng NCC
+            </div>
           </button>
         </div>
 
@@ -4214,13 +4227,14 @@ const MaterialManager: React.FC<{
                 onClick={() => setShowImportModal(true)}
                 className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-all"
               >
-                📥 Import
+                <Icon name="import" size="sm" weight="bold" />
+                Import
               </button>
               <button
                 onClick={() => navigate("/materials/goods-receipt/new")}
                 className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-all"
               >
-                <PlusIcon className="w-4 h-4" />
+                <Icon name="add" size="sm" weight="bold" />
                 Tạo phiếu nhập
               </button>
             </>
@@ -4250,7 +4264,7 @@ const MaterialManager: React.FC<{
                         onClick={handleBulkDelete}
                         className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-1"
                       >
-                        <TrashIcon className="w-4 h-4" />
+                        <Icon name="trash" size="sm" weight="bold" />
                         Xóa
                       </button>
                       <button
@@ -4277,7 +4291,7 @@ const MaterialManager: React.FC<{
                     }}
                     className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 p-1.5 rounded-lg transition-all"
                   >
-                    <XMarkIcon className="w-5 h-5" />
+                    <Icon name="close" size="md" />
                   </button>
                 </div>
 
@@ -4310,12 +4324,13 @@ const MaterialManager: React.FC<{
                         />
                       </div>
                       <div className="flex items-end">
-                        <button
-                          onClick={handleBulkUpdateSupplier}
-                          className="w-full px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium shadow-sm transition-all"
-                        >
-                          ✅ Cập nhật {selectedItems.size} vật tư
-                        </button>
+                          <button
+                            onClick={handleBulkUpdateSupplier}
+                            className="w-full px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium shadow-sm transition-all flex items-center justify-center gap-2"
+                          >
+                            <Icon name="check-circle" size="sm" weight="bold" />
+                            Cập nhật {selectedItems.size} vật tư
+                          </button>
                       </div>
                     </div>
                   </div>
@@ -4327,14 +4342,17 @@ const MaterialManager: React.FC<{
             <div className="hidden md:block bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex flex-wrap items-center gap-2">
                 {/* Search Bar */}
-                <div className="flex-1 min-w-[180px]">
+                <div className="flex-1 min-w-[180px] relative">
                   <input
                     type="text"
-                    placeholder="🔍 Tìm kiếm..."
+                    placeholder="Tìm kiếm..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full input-base text-sm"
+                    className="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                     <Icon name="search" size="sm" tone="muted" />
+                  </span>
                 </div>
 
                 {/* Supplier Filter */}
@@ -4517,7 +4535,7 @@ const MaterialManager: React.FC<{
                         <div className="flex items-center gap-1">
                           Sản phẩm
                           {sortBy === "name" && (
-                            <span className="text-slate-600">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                            <Icon name={sortOrder === "asc" ? "progressUp" : "progressDown"} size="sm" />
                           )}
                         </div>
                       </th>
@@ -4534,7 +4552,7 @@ const MaterialManager: React.FC<{
                         <div className="flex items-center justify-end gap-1">
                           Giá nhập
                           {sortBy === "purchasePrice" && (
-                            <span className="text-slate-600">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                            <Icon name={sortOrder === "asc" ? "progressUp" : "progressDown"} size="sm" />
                           )}
                         </div>
                       </th>
@@ -4551,7 +4569,7 @@ const MaterialManager: React.FC<{
                         <div className="flex items-center justify-center gap-1">
                           Tồn kho
                           {sortBy === "stock" && (
-                            <span className="text-slate-600">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                            <Icon name={sortOrder === "asc" ? "progressUp" : "progressDown"} size="sm" />
                           )}
                         </div>
                       </th>
