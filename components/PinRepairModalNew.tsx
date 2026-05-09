@@ -729,497 +729,496 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh]">
-
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-[#1e293b] border border-slate-700/50 rounded-[20px] shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[96vh] text-slate-200 font-sans">
+        
         {/* ── HEADER ── */}
-        <div className="px-5 py-3 bg-gradient-to-r from-blue-700 to-cyan-600 flex justify-between items-center flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-              {initialOrder ? "✏" : "+"}
+        <div className="px-6 py-4 flex flex-wrap justify-between items-center gap-6 bg-[#1e293b] border-b border-slate-700/50 flex-shrink-0">
+          <div className="flex items-center gap-5">
+            <h2 className="text-lg font-bold text-white tracking-wide">
+              {initialOrder ? initialOrder.id : "Phiếu mới"}
+            </h2>
+            <div className="h-5 w-px bg-slate-600/50"></div>
+            {/* Status Segmented Control */}
+            <div className="flex bg-[#0f172a] rounded-xl p-1 border border-slate-700/50">
+              {([
+                { value: "Tiếp nhận", icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> },
+                { value: "Đang sửa", icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
+                { value: "Đã sửa xong", icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg> },
+                { value: "Trả máy", icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg> }
+              ] as const).map(({ value, icon }) => {
+                const active = formData.status === value;
+                return (
+                  <button key={value} type="button" disabled={isCompleted}
+                    onClick={() => setFormData(p => ({ ...p, status: value as any }))}
+                    className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-1.5 ${
+                      active ? "bg-blue-600 shadow-sm text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                    }`}>
+                    <span className="opacity-80">{icon}</span>
+                    <span>{value}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white leading-tight">{getHeaderTitle()}</h2>
-              {initialOrder && <p className="text-xs text-blue-200">{initialOrder.id}</p>}
-            </div>
+            {/* Status phụ */}
+            {["Chờ vật liệu", "Đã hủy"].includes(formData.status as string) && (
+              <div className="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                {formData.status}
+              </div>
+            )}
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors" type="button">
+          
+          <button onClick={onClose} className="text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full p-2.5 transition-all" type="button">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0 bg-[#0f172a]">
 
-          {/* ── BANNER hoàn tất ── */}
           {isCompleted && (
-            <div className="mx-4 mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 rounded-r-xl flex items-center gap-3 flex-shrink-0">
-              <span className="text-xl flex-shrink-0">🔒</span>
-              <p className="font-semibold text-emerald-800 dark:text-emerald-300 text-sm">Đơn đã hoàn tất & thanh toán — chỉ đọc</p>
+            <div className="mx-6 mt-5 p-3.5 bg-emerald-900/20 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-3 flex-shrink-0 text-emerald-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              <p className="font-semibold text-sm tracking-wide">Đơn đã hoàn tất & thanh toán — Chỉ xem</p>
             </div>
           )}
 
-          {/* ── BODY: 2 CỘT ── */}
-          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-5 min-h-0 divide-x divide-slate-200 dark:divide-slate-700">
+          {/* ── BODY ── */}
+          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-10 min-h-0">
 
-            {/* ════════ CỘT TRÁI (40%) ════════ */}
-            <div className="lg:col-span-2 overflow-y-auto p-4 space-y-3 bg-white dark:bg-slate-900">
+            {/* ════ CỘT TRÁI (NỘI DUNG CHÍNH) ════ */}
+            <div className="lg:col-span-7 overflow-y-auto p-6 space-y-6 custom-scrollbar pr-2 lg:pr-6">
+              
+              {/* SECTION 1: Khách hàng & Thiết bị */}
+              <div className="bg-[#1e293b] border border-slate-700/50 shadow-md rounded-[18px] p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-6 w-1.5 rounded-full bg-blue-500"></div>
+                  <h3 className="font-bold text-slate-100 text-base tracking-wide">Khách hàng & Thiết bị</h3>
+                </div>
 
-              {/* ── Khách hàng ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-blue-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide">Khách hàng</span>
-                  <span className="text-red-500 text-xs ml-auto">*</span>
-                </div>
-                <div className="p-3 space-y-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={formData.customerName || customerSearch}
-                        onChange={(e) => {
-                          if (formData.customerName) return;
-                          setCustomerSearch(e.target.value);
-                          setShowCustomerDropdown(!!e.target.value.trim());
-                        }}
-                        onFocus={() => { if (!formData.customerName) setShowCustomerDropdown(!!customerSearch.trim()); }}
-                        onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-                        disabled={isCompleted}
-                        readOnly={!!formData.customerName || isCompleted}
-                        className={`w-full px-3 py-2.5 rounded-xl text-sm border-2 transition-all focus:outline-none disabled:opacity-50 ${
-                          formData.customerName
-                            ? "border-blue-400 bg-blue-50 dark:bg-blue-900/30 font-semibold pr-9 text-slate-900 dark:text-slate-100"
-                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
-                        }`}
-                        placeholder="Tìm tên hoặc SĐT..."
-                        autoComplete="off"
-                      />
-                      {formData.customerName && (
-                        <button type="button"
-                          onClick={() => { setFormData(p => ({ ...p, customerName: "", customerPhone: "" })); setCustomerSearch(""); }}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors">
-                          <XMarkIcon className="w-4 h-4" />
-                        </button>
-                      )}
-                      {showCustomerDropdown && !formData.customerName && filteredCustomers.length > 0 && (
-                        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                          {filteredCustomers.map((c: any) => (
-                            <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
-                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 border-b dark:border-slate-700 last:border-0 transition-colors">
-                              <div className="font-semibold text-sm text-slate-900 dark:text-slate-100">{c.name}</div>
-                              <div className="text-xs text-slate-500 mt-0.5">📞 {c.phone}</div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button type="button" onClick={() => setShowAddCustomerModal(true)} disabled={isCompleted}
-                      className="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:scale-95 text-white rounded-xl shadow-md shadow-blue-200 dark:shadow-blue-900 transition-all disabled:opacity-40 flex-shrink-0"
-                      title="Thêm khách mới">
-                      <PlusIcon className="w-5 h-5" />
-                    </button>
-                  </div>
-                  {formData.customerName && formData.customerPhone && (
-                    <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <span className="text-blue-400 text-sm">📞</span>
-                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{formData.customerPhone}</span>
-                    </div>
-                  )}
-                  <input type="hidden" name="customerName" value={formData.customerName || ""} required />
-                  <input type="hidden" name="customerPhone" value={formData.customerPhone || ""} required />
-                </div>
-              </div>
-
-              {/* ── Thiết bị & KTV ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-violet-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Thiết bị & Kỹ thuật viên</span>
-                </div>
-                <div className="p-3 grid grid-cols-2 gap-2">
-                  <div>
-                    <input type="text" name="deviceName" value={formData.deviceName || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900 disabled:opacity-50"
-                      placeholder="iPhone 15, Laptop..." />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Tên thiết bị</span>
-                  </div>
-                  <div>
-                    <input type="text" name="technicianName" value={formData.technicianName || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:focus:ring-violet-900 disabled:opacity-50"
-                      placeholder="Tên KTV..." />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Kỹ thuật viên</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Mô tả sự cố ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-rose-50 dark:bg-rose-900/20 border-b border-rose-100 dark:border-rose-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-rose-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wide">Mô tả sự cố</span>
-                  <span className="text-red-500 text-xs ml-auto">*</span>
-                </div>
-                <div className="p-3">
-                  <textarea name="issueDescription" value={formData.issueDescription || ""} onChange={handleInputChange} disabled={isCompleted}
-                    rows={2} required
-                    className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900 disabled:opacity-50"
-                    placeholder="Mô tả chi tiết tình trạng hư hỏng..." />
-                </div>
-              </div>
-
-              {/* ── Trạng thái — 3×2 grid ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-amber-500 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">Trạng thái</span>
-                  {formData.status && (
-                    <span className="ml-auto text-[11px] font-semibold text-amber-600 dark:text-amber-400">{formData.status}</span>
-                  )}
-                </div>
-                <div className="p-3 grid grid-cols-3 gap-1.5">
-                  {([
-                    { value: "Tiếp nhận",    icon: "🆕", color: "blue"   },
-                    { value: "Chờ vật liệu", icon: "📦", color: "orange" },
-                    { value: "Đang sửa",     icon: "🔧", color: "amber"  },
-                    { value: "Đã sửa xong",  icon: "✅", color: "green"  },
-                    { value: "Trả máy",      icon: "📤", color: "slate"  },
-                    { value: "Đã hủy",       icon: "❌", color: "red"    },
-                  ] as const).map(({ value, icon, color }) => {
-                    const active = formData.status === value;
-                    const styles: Record<string, { on: string; off: string }> = {
-                      blue:   { on: "bg-blue-600 text-white shadow-blue-200 dark:shadow-blue-900",     off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-300 hover:text-blue-600 dark:hover:text-blue-400" },
-                      orange: { on: "bg-orange-500 text-white shadow-orange-200 dark:shadow-orange-900", off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400" },
-                      amber:  { on: "bg-amber-500 text-white shadow-amber-200 dark:shadow-amber-900",   off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300 hover:text-amber-600 dark:hover:text-amber-400" },
-                      green:  { on: "bg-emerald-600 text-white shadow-emerald-200 dark:shadow-emerald-900", off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300 hover:text-emerald-600 dark:hover:text-emerald-400" },
-                      slate:  { on: "bg-slate-600 text-white shadow-slate-200 dark:shadow-slate-900",   off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:text-slate-700 dark:hover:text-slate-200" },
-                      red:    { on: "bg-red-500 text-white shadow-red-200 dark:shadow-red-900",         off: "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-red-300 hover:text-red-600 dark:hover:text-red-400" },
-                    };
-                    return (
-                      <button key={value} type="button" disabled={isCompleted}
-                        onClick={() => setFormData(p => ({ ...p, status: value as any }))}
-                        className={`py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1 ${active ? `${styles[color].on} shadow-md` : styles[color].off}`}>
-                        <span>{icon}</span>
-                        <span className="leading-tight text-center">{value}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Khách hàng */}
+                  <div className="relative col-span-1 md:col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Khách hàng <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          value={formData.customerName || customerSearch}
+                          onChange={(e) => {
+                            if (formData.customerName) return;
+                            setCustomerSearch(e.target.value);
+                            setShowCustomerDropdown(!!e.target.value.trim());
+                          }}
+                          onFocus={() => { if (!formData.customerName) setShowCustomerDropdown(!!customerSearch.trim()); }}
+                          onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                          disabled={isCompleted}
+                          readOnly={!!formData.customerName || isCompleted}
+                          className={`w-full px-4 py-2.5 rounded-xl text-sm transition-all focus:outline-none disabled:opacity-50 ${
+                            formData.customerName
+                              ? "border-blue-500/50 bg-blue-500/10 border font-semibold pr-9 pl-4 text-blue-100 placeholder-transparent"
+                              : "border border-slate-600 bg-[#0f172a] text-slate-200 focus:border-blue-500 focus:bg-slate-800 placeholder-slate-500"
+                          }`}
+                          placeholder="Tìm khách hàng..."
+                          autoComplete="off"
+                        />
+                        {formData.customerName && (
+                          <button type="button"
+                            onClick={() => { setFormData(p => ({ ...p, customerName: "", customerPhone: "" })); setCustomerSearch(""); }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-400 transition-colors">
+                            <XMarkIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                        {showCustomerDropdown && !formData.customerName && filteredCustomers.length > 0 && (
+                          <div className="absolute z-30 w-full mt-2 bg-[#1e293b] border border-slate-600 rounded-xl shadow-2xl max-h-48 overflow-y-auto overflow-hidden">
+                            {filteredCustomers.map((c: any) => (
+                              <button key={c.id} type="button" onClick={() => handleSelectCustomer(c)}
+                                className="w-full text-left px-4 py-3 hover:bg-slate-800 border-b border-slate-700/50 last:border-0 transition-colors">
+                                <div className="font-semibold text-sm text-slate-200">{c.name}</div>
+                                <div className="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                  {c.phone}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => setShowAddCustomerModal(true)} disabled={isCompleted}
+                        className="w-[42px] shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 rounded-xl transition-all disabled:opacity-40 shadow-sm">
+                        <PlusIcon className="w-5 h-5" />
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
+                    </div>
+                    {formData.customerPhone && (
+                      <div className="mt-2 text-[12px] font-medium text-blue-400 ml-1 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                        {formData.customerPhone}
+                      </div>
+                    )}
+                  </div>
 
-              {/* ── Hẹn trả & Ghi chú ── */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-slate-400 rounded-full flex-shrink-0" />
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Hẹn trả & Ghi chú</span>
-                </div>
-                <div className="p-3 grid grid-cols-2 gap-2">
-                  <div>
+                  {/* Thiết bị */}
+                  <div className="col-span-1 md:col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Thiết bị (Xe/Máy)</label>
+                    <input type="text" name="deviceName" value={formData.deviceName || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-600 bg-[#0f172a] text-slate-200 focus:outline-none focus:border-blue-500 focus:bg-slate-800 placeholder-slate-500 disabled:opacity-50 transition-colors"
+                      placeholder="VD: iPhone 15 / Honda..." />
+                  </div>
+
+                  {/* KTV */}
+                  <div className="col-span-1 md:col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Kỹ thuật viên</label>
+                    <input type="text" name="technicianName" value={formData.technicianName || ""} onChange={handleInputChange} disabled={isCompleted}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-600 bg-[#0f172a] text-slate-200 focus:outline-none focus:border-blue-500 focus:bg-slate-800 placeholder-slate-500 disabled:opacity-50 transition-colors"
+                      placeholder="VD: Nguyễn Văn A..." />
+                  </div>
+
+                  {/* Hẹn trả */}
+                  <div className="col-span-1 md:col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Hẹn trả</label>
                     <input type="datetime-local" name="dueDate" value={formData.dueDate?.slice(0, 16) || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50" />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Ngày hẹn trả</span>
+                      className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-600 bg-[#0f172a] text-slate-200 focus:outline-none focus:border-blue-500 focus:bg-slate-800 placeholder-slate-500 disabled:opacity-50 transition-colors" />
                   </div>
-                  <div>
-                    <input type="text" name="notes" placeholder="Ghi chú..." value={formData.notes || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50" />
-                    <span className="text-[10px] text-slate-400 mt-1 ml-1 block">Ghi chú nội bộ</span>
+
+                  {/* Mô tả */}
+                  <div className="col-span-1 md:col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Mô tả sự cố</label>
+                    <textarea name="issueDescription" value={formData.issueDescription || ""} onChange={handleInputChange} disabled={isCompleted} rows={2}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-600 bg-[#0f172a] text-slate-200 focus:outline-none focus:border-blue-500 focus:bg-slate-800 placeholder-slate-500 disabled:opacity-50 transition-colors resize-none"
+                      placeholder="VD: Không lên nguồn..." />
+                  </div>
+
+                  {/* Ghi chú */}
+                  <div className="col-span-1 md:col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Ghi chú nội bộ</label>
+                    <textarea name="notes" value={formData.notes || ""} onChange={handleInputChange} disabled={isCompleted} rows={2}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-600 bg-[#0f172a] text-slate-200 focus:outline-none focus:border-blue-500 focus:bg-slate-800 placeholder-slate-500 disabled:opacity-50 transition-colors resize-none"
+                      placeholder="VD: Nhắc khách mang theo phụ kiện..." />
                   </div>
                 </div>
               </div>
 
-            </div>{/* end cột trái */}
+              {/* SECTION 2: Phụ tùng sử dụng */}
+              <div className="bg-[#1e293b] border border-slate-700/50 shadow-md rounded-[18px] p-6">
+                <div className="flex items-center mb-5 gap-3">
+                  <div className="h-6 w-1.5 rounded-full bg-indigo-500"></div>
+                  <h3 className="font-bold text-slate-100 text-base tracking-wide">Phụ tùng sử dụng</h3>
+                </div>
 
-            {/* ════════ CỘT PHẢI (60%) ════════ */}
-            <div className="lg:col-span-3 flex flex-col min-h-0 bg-slate-50 dark:bg-slate-900">
-
-              {/* ── Thanh thêm (sticky top) ── */}
-              <div className="flex-shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-3 space-y-2.5">
-
-                {/* Vật liệu row */}
-                <div className={`flex gap-2 items-center transition-opacity ${activeItemTab !== "materials" ? "opacity-40" : ""}`}>
-                  <button type="button" onClick={() => setActiveItemTab("materials")}
-                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
-                      activeItemTab === "materials"
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200 dark:shadow-indigo-900"
-                        : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300"
-                    }`}>
-                    <span>📦</span>
-                    <span>VL {(formData.materialsUsed || []).length > 0 && `(${(formData.materialsUsed || []).length})`}</span>
-                  </button>
-                  <div className="flex-1 relative">
+                <div className="flex flex-wrap lg:flex-nowrap gap-3 mb-4 relative bg-[#0f172a] p-2 rounded-2xl border border-slate-700/50">
+                  <div className="flex-1 relative min-w-[200px]">
                     <input type="text" placeholder="Tìm vật liệu..."
                       value={materialSearch}
                       onChange={(e) => { setMaterialSearch(e.target.value); setShowMaterialDropdown(true); setMaterialInput(p => ({ ...p, materialName: e.target.value })); }}
-                      onFocus={() => { setActiveItemTab("materials"); setShowMaterialDropdown(true); }}
+                      onFocus={() => setShowMaterialDropdown(true)}
                       onBlur={() => setTimeout(() => setShowMaterialDropdown(false), 200)}
                       disabled={isCompleted}
-                      className="w-full px-3 py-2 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 disabled:opacity-50" />
+                      className="w-full px-4 py-2 rounded-xl text-sm border-none bg-transparent text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 disabled:opacity-50 placeholder-slate-500" />
                     {showMaterialDropdown && filteredMaterials.length > 0 && (
-                      <div className="absolute z-30 w-full left-0 mt-1 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded-xl shadow-2xl max-h-52 overflow-y-auto">
+                      <div className="absolute z-30 w-full left-0 mt-3 bg-[#1e293b] border border-slate-600 rounded-xl shadow-2xl max-h-52 overflow-y-auto no-scrollbar">
                         {filteredMaterials.map((m: any) => (
                           <button key={m.id} type="button"
                             onClick={() => { setMaterialInput({ materialName: m.name, quantity: 1, price: m.retailPrice || m.purchasePrice || 0 }); setMaterialSearch(m.name); setShowMaterialDropdown(false); }}
-                            className="w-full text-left px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b dark:border-slate-700 last:border-0 transition-colors">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-sm text-slate-900 dark:text-slate-100">{m.name}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${(m.stock || 0) <= 0 ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"}`}>
-                                {(m.stock || 0) <= 0 ? "Hết hàng" : `Tồn: ${m.stock}`}
+                            className="w-full text-left px-4 py-3 hover:bg-slate-800 border-b border-slate-700/50 last:border-0 transition-colors">
+                            <div className="flex justify-between items-center text-sm text-slate-200">
+                              <span className="font-semibold">{m.name}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded text-white font-bold ${(m.stock || 0) <= 0 ? "bg-red-500/80" : "bg-emerald-600/80"}`}>
+                                {(m.stock || 0) <= 0 ? "Hết" : `Tồn: ${m.stock}`}
                               </span>
                             </div>
-                            <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">{formatCurrency(m.retailPrice || 0)}</div>
+                            <div className="text-xs text-indigo-400 mt-1 font-medium">{formatCurrency(m.retailPrice || 0)}</div>
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
+                  <div className="w-px bg-slate-700"></div>
                   <input type="number" placeholder="SL" min="1" value={materialInput.quantity}
                     onChange={(e) => setMaterialInput(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))}
                     disabled={isCompleted}
-                    className="w-14 px-2 py-2 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl text-sm text-center bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
-                  <input type="text" placeholder="Đơn giá"
+                    className="w-16 px-2 py-2 rounded-xl text-sm text-center border-none bg-transparent text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 disabled:opacity-50 placeholder-slate-500" />
+                  <div className="w-px bg-slate-700"></div>
+                  <input type="text" placeholder="Đ. Giá"
                     value={materialInput.price ? formatCurrencyInput(materialInput.price) : ""}
                     onChange={(e) => setMaterialInput(p => ({ ...p, price: parseCurrencyInput(e.target.value) }))}
                     disabled={isCompleted}
-                    className="w-28 px-2 py-2 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                    className="w-28 px-3 py-2 rounded-xl text-sm text-right border-none bg-transparent text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 disabled:opacity-50 placeholder-slate-500" />
                   <button type="button" onClick={handleAddMaterial} disabled={isCompleted}
-                    className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl shadow-md shadow-indigo-200 dark:shadow-indigo-900 transition-all disabled:opacity-40">
-                    <PlusIcon className="w-4 h-4" />
+                    className="px-5 py-2 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] tracking-wide font-bold rounded-xl transition-all disabled:opacity-40 ml-1 shadow-sm">
+                    Thêm
                   </button>
                 </div>
 
-                {/* Gia công row */}
-                <div className={`flex gap-2 items-center transition-opacity ${activeItemTab !== "outsourcing" ? "opacity-40" : ""}`}>
-                  <button type="button" onClick={() => setActiveItemTab("outsourcing")}
-                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
-                      activeItemTab === "outsourcing"
-                        ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200 dark:shadow-orange-900"
-                        : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-orange-300"
-                    }`}>
-                    <span>🔩</span>
-                    <span>GC {(formData.outsourcingItems || []).length > 0 && `(${(formData.outsourcingItems || []).length})`}</span>
-                  </button>
-                  <input type="text" placeholder="Mô tả công việc gia công..." value={outsourcingInput.description}
-                    onChange={(e) => setOutsourcingInput(p => ({ ...p, description: e.target.value }))}
-                    onFocus={() => setActiveItemTab("outsourcing")}
-                    disabled={isCompleted}
-                    className="flex-1 px-3 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900 disabled:opacity-50" />
-                  <input type="number" placeholder="SL" min="1" value={outsourcingInput.quantity}
-                    onChange={(e) => setOutsourcingInput(p => ({ ...p, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
-                    disabled={isCompleted}
-                    className="w-14 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-center bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-orange-500 disabled:opacity-50" />
-                  <input type="text" placeholder="Giá vốn"
-                    value={outsourcingInput.costPrice ? formatSignedCurrencyInput(outsourcingInput.costPrice) : ""}
-                    onChange={(e) => setOutsourcingInput(p => ({ ...p, costPrice: parseSignedCurrencyInput(e.target.value) }))}
-                    disabled={isCompleted}
-                    className="w-24 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none disabled:opacity-50" />
-                  <input type="text" placeholder="Đơn giá"
-                    value={outsourcingInput.sellingPrice ? formatSignedCurrencyInput(outsourcingInput.sellingPrice) : ""}
-                    onChange={(e) => setOutsourcingInput(p => ({ ...p, sellingPrice: parseSignedCurrencyInput(e.target.value) }))}
-                    disabled={isCompleted}
-                    className="w-24 px-2 py-2 border-2 border-orange-200 dark:border-orange-700 rounded-xl text-sm text-right bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none disabled:opacity-50" />
-                  <button type="button" onClick={handleAddOutsourcing} disabled={isCompleted}
-                    className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-orange-500 hover:bg-orange-600 active:scale-95 text-white rounded-xl shadow-md shadow-orange-200 dark:shadow-orange-900 transition-all disabled:opacity-40">
-                    <PlusIcon className="w-4 h-4" />
-                  </button>
+                <div className="overflow-x-auto rounded-xl border border-slate-700/50 bg-[#0f172a]/50">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="text-slate-400 border-b border-slate-700/50 text-[11px] uppercase tracking-widest font-bold bg-[#1e293b]">
+                      <tr>
+                        <th className="px-5 py-3.5">Tên phụ tùng</th>
+                        <th className="px-4 py-3.5 text-center">SL</th>
+                        <th className="px-4 py-3.5 text-right">Đ.Giá</th>
+                        <th className="px-5 py-3.5 text-right text-slate-300">T.Tiền</th>
+                        <th className="px-3 py-3.5 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      {(formData.materialsUsed || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-8 text-center text-slate-500 font-medium text-[13px]">Chưa có phụ tùng nào</td>
+                        </tr>
+                      ) : (
+                        (formData.materialsUsed || []).map((m, i) => (
+                          <tr key={i} className="hover:bg-slate-800/50 transition-colors text-slate-200">
+                            <td className="px-5 py-3 font-medium">{m.materialName}</td>
+                            <td className="px-4 py-3 text-center">{m.quantity}</td>
+                            <td className="px-4 py-3 text-right text-slate-400">{formatCurrency(m.price)}</td>
+                            <td className="px-5 py-3 text-right font-bold text-slate-200">{formatCurrency(m.quantity * m.price)}</td>
+                            <td className="px-3 py-3 text-center">
+                              <button type="button" onClick={() => handleRemoveMaterial(i)} disabled={isCompleted}
+                                className="text-slate-500 hover:text-red-400 disabled:opacity-20 transition-colors p-1 rounded-md hover:bg-red-400/10">
+                                <XMarkIcon className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              </div>{/* end thanh thêm */}
+              </div>
 
-              {/* ── Danh sách (cuộn) ── */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {/* SECTION 3: Báo giá (Gia công) */}
+              <div className="bg-[#1e293b] border border-slate-700/50 shadow-md rounded-[18px] p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-6 w-1.5 rounded-full bg-purple-500"></div>
+                  <h3 className="font-bold text-slate-100 text-base tracking-wide">Dịch vụ & Gia công</h3>
+                </div>
 
-                {/* Thiếu hàng cảnh báo */}
-                {materialShortageInfo.hasShortage && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-xl">
-                    <p className="font-bold text-red-700 dark:text-red-400 text-xs mb-1.5">⚠️ Thiếu vật liệu — cần đặt hàng NCC</p>
-                    {materialShortageInfo.shortages.map((s, i) => (
-                      <p key={i} className="text-xs text-red-600 dark:text-red-400 mt-0.5">
-                        {s.isNew
-                          ? <><span className="font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400 px-1 rounded">MỚI</span> &ldquo;{s.materialName}&rdquo; — cần mua <strong>{s.shortage}</strong></>
-                          : <><strong>{s.materialName}</strong>: cần {s.needed}, tồn {s.inStock}, <strong className="text-red-700 dark:text-red-300">thiếu {s.shortage}</strong></>
-                        }
-                      </p>
-                    ))}
+                <div className="overflow-x-auto rounded-xl border border-slate-700/50 bg-[#0f172a]/50">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="text-slate-400 border-b border-slate-700/50 text-[11px] uppercase tracking-widest font-bold bg-[#1e293b]">
+                      <tr>
+                        <th className="px-5 py-3.5">Mô tả</th>
+                        <th className="px-4 py-3.5 text-center w-20">SL</th>
+                        <th className="px-4 py-3.5 text-right w-28">Giá vốn</th>
+                        <th className="px-4 py-3.5 text-right w-28">Đơn giá</th>
+                        <th className="px-5 py-3.5 text-right w-32 text-slate-300">Total</th>
+                        <th className="px-3 py-3.5 text-center w-16"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      <tr className="bg-[#0f172a] border-b border-slate-700 focus-within:bg-slate-800/80 transition-colors">
+                        <td className="p-1">
+                          <input type="text" placeholder="Thêm dịch vụ..." value={outsourcingInput.description}
+                            onChange={(e) => setOutsourcingInput(p => ({ ...p, description: e.target.value }))}
+                            disabled={isCompleted}
+                            className="w-full px-4 py-2.5 bg-transparent border-none text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500/50 rounded-lg text-sm placeholder-slate-500" />
+                        </td>
+                        <td className="p-1">
+                          <input type="number" placeholder="1" value={outsourcingInput.quantity} min="1"
+                            onChange={(e) => setOutsourcingInput(p => ({ ...p, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
+                            disabled={isCompleted}
+                            className="w-full text-center px-2 py-2.5 bg-transparent border-none text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500/50 rounded-lg text-sm placeholder-slate-500" />
+                        </td>
+                        <td className="p-1">
+                          <input type="text" placeholder="0"
+                            value={outsourcingInput.costPrice ? formatSignedCurrencyInput(outsourcingInput.costPrice) : ""}
+                            onChange={(e) => setOutsourcingInput(p => ({ ...p, costPrice: parseSignedCurrencyInput(e.target.value) }))}
+                            disabled={isCompleted}
+                            className="w-full text-right px-3 py-2.5 bg-transparent border-none text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500/50 rounded-lg text-sm placeholder-slate-500" />
+                        </td>
+                        <td className="p-1">
+                          <input type="text" placeholder="0"
+                            value={outsourcingInput.sellingPrice ? formatSignedCurrencyInput(outsourcingInput.sellingPrice) : ""}
+                            onChange={(e) => setOutsourcingInput(p => ({ ...p, sellingPrice: parseSignedCurrencyInput(e.target.value) }))}
+                            disabled={isCompleted}
+                            className="w-full text-right px-3 py-2.5 bg-transparent border-none text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500/50 rounded-lg text-sm placeholder-slate-500" />
+                        </td>
+                        <td className="p-2 px-5 text-right font-bold text-slate-200">
+                          {formatCurrency(outsourcingInput.quantity * outsourcingInput.sellingPrice)}
+                        </td>
+                        <td className="p-1 text-center px-2">
+                          <button type="button" onClick={handleAddOutsourcing} disabled={isCompleted}
+                            className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-purple-400 font-bold rounded-lg text-xs transition-colors disabled:opacity-40">
+                            + 
+                          </button>
+                        </td>
+                      </tr>
+                      
+                      {/* List Items */}
+                      {(formData.outsourcingItems || []).map((item, idx) => (
+                        <tr key={item.id} className="hover:bg-slate-800/50 transition-colors text-slate-200">
+                          <td className="px-5 py-3 font-medium">{item.description}</td>
+                          <td className="px-4 py-3 text-center">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right text-slate-400">{formatCurrency(item.costPrice)}</td>
+                          <td className="px-4 py-3 text-right text-slate-400">{formatCurrency(item.sellingPrice)}</td>
+                          <td className="px-5 py-3 text-right font-bold text-slate-200">{formatCurrency(item.total)}</td>
+                          <td className="px-3 py-3 text-center">
+                            <button type="button" onClick={() => handleRemoveOutsourcing(idx)} disabled={isCompleted}
+                              className="text-slate-500 hover:text-red-400 disabled:opacity-20 transition-colors p-1 rounded-md hover:bg-red-400/10">
+                              <XMarkIcon className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>{/* end Cột Trái */}
+
+            {/* ════ CỘT PHẢI (TỔNG KẾT & THANH TOÁN) ════ */}
+            <div className="lg:col-span-3 flex flex-col bg-[#1e293b] border-l border-slate-700/50 p-6 overscroll-none overflow-y-auto custom-scrollbar relative shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.3)] z-10">
+              <div className="flex-1 space-y-6 pb-24"> {/* pb-24 space for floating actions */}
+
+                {/* Tổng kết */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-blue-400 opacity-90">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </span>
+                    <h3 className="text-[13px] font-bold text-slate-300 uppercase tracking-widest">Chi phí tạm tính</h3>
                   </div>
-                )}
-
-                {/* Items vật liệu */}
-                {(formData.materialsUsed || []).map((m, i) => {
-                  const mat = (pinMaterials || []).find((x: any) => x.name.toLowerCase() === m.materialName.toLowerCase());
-                  const isNew = !mat;
-                  const isShort = !isNew && m.quantity > (mat?.stock || 0);
-                  return (
-                    <div key={i} className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl border text-sm transition-all group ${
-                      isNew   ? "border-purple-200 dark:border-purple-700/60 bg-purple-50 dark:bg-purple-900/10" :
-                      isShort ? "border-red-200 dark:border-red-700/60 bg-red-50 dark:bg-red-900/10" :
-                                "border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800"
-                    }`}>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-black bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 flex-shrink-0 tracking-wide">VL</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{m.materialName}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                          <span>{m.quantity} × {formatCurrency(m.price)}</span>
-                          <span className="text-slate-300 dark:text-slate-600">=</span>
-                          <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(m.quantity * m.price)}</span>
-                          {isNew   && <span className="ml-1 px-1 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 rounded text-[9px] font-bold">🆕 CẦN MUA</span>}
-                          {isShort && <span className="ml-1 px-1 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded text-[9px] font-bold">⚠️ THIẾU {m.quantity - (mat?.stock || 0)}</span>}
-                          {!isNew && !isShort && <span className="ml-1 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">✓ ĐỦ</span>}
+                  
+                  <div className="bg-[#0f172a] rounded-[16px] p-5 border border-slate-700/50 shadow-inner">
+                    <div className="space-y-4 font-medium text-[13px] text-slate-400">
+                      <div className="flex items-center justify-between">
+                        <span>Phí dịch vụ</span>
+                        <input type="text" name="laborCost" placeholder="0"
+                          value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
+                          onChange={handleInputChange} disabled={isCompleted}
+                          className="w-24 text-right font-bold text-slate-200 bg-[#1e293b] border border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 placeholder-slate-500" />
+                      </div>
+                      <div className="flex items-center justify-between border-t border-slate-700/50 pt-3">
+                        <span>Phụ tùng</span>
+                        <span className="font-bold text-slate-200">{formatCurrency(materialsTotal)}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-slate-700/50 pt-3">
+                        <span>Dịch vụ ngoài</span>
+                        <span className="font-bold text-slate-200">
+                          {formatCurrency((formData.outsourcingItems || []).reduce((s, i) => s + i.total, 0))}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-slate-800/50 pt-3 text-red-400">
+                        <span>Giảm giá</span>
+                        <div className="flex items-center gap-1.5">
+                          <input type="text" className="w-16 bg-[#151E32] border border-slate-700/60 rounded-lg px-2 py-1 text-right text-red-200 font-bold focus:outline-none" disabled value="0" />
+                          <div className="bg-[#151E32] border border-slate-700/60 rounded-lg px-2 py-1 text-slate-400 text-xs font-bold pointer-events-none">đ</div>
                         </div>
                       </div>
-                      <button type="button" onClick={() => handleRemoveMaterial(i)} disabled={isCompleted}
-                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 p-1.5 rounded-lg transition-all disabled:opacity-20 flex-shrink-0">
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  );
-                })}
 
-                {/* Items gia công */}
-                {(formData.outsourcingItems || []).map((item, idx) => (
-                  <div key={item.id} className="flex items-center gap-3 px-3.5 py-3 rounded-2xl border border-orange-200 dark:border-orange-700/60 bg-orange-50 dark:bg-orange-900/10 text-sm group">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-md font-black bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300 flex-shrink-0 tracking-wide">GC</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{item.description}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                        <span>{item.quantity} × {formatCurrency(item.sellingPrice)}</span>
-                        <span className="text-slate-300 dark:text-slate-600">=</span>
-                        <span className="font-bold text-orange-600 dark:text-orange-400">{formatCurrency(item.total)}</span>
-                        {((item.sellingPrice - item.costPrice) * item.quantity) >= 0 ? (
-                          <span className="ml-1 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold">
-                            +{formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lời
-                          </span>
-                        ) : (
-                          <span className="ml-1 text-rose-600 dark:text-rose-400 text-[10px] font-semibold">
-                            {formatCurrency((item.sellingPrice - item.costPrice) * item.quantity)} lỗ
-                          </span>
-                        )}
+                      <div className="border-t border-slate-700/80 mt-4 pt-4 flex items-center justify-between">
+                        <span className="text-[14px] font-bold text-slate-200 uppercase tracking-wide">Tổng cộng</span>
+                        <span className="text-xl font-black text-blue-400 tracking-tight">{formatCurrency(total)}</span>
                       </div>
                     </div>
-                    <button type="button" onClick={() => handleRemoveOutsourcing(idx)} disabled={isCompleted}
-                      className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 p-1.5 rounded-lg transition-all disabled:opacity-20 flex-shrink-0">
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
                   </div>
-                ))}
+                </div>
 
-                {/* Empty state */}
-                {(formData.materialsUsed || []).length === 0 && (formData.outsourcingItems || []).length === 0 && (
-                  <div className="text-center py-12 text-slate-400 dark:text-slate-600">
-                    <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-3xl">🔧</div>
-                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Chưa có mặt hàng nào</p>
-                    <p className="text-xs mt-1 text-slate-400 dark:text-slate-600">Dùng thanh tìm kiếm phía trên để thêm</p>
+                {/* Thanh toán */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-emerald-400 opacity-80">
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    <h3 className="text-[13px] font-bold text-slate-300 uppercase tracking-widest">Thanh toán</h3>
                   </div>
-                )}
-              </div>{/* end list */}
 
-              {/* ── Chi phí & Thanh toán (sticky bottom) ── */}
-              <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <div className="bg-[#0B1121] rounded-[16px] p-5 border border-slate-800/80 space-y-5">
+                    
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                          (formData.depositAmount || 0) > 0 ? "bg-blue-600 border-blue-600" : "bg-[#151E32] border-slate-600 group-hover:border-blue-500"
+                        }`}>
+                          {(formData.depositAmount || 0) > 0 && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input type="checkbox" className="hidden" checked={(formData.depositAmount || 0) > 0} 
+                          onChange={(e) => setFormData(p => ({ ...p, depositAmount: e.target.checked ? 100000 : 0 }))} disabled={isCompleted} />
+                        <span className="text-[13px] font-bold text-slate-200">Yêu cầu Đặt cọc</span>
+                      </label>
+                       
+                      {(formData.depositAmount || 0) > 0 && (
+                         <div className="ml-8 relative">
+                           <input type="text"
+                            value={formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""}
+                            onChange={(e) => setFormData(p => ({ ...p, depositAmount: parseCurrencyInput(e.target.value) }))}
+                            disabled={isCompleted}
+                            className="w-full px-3 py-2.5 border border-blue-500/40 bg-blue-500/10 rounded-xl text-sm text-right font-bold text-blue-100 focus:outline-none focus:border-blue-500 transition-colors" />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-400">Số tiền gốc</span>
+                         </div>
+                      )}
 
-                {/* Cost breakdown row */}
-                <div className="grid grid-cols-4 divide-x divide-slate-100 dark:divide-slate-700 border-b border-slate-100 dark:border-slate-700">
-                  <div className="px-3 py-2.5 text-center">
-                    <div className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider mb-0.5">📦 Vật liệu</div>
-                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{formatCurrency(materialsTotal)}</div>
-                  </div>
-                  <div className="px-3 py-2.5 text-center">
-                    <div className="text-[10px] text-orange-500 dark:text-orange-400 font-bold uppercase tracking-wider mb-0.5">🔩 Gia công</div>
-                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      {formatCurrency((formData.outsourcingItems || []).reduce((s, i) => s + i.total, 0))}
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                          formData.quoteApproved ? "bg-emerald-600 border-emerald-600" : "bg-[#151E32] border-slate-600 group-hover:border-emerald-500"
+                        }`}>
+                          {formData.quoteApproved && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input type="checkbox" className="hidden" checked={formData.quoteApproved || false}
+                          onChange={(e) => setFormData(p => ({ ...p, quoteApproved: e.target.checked, quoteApprovedAt: e.target.checked ? new Date().toISOString() : undefined }))} disabled={isCompleted} />
+                        <span className="text-[13px] font-bold text-slate-200">Khách đã duyệt giá</span>
+                      </label>
+                    </div>
+
+                    <div className="border-t border-slate-800/80 pt-5">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Phương thức thanh toán</label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <button type="button" onClick={() => setFormData(p => ({...p, paymentMethod: "cash", paymentStatus: "paid" }))} disabled={isCompleted}
+                          className={`flex items-center justify-center gap-2 py-3 rounded-[12px] text-[13px] font-bold transition-all border ${
+                            formData.paymentMethod === "cash" && formData.paymentStatus === "paid"
+                              ? "bg-slate-700/50 border-slate-600 text-white shadow-sm" 
+                              : "bg-[#151E32] border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          }`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                          Tiền mặt
+                        </button>
+                        <button type="button" onClick={() => setFormData(p => ({...p, paymentMethod: "bank", paymentStatus: "paid" }))} disabled={isCompleted}
+                          className={`flex items-center justify-center gap-2 py-3 rounded-[12px] text-[13px] font-bold transition-all border ${
+                            formData.paymentMethod === "bank" && formData.paymentStatus === "paid"
+                              ? "bg-slate-700/50 border-slate-600 text-white shadow-sm" 
+                              : "bg-[#151E32] border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                          }`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                          C.Khoản
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-500/80 mt-3 text-center">* Bắt buộc thanh toán 100% khi "Trả máy"</p>
                     </div>
                   </div>
-                  <div className="px-3 py-2.5">
-                    <div className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider mb-0.5">🛠 Phí công</div>
-                    <input type="text" name="laborCost" placeholder="0 ₫"
-                      value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
-                      onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full text-sm font-bold text-slate-800 dark:text-slate-200 bg-transparent focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 rounded px-1 -mx-1 text-right disabled:opacity-50 placeholder:text-slate-300 dark:placeholder:text-slate-600" />
-                  </div>
-                  <div className="px-3 py-2.5">
-                    <div className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold uppercase tracking-wider mb-0.5">💰 Đã cọc</div>
-                    <input type="text" name="depositAmount" placeholder="0 ₫"
-                      value={formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""}
-                      onChange={handleInputChange} disabled={isCompleted}
-                      className="w-full text-sm font-bold text-yellow-600 dark:text-yellow-400 bg-transparent focus:outline-none focus:bg-yellow-50 dark:focus:bg-yellow-900/20 rounded px-1 -mx-1 text-right disabled:opacity-50 placeholder:text-slate-300 dark:placeholder:text-slate-600" />
-                  </div>
                 </div>
+              </div>
 
-                {/* Tổng bar */}
-                <div className="grid grid-cols-2 divide-x divide-emerald-500/30">
-                  <div className="bg-gradient-to-br from-emerald-500 to-teal-500 px-4 py-2.5">
-                    <div className="text-[10px] text-emerald-100 font-semibold uppercase tracking-wider">Tổng cộng</div>
-                    <div className="text-xl font-black text-white leading-tight">{formatCurrency(total)}</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-teal-500 to-cyan-500 px-4 py-2.5 text-right">
-                    <div className="text-[10px] text-teal-100 font-semibold uppercase tracking-wider">Khách cần trả</div>
-                    <div className="text-xl font-black text-white leading-tight">{formatCurrency(remaining)}</div>
-                  </div>
-                </div>
-
-                {/* Thanh toán row */}
-                <div className="flex gap-2 px-3 py-2.5 items-center">
-                  <select name="paymentStatus" value={formData.paymentStatus || "unpaid"} onChange={handleInputChange} disabled={isCompleted}
-                    className="flex-1 px-2.5 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50">
-                    <option value="unpaid">⬜ Chưa thanh toán</option>
-                    <option value="partial">🔷 Một phần</option>
-                    <option value="paid">✅ Đã thanh toán</option>
-                  </select>
-                  {formData.paymentStatus === "partial" ? (
-                    <input type="text" placeholder="Số tiền đã trả..."
-                      value={formData.partialPaymentAmount ? formatCurrencyInput(formData.partialPaymentAmount) : ""}
-                      onChange={(e) => setFormData(p => ({ ...p, partialPaymentAmount: parseCurrencyInput(e.target.value) }))}
-                      disabled={isCompleted}
-                      className="flex-1 px-2.5 py-2 border-2 border-teal-200 dark:border-teal-700 rounded-xl text-xs text-right font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-400 disabled:opacity-50" />
-                  ) : (
-                    <select name="paymentMethod" value={formData.paymentMethod || ""} onChange={handleInputChange} disabled={isCompleted}
-                      className="flex-1 px-2.5 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-400 disabled:opacity-50">
-                      <option value="">-- Hình thức --</option>
-                      <option value="cash">💵 Tiền mặt</option>
-                      <option value="bank">🏦 Chuyển khoản</option>
-                      <option value="card">💳 Thẻ</option>
-                    </select>
-                  )}
-                  <label className="flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none">
-                    <input type="checkbox" checked={formData.quoteApproved || false}
-                      onChange={(e) => setFormData(p => ({ ...p, quoteApproved: e.target.checked, quoteApprovedAt: e.target.checked ? new Date().toISOString() : undefined }))}
-                      className="w-4 h-4 rounded border-amber-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">Duyệt giá</span>
-                  </label>
-                  <button type="button" onClick={() => setShowQuotePrint(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 hover:bg-amber-100 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold transition-all active:scale-95 flex-shrink-0">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    In BG
+              {/* FLOATING ACTION BLOCKS (Lưu phiếu / Hủy) */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#151E32] via-[#151E32] to-transparent pt-12">
+                <div className="space-y-3">
+                  <button type="submit" disabled={isSubmitting || isCompleted}
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 active:transform active:scale-[0.99] text-white rounded-2xl font-bold shadow-lg shadow-blue-900/40 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 text-[15px] tracking-wide">
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-2">
+                         <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Đang lưu hệ thống...
+                      </span>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        {getButtonText()}
+                      </>
+                    )}
+                  </button>
+                  <button type="button" onClick={onClose} disabled={isSubmitting}
+                    className="w-full py-2.5 text-slate-500 hover:text-slate-300 font-bold transition-colors text-[13px] tracking-wide">
+                    Hủy & Đóng
                   </button>
                 </div>
+              </div>
 
-              </div>{/* end cost panel */}
-            </div>{/* end cột phải */}
-
+            </div>{/* end Cột Phải */}
           </div>{/* end grid */}
-
-          {/* ── FOOTER ── */}
-          <div className="flex-shrink-0 px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
-            <button type="button" onClick={onClose} disabled={isSubmitting}
-              className="px-5 py-2.5 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 transition-all disabled:opacity-50 text-sm active:scale-95">
-              Hủy
-            </button>
-            <button type="submit" disabled={isSubmitting || isCompleted}
-              className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm active:scale-[0.99]">
-              {isCompleted ? (
-                <><span>🔒</span><span>Đã hoàn tất</span></>
-              ) : isSubmitting ? (
-                <>
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>Đang lưu...</span>
-                </>
-              ) : (
-                <><span>✅</span><span>{getButtonText()}</span></>
-              )}
-            </button>
-          </div>
-
         </form>
       </div>
 
