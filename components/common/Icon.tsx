@@ -3,26 +3,34 @@ import { cn } from "../../lib/utils/cn";
 import type { IconProps as PhosphorIconProps } from "phosphor-react";
 import {
   ArrowsClockwise,
+  ArrowsLeftRight,
   ArrowSquareDown,
   ArrowSquareUp,
   Bank,
   Buildings,
   CalendarBlank,
   ChartBar,
+  ChartLineUp,
   ChartPie,
   CheckCircle,
   ClipboardText,
   Clock,
   ClockCounterClockwise,
   Coins,
+  Cpu,
   Cube,
   CurrencyDollarSimple,
   DeviceMobile,
   DotsThreeVertical,
+  DownloadSimple,
   Eye,
+  Factory,
+  FileText,
   Gear,
+  House,
   IdentificationCard,
   Info,
+  Lightning,
   MagnifyingGlass,
   Money,
   Package,
@@ -30,6 +38,9 @@ import {
   PhoneCall,
   Plus,
   Prohibit,
+  ShieldCheck,
+  ShoppingCart,
+  SignOut,
   Sparkle,
   Storefront,
   Tag,
@@ -95,6 +106,19 @@ export const ICON_REGISTRY = {
   import: ArrowSquareDown,
   export: ArrowSquareUp,
   history: ClockCounterClockwise,
+  factory: Factory,
+  "hand-coins": Coins,
+  "file-text": FileText,
+  "chart-line-up": ChartLineUp,
+  download: DownloadSimple,
+  lightning: Lightning,
+  sparkle: Sparkle,
+  "shopping-cart": ShoppingCart,
+  "shield-check": ShieldCheck,
+  "cpu-chip": Cpu,
+  home: House,
+  "sign-out": SignOut,
+  "arrows-left-right": ArrowsLeftRight,
 } as const satisfies Record<string, PhosphorIconComponent>;
 
 export type IconName = keyof typeof ICON_REGISTRY;
@@ -147,6 +171,13 @@ export const Icon: React.FC<StandardIconProps> = ({
   ...props
 }) => {
   const IconComponent = ICON_REGISTRY[name];
+
+  if (!IconComponent) {
+    if (import.meta.env.DEV) {
+      console.warn(`Icon "${name}" not found in ICON_REGISTRY`);
+    }
+    return null;
+  }
 
   return (
     <IconComponent

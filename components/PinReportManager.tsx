@@ -474,11 +474,11 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
 
   // Category tabs configuration
   const categoryTabs = [
-    { id: "revenue" as ReportCategory, label: "Doanh thu", icon: "💰", color: "emerald" },
-    { id: "cashflow" as ReportCategory, label: "Thu chi", icon: "📊", color: "blue" },
-    { id: "production" as ReportCategory, label: "Sản xuất", icon: "🏭", color: "amber" },
-    { id: "inventory" as ReportCategory, label: "Tồn kho", icon: "📦", color: "violet" },
-    { id: "tax" as ReportCategory, label: "Báo cáo thuế", icon: "📋", color: "orange" },
+    { id: "revenue" as ReportCategory, label: "Doanh thu", icon: "money", color: "emerald" },
+    { id: "cashflow" as ReportCategory, label: "Thu chi", icon: "cashflow", color: "blue" },
+    { id: "production" as ReportCategory, label: "Sản xuất", icon: "factory", color: "amber" },
+    { id: "inventory" as ReportCategory, label: "Tồn kho", icon: "package", color: "violet" },
+    { id: "tax" as ReportCategory, label: "Báo cáo thuế", icon: "file-text", color: "orange" },
   ];
 
   // Month names
@@ -497,17 +497,17 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
   return (
     <div className="min-h-screen bg-slate-900 text-white pb-20 md:pb-0">
       {/* Category Tabs */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-slate-700/50 bg-slate-800/50">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-4 border-b border-slate-700/50 bg-slate-800/30 backdrop-blur-md">
         {categoryTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setSelectedCategory(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === tab.id
-              ? `bg-${tab.color}-500/20 text-${tab.color}-400 border border-${tab.color}-500/50`
-              : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white border border-transparent"
+            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg ${selectedCategory === tab.id
+              ? `bg-${tab.color}-500/20 text-${tab.color}-400 ring-2 ring-${tab.color}-500/50 scale-105`
+              : "bg-slate-800/40 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700"
               }`}
           >
-            <span>{tab.icon}</span>
+            <Icon name={tab.icon as any} className={`w-4.5 h-4.5 ${selectedCategory === tab.id ? `text-${tab.color}-400` : "text-slate-500"}`} />
             <span>{tab.label}</span>
           </button>
         ))}
@@ -586,15 +586,15 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors">
-            <span>📥</span>
+          <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600/90 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-95">
+            <Icon name="download" className="w-4 h-4" />
             <span className="hidden sm:inline">Xuất Excel</span>
           </button>
           <button
             onClick={() => navigate("/analytics")}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-cyan-600/90 hover:bg-cyan-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-cyan-500/20 active:scale-95"
           >
-            <span>📈</span>
+            <Icon name="chart-line-up" className="w-4 h-4" />
             <span className="hidden sm:inline">Báo cáo nâng cao</span>
           </button>
         </div>
@@ -624,43 +624,55 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4">
         {selectedCategory === "revenue" && (
           <>
-            <div className="bg-slate-800 rounded-xl p-4 border-l-4 border-emerald-500">
-              <div className="text-xs text-slate-400 mb-1">$ Tổng doanh thu</div>
-              <div className="text-2xl md:text-3xl font-bold text-emerald-400">
+            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
+              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+                <Icon name="money" className="w-4 h-4 text-emerald-400" />
+                Tổng doanh thu
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-emerald-400 tracking-tight">
                 {formatNumber(revenueSummary.totalRevenue)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">
-                đ (Bán hàng: {formatNumber(revenueSummary.salesRevenue)} + Sửa chữa: {formatNumber(revenueSummary.repairRevenue)})
+              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50">
+                Bán hàng: <span className="text-slate-300">{formatNumber(revenueSummary.salesRevenue)}</span> + Sửa chữa: <span className="text-slate-300">{formatNumber(revenueSummary.repairRevenue)}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl p-4 border-l-4 border-fuchsia-500">
-              <div className="text-xs text-slate-400 mb-1">↓ Tổng chi phí</div>
-              <div className="text-2xl md:text-3xl font-bold text-fuchsia-400">
+            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
+              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+                <Icon name="progressDown" className="w-4 h-4 text-fuchsia-400" />
+                Tổng chi phí
+              </div>
+              <div className="text-2xl md:text-3xl font-black text-fuchsia-400 tracking-tight">
                 {formatNumber(revenueSummary.totalCost)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">
-                đ (Giá vốn: {formatNumber(revenueSummary.salesCOGS)} + Chi phí: {formatNumber(revenueSummary.operatingExpenses)})
+              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50">
+                Giá vốn: <span className="text-slate-300">{formatNumber(revenueSummary.salesCOGS)}</span> + Chi phí: <span className="text-slate-300">{formatNumber(revenueSummary.operatingExpenses)}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl p-4 border-l-4 border-cyan-500">
-              <div className="text-xs text-slate-400 mb-1">→ Lợi nhuận thuần</div>
-              <div className={`text-2xl md:text-3xl font-bold ${revenueSummary.netProfit >= 0 ? "text-cyan-400" : "text-red-400"}`}>
+            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
+              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+                <Icon name="chart-line-up" className="w-4 h-4 text-cyan-400" />
+                Lợi nhuận thuần
+              </div>
+              <div className={`text-2xl md:text-3xl font-black tracking-tight ${revenueSummary.netProfit >= 0 ? "text-cyan-400" : "text-red-400"}`}>
                 {formatNumber(revenueSummary.netProfit)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">
-                đ (Lãi gộp: {formatNumber(revenueSummary.grossProfit)} - Chi phí: {formatNumber(revenueSummary.operatingExpenses)})
+              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50">
+                Lãi gộp: <span className="text-slate-300">{formatNumber(revenueSummary.grossProfit)}</span> - Chi phí: <span className="text-slate-300">{formatNumber(revenueSummary.operatingExpenses)}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800 rounded-xl p-4 border-l-4 border-violet-500">
-              <div className="text-xs text-slate-400 mb-1">⊙ Tỷ suất lợi nhuận thuần</div>
-              <div className="text-2xl md:text-3xl font-bold text-violet-400">
-                {revenueSummary.profitMargin.toFixed(1)}
+            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
+              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+                <Icon name="sparkle" className="w-4 h-4 text-violet-400" />
+                Tỷ suất LN thuần
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">
-                % (Lợi nhuận thuần / Doanh thu tổng)
+              <div className="text-2xl md:text-3xl font-black text-violet-400 tracking-tight">
+                {revenueSummary.profitMargin.toFixed(1)}%
+              </div>
+              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50 italic">
+                Lợi nhuận thuần / Doanh thu tổng
               </div>
             </div>
           </>
@@ -725,7 +737,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
             </div>
 
             <div className="bg-slate-800 rounded-xl p-4 border-l-4 border-amber-500">
-              <div className="text-xs text-slate-400 mb-1">⏳ Đang thực hiện</div>
+              <div className="text-xs text-slate-400 mb-1">⌛ Đang thực hiện</div>
               <div className="text-2xl md:text-3xl font-bold text-amber-400">
                 {productionStats.inProgress}
               </div>
