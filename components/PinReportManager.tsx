@@ -584,20 +584,6 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
           </select>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600/90 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-95">
-            <Icon name="download" className="w-4 h-4" />
-            <span className="hidden sm:inline">Xuất Excel</span>
-          </button>
-          <button
-            onClick={() => navigate("/analytics")}
-            className="flex items-center gap-2 px-4 py-2 bg-cyan-600/90 hover:bg-cyan-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-cyan-500/20 active:scale-95"
-          >
-            <Icon name="chart-line-up" className="w-4 h-4" />
-            <span className="hidden sm:inline">Báo cáo nâng cao</span>
-          </button>
-        </div>
       </div>
 
       {/* Custom Date Range (shown when custom is selected) */}
@@ -624,54 +610,54 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4">
         {selectedCategory === "revenue" && (
           <>
-            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
-              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700 shadow-lg transition-transform hover:scale-[1.01]">
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">
                 <Icon name="money" className="w-4 h-4 text-emerald-400" />
                 Tổng doanh thu
               </div>
-              <div className="text-2xl md:text-3xl font-black text-emerald-400 tracking-tight">
+              <div className="text-xl md:text-2xl font-black text-emerald-400 tracking-tight">
                 {formatNumber(revenueSummary.totalRevenue)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50">
+              <div className="text-[9px] text-slate-500 mt-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
                 Bán hàng: <span className="text-slate-300">{formatNumber(revenueSummary.salesRevenue)}</span> + Sửa chữa: <span className="text-slate-300">{formatNumber(revenueSummary.repairRevenue)}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
-              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700 shadow-lg transition-transform hover:scale-[1.01]">
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">
                 <Icon name="progressDown" className="w-4 h-4 text-fuchsia-400" />
                 Tổng chi phí
               </div>
-              <div className="text-2xl md:text-3xl font-black text-fuchsia-400 tracking-tight">
+              <div className="text-xl md:text-2xl font-black text-fuchsia-400 tracking-tight">
                 {formatNumber(revenueSummary.totalCost)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50">
+              <div className="text-[9px] text-slate-500 mt-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
                 Giá vốn: <span className="text-slate-300">{formatNumber(revenueSummary.salesCOGS)}</span> + Chi phí: <span className="text-slate-300">{formatNumber(revenueSummary.operatingExpenses)}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
-              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700 shadow-lg transition-transform hover:scale-[1.01]">
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">
                 <Icon name="chart-line-up" className="w-4 h-4 text-cyan-400" />
                 Lợi nhuận thuần
               </div>
-              <div className={`text-2xl md:text-3xl font-black tracking-tight ${revenueSummary.netProfit >= 0 ? "text-cyan-400" : "text-red-400"}`}>
+              <div className={`text-xl md:text-2xl font-black tracking-tight ${revenueSummary.netProfit >= 0 ? "text-cyan-400" : "text-red-400"}`}>
                 {formatNumber(revenueSummary.netProfit)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50">
+              <div className="text-[9px] text-slate-500 mt-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50">
                 Lãi gộp: <span className="text-slate-300">{formatNumber(revenueSummary.grossProfit)}</span> - Chi phí: <span className="text-slate-300">{formatNumber(revenueSummary.operatingExpenses)}</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 shadow-xl transition-transform hover:scale-[1.02]">
-              <div className="flex items-center gap-2 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700 shadow-lg transition-transform hover:scale-[1.01]">
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">
                 <Icon name="sparkle" className="w-4 h-4 text-violet-400" />
                 Tỷ suất LN thuần
               </div>
-              <div className="text-2xl md:text-3xl font-black text-violet-400 tracking-tight">
+              <div className="text-xl md:text-2xl font-black text-violet-400 tracking-tight">
                 {revenueSummary.profitMargin.toFixed(1)}%
               </div>
-              <div className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50 italic">
+              <div className="text-[9px] text-slate-500 mt-1 bg-slate-900/50 p-1 rounded-md border border-slate-700/50 italic">
                 Lợi nhuận thuần / Doanh thu tổng
               </div>
             </div>

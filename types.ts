@@ -616,6 +616,8 @@ export interface ProductionOrder {
   committedMaterials?: MaterialCommitment[];
   actualCosts?: ActualCost;
   costAnalysis?: CostAnalysis;
+  priority?: "low" | "medium" | "high" | "urgent";
+  tags?: string[];
   completedAt?: string;
 }
 

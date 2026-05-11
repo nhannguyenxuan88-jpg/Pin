@@ -6,6 +6,7 @@ import { useMaterialStock } from "../lib/hooks/useMaterialStock";
 import { usePinContext } from "../contexts/PinContext";
 // Standard icons
 import { Icon, type IconName } from "./common/Icon";
+import { XMarkIcon } from "./common/Icons";
 import PinImportHistory from "./PinImportHistory";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
 import PurchaseOrderManager from "./PurchaseOrderManager";
@@ -1681,6 +1682,14 @@ const MaterialEditModal: React.FC<{
     }));
   };
 
+  const formatNumberInput = (value: number) =>
+    new Intl.NumberFormat("vi-VN").format(Number.isFinite(value) ? value : 0);
+
+  const parseNumberInput = (value: string) => {
+    const cleaned = value.replace(/[^0-9]/g, "");
+    return cleaned ? Number(cleaned) : 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!material || isSubmitting) return;
@@ -1822,10 +1831,16 @@ const MaterialEditModal: React.FC<{
                   Tồn kho
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
+                  value={formatNumberInput(formData.stock)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      stock: parseNumberInput(e.target.value),
+                    }))
+                  }
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1835,10 +1850,16 @@ const MaterialEditModal: React.FC<{
                   Giá nhập (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="purchasePrice"
-                  value={formData.purchasePrice}
-                  onChange={handleChange}
+                  value={formatNumberInput(formData.purchasePrice)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      purchasePrice: parseNumberInput(e.target.value),
+                    }))
+                  }
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1852,10 +1873,16 @@ const MaterialEditModal: React.FC<{
                   Giá bán lẻ (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="retailPrice"
-                  value={formData.retailPrice}
-                  onChange={handleChange}
+                  value={formatNumberInput(formData.retailPrice)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      retailPrice: parseNumberInput(e.target.value),
+                    }))
+                  }
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1865,10 +1892,16 @@ const MaterialEditModal: React.FC<{
                   Giá bán sỉ (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   name="wholesalePrice"
-                  value={formData.wholesalePrice}
-                  onChange={handleChange}
+                  value={formatNumberInput(formData.wholesalePrice)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      wholesalePrice: parseNumberInput(e.target.value),
+                    }))
+                  }
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />

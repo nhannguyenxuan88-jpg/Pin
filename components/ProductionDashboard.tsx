@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import type { ProductionOrder, PinMaterial, PinBOM, User } from "../types";
 import {
   ArrowPathIcon,
@@ -100,16 +100,64 @@ const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
     return name;
   };
 
+  const buildBadge = (label: string, className: string) => ({ label, className });
+  const priorityLabelMap: Record<NonNullable<ProductionOrder["priority"]>, string> = {
+    urgent: "Gấp",
+    high: "Ưu tiên",
+    medium: "Theo dõi",
+    low: "Bình thường",
+  };
+  const priorityClassMap: Record<NonNullable<ProductionOrder["priority"]>, string> = {
+    urgent: "bg-red-500 text-white",
+    high: "bg-amber-500 text-white",
+    medium: "bg-blue-500 text-white",
+    low: "bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-100",
+  };
+
+  const badgeMap = new Map<string, string>();
+  if (order.priority) {
+    badgeMap.set(priorityLabelMap[order.priority], priorityClassMap[order.priority]);
+  }
+  (order.tags ?? []).forEach((tag) => {
+    const normalized = tag.trim().toLowerCase();
+    if (!normalized) return;
+    if (normalized.includes("gấp")) {
+      badgeMap.set("Gấp", "bg-red-500 text-white");
+      return;
+    }
+    if (normalized.includes("linh kiện")) {
+      badgeMap.set("Chờ linh kiện", "bg-yellow-500 text-slate-900");
+      return;
+    }
+    badgeMap.set(tag.trim(), "bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-100");
+  });
+  const badges = Array.from(badgeMap.entries())
+    .map(([label, className]) => buildBadge(label, className))
+    .slice(0, 2);
+  const hasBadges = badges.length > 0;
+
   return (
     <div
       className={`
-        bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-2 
+        bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-2 relative
         ${statusInfo.borderColor} ${statusInfo.bgColor}
         p-5 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1
         ${isDragging ? "opacity-50 rotate-2 scale-105 shadow-2xl" : ""}
       `}
       onClick={() => onViewDetails(order)}
     >
+      {hasBadges && (
+        <div className="absolute top-3 right-3 flex gap-1 flex-wrap">
+          {badges.map((badge) => (
+            <span
+              key={badge.label}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-sm ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          ))}
+        </div>
+      )}
       {/* Header with Status */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
@@ -121,19 +169,19 @@ const ProductionOrderCard: React.FC<ProductionOrderCardProps> = ({
           <div>
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
               {productSku ? (
-                <span className="text-blue-600 dark:text-blue-400 font-mono tracking-tight">
+                <span className="text-blue-700 dark:text-blue-300 font-mono tracking-tight text-[15px]">
                   {productSku}
                 </span>
               ) : (
-                <span className="text-slate-500 font-mono text-xs">#{order.id.slice(0, 8)}</span>
+                <span className="text-blue-700 dark:text-blue-300 font-mono tracking-tight text-[15px]">#{order.id.slice(0, 8)}</span>
               )}
             </h3>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
               {productSku ? `ID: #${order.id.slice(0, 8)}` : order.status}
             </p>
           </div>
         </div>
-        <div className="text-right">
+        <div className={`text-right ${hasBadges ? "pr-16" : ""}`}>
           <p className="text-xs text-slate-500 dark:text-slate-400">Số lượng</p>
           <p className="font-bold text-slate-800 dark:text-slate-100">{order.quantityProduced}</p>
         </div>
@@ -209,6 +257,8 @@ interface KanbanColumnProps {
   completingOrderId: string | null;
   boms?: PinBOM[];
   onToast?: (title: string, message: string, type: "success" | "error" | "warn") => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -224,6 +274,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   completingOrderId,
   boms = [],
   onToast,
+  hasMore,
+  onLoadMore,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -296,6 +348,14 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             );
           })
         )}
+        {hasMore && onLoadMore && (
+          <button
+            onClick={onLoadMore}
+            className="w-full mt-2 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          >
+            Tải thêm
+          </button>
+        )}
       </div>
     </div>
   );
@@ -334,6 +394,11 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [bomSearchTerm, setBomSearchTerm] = useState("");
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
+  const [completedVisibleCount, setCompletedVisibleCount] = useState(12);
+
+  useEffect(() => {
+    setCompletedVisibleCount(12);
+  }, [searchTerm, orders.length]);
 
   // Filter orders based on search
   const filteredOrders = useMemo(() => {
@@ -389,6 +454,13 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
 
     return grouped;
   }, [filteredOrders]);
+
+  const completedOrders = ordersByStatus["Hoàn thành"];
+  const visibleCompletedOrders = completedOrders.slice(0, completedVisibleCount);
+  const hasMoreCompleted = completedVisibleCount < completedOrders.length;
+  const handleLoadMoreCompleted = useCallback(() => {
+    setCompletedVisibleCount((count) => Math.min(count + 12, completedOrders.length));
+  }, [completedOrders.length]);
 
   const handleViewDetails = useCallback((order: ProductionOrder) => {
     setSelectedOrder(order);
@@ -460,7 +532,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-2 lg:space-y-0 animate-fadeIn">
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
               📊 Production Dashboard
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-sm">
@@ -603,6 +675,16 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  onCreateOrderFromBOM?.(bom.id);
+                                }}
+                                className="p-1 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded transition-colors"
+                                title="Tạo lệnh SX"
+                              >
+                                <PlusIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   onEditBOM?.(bom.id);
                                 }}
                                 className="p-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
@@ -687,7 +769,7 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
               <KanbanColumn
                 title="Hoàn thành"
                 status="Hoàn thành"
-                orders={ordersByStatus["Hoàn thành"]}
+                orders={visibleCompletedOrders}
                 onMove={handleMove}
                 onViewDetails={handleViewDetails}
                 currentUser={currentUser}
@@ -697,6 +779,8 @@ const ProductionDashboard: React.FC<ProductionDashboardProps> = ({
                 completingOrderId={completingOrderId}
                 boms={boms}
                 onToast={onToast}
+                hasMore={hasMoreCompleted}
+                onLoadMore={handleLoadMoreCompleted}
               />
             </div>
           </div>

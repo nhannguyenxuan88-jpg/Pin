@@ -117,101 +117,6 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [invoiceSaleData, setInvoiceSaleData] = useState<PinSale | null>(null);
 
-  const [invoiceInventoryLogs, setInvoiceInventoryLogs] = useState<{
-    isLoading: boolean;
-    error: string | null;
-    materials: Array<{ name: string; sku?: string; quantity: number }>;
-    products: Array<{ name: string; sku?: string; quantity: number }>;
-  } | null>(null);
-
-  useEffect(() => {
-    const run = async () => {
-      if (!showInvoicePreview || !invoiceSaleData) return;
-
-      const invNo = invoiceSaleData.code || invoiceSaleData.id;
-      setInvoiceInventoryLogs({
-        isLoading: true,
-        error: null,
-        materials: [],
-        products: [],
-      });
-
-      try {
-        const matById = new Map((pinMaterials || []).map((m: PinMaterial) => [m.id, m]));
-        const prodById = new Map((products || []).map((p: PinProduct) => [p.id, p]));
-
-        const [matRes, prodRes] = await Promise.all([
-          supabase
-            .from("pin_stock_history")
-            .select("material_id, quantity_change, transaction_type, invoice_number")
-            .eq("invoice_number", invNo)
-            .eq("transaction_type", "export"),
-          supabase
-            .from("pin_product_stock_history")
-            .select("product_id, quantity_change, transaction_type, invoice_number")
-            .eq("invoice_number", invNo)
-            .eq("transaction_type", "export"),
-        ]);
-
-        // If product history table doesn't exist yet, ignore.
-        const prodMissingTable =
-          !!prodRes.error && /does not exist|42P01/i.test(prodRes.error.message || "");
-        const matMissingTable =
-          !!matRes.error && /does not exist|42P01/i.test(matRes.error.message || "");
-
-        const materials: Array<{ name: string; sku?: string; quantity: number }> = [];
-        if (!matRes.error && Array.isArray(matRes.data)) {
-          for (const row of matRes.data as any[]) {
-            const id = row.material_id;
-            const m = id ? matById.get(id) : undefined;
-            const qty = Math.abs(Number(row.quantity_change ?? 0));
-            if (qty <= 0) continue;
-            materials.push({
-              name: m?.name || id || "(Không rõ)",
-              sku: m?.sku,
-              quantity: qty,
-            });
-          }
-        }
-
-        const productsOut: Array<{ name: string; sku?: string; quantity: number }> = [];
-        if (!prodRes.error && Array.isArray(prodRes.data)) {
-          for (const row of prodRes.data as any[]) {
-            const id = row.product_id;
-            const p = id ? prodById.get(id) : undefined;
-            const qty = Math.abs(Number(row.quantity_change ?? 0));
-            if (qty <= 0) continue;
-            productsOut.push({
-              name: p?.name || id || "(Không rõ)",
-              sku: p?.sku,
-              quantity: qty,
-            });
-          }
-        }
-
-        const errors: string[] = [];
-        if (matRes.error && !matMissingTable) errors.push(matRes.error.message);
-        if (prodRes.error && !prodMissingTable) errors.push(prodRes.error.message);
-
-        setInvoiceInventoryLogs({
-          isLoading: false,
-          error: errors.length ? errors.join(" | ") : null,
-          materials,
-          products: productsOut,
-        });
-      } catch (e: any) {
-        setInvoiceInventoryLogs({
-          isLoading: false,
-          error: e?.message || String(e),
-          materials: [],
-          products: [],
-        });
-      }
-    };
-
-    run();
-  }, [showInvoicePreview, invoiceSaleData, pinMaterials, products]);
-
   // Installment (trả góp) state
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [installmentPlan, setInstallmentPlan] = useState<InstallmentPlan | null>(null);
@@ -225,12 +130,18 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const [shippingCarrier, setShippingCarrier] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
 
-  // Custom Date/Time State
-  const [saleDate, setSaleDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
-  const [saleTime, setSaleTime] = useState<string>(() => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  });
+  const getLocalDateString = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getLocalTimeString = (date = new Date()) =>
+    `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+  // Custom Date State
+  const [saleDate, setSaleDate] = useState<string>(() => getLocalDateString());
 
   // Customer state
   const [customerSearch, setCustomerSearch] = useState("");
@@ -530,7 +441,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       ...saleData,
       id: `SALE-${Date.now()}`,
       // Combine date and time
-      date: new Date(`${saleDate}T${saleTime}:00`).toISOString(),
+      date: new Date(`${saleDate}T${getLocalTimeString()}:00`).toISOString(),
       userId: currentUser?.id || "",
       userName: currentUser?.name || "",
       code: `HD${Date.now().toString().slice(-8)}`,
@@ -575,12 +486,8 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     setTrackingNumber('');
     setMobileView("products");
 
-    // Reset date/time to now
-    const now = new Date();
-    setSaleDate(now.toISOString().split("T")[0]);
-    setSaleTime(
-      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
-    );
+    // Reset date to today (local time)
+    setSaleDate(getLocalDateString());
   };
 
   // Load installment plans for sales
@@ -1018,22 +925,6 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           value={saleDate}
                           onChange={(e) => setSaleDate(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-600 rounded-xl text-sm font-semibold text-pin-gray-700 dark:text-pin-gray-200 focus:ring-4 focus:ring-pin-blue-500/10 focus:border-pin-blue-500 transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-                    <div className="w-[100px] group">
-                      <label className="block text-[10px] font-bold text-pin-gray-400 dark:text-pin-gray-500 mb-1.5 uppercase tracking-widest">
-                        Giờ
-                      </label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-pin-gray-400 group-focus-within:text-pin-blue-500 transition-colors pointer-events-none">
-                          <ClockIcon className="w-4 h-4" />
-                        </div>
-                        <input
-                          type="time"
-                          value={saleTime}
-                          onChange={(e) => setSaleTime(e.target.value)}
-                          className="w-full pl-9 pr-2 py-2 bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-600 rounded-xl text-sm font-semibold text-pin-gray-700 dark:text-pin-gray-200 focus:ring-4 focus:ring-pin-blue-500/10 focus:border-pin-blue-500 transition-all outline-none"
                         />
                       </div>
                     </div>
@@ -1520,59 +1411,59 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
 
       {activeTab === "history" && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 animate-slideUp">
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-pin-blue-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-pin-blue-500 transition-colors">Doanh thu</span>
-                <span className="w-10 h-10 rounded-2xl bg-pin-blue-50 dark:bg-pin-blue-900/30 text-pin-blue-600 dark:text-pin-blue-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BanknotesIcon className="w-5 h-5" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 animate-slideUp">
+            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:shadow-pin-blue-500/5 transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-pin-blue-500 transition-colors">Doanh thu</span>
+                <span className="w-9 h-9 rounded-xl bg-pin-blue-50 dark:bg-pin-blue-900/30 text-pin-blue-600 dark:text-pin-blue-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <BanknotesIcon className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-3xl font-black text-pin-gray-900 dark:text-white tracking-tight">{formatCurrency(historyMetrics.revenue)}</div>
-              <div className="mt-3 text-[11px] font-bold text-pin-gray-400 flex items-center gap-2">
+              <div className="text-2xl font-black text-pin-gray-900 dark:text-white tracking-tight">{formatCurrency(historyMetrics.revenue)}</div>
+              <div className="mt-2 text-[10px] font-bold text-pin-gray-400 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {historyMetrics.count}/{recentSales.length} hóa đơn đang hiển thị
               </div>
             </div>
 
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-emerald-500 transition-colors">Lợi nhuận gộp</span>
+            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-emerald-500 transition-colors">Lợi nhuận gộp</span>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-[10px] font-black text-emerald-600 dark:text-emerald-300">
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-[9px] font-black text-emerald-600 dark:text-emerald-300">
                     {historyMetrics.margin.toFixed(1)}%
                   </span>
-                  <span className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ArrowTrendingUpIcon className="w-5 h-5" />
+                  <span className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <ArrowTrendingUpIcon className="w-4 h-4" />
                   </span>
                 </div>
               </div>
-              <div className={`text-3xl font-black tracking-tight ${historyMetrics.profit >= 0 ? "text-emerald-500 dark:text-emerald-300" : "text-red-500"}`}>
+              <div className={`text-2xl font-black tracking-tight ${historyMetrics.profit >= 0 ? "text-emerald-500 dark:text-emerald-300" : "text-red-500"}`}>
                 {formatCurrency(historyMetrics.profit)}
               </div>
-              <div className="mt-3 text-xs font-bold text-pin-gray-500 dark:text-pin-gray-300">Giá vốn: {formatCurrency(historyMetrics.cost)}</div>
+              <div className="mt-2 text-[10px] font-bold text-pin-gray-500 dark:text-pin-gray-300">Giá vốn: {formatCurrency(historyMetrics.cost)}</div>
             </div>
 
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-teal-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-teal-500 transition-colors">Đã thu</span>
-                <span className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <CheckCircleIcon className="w-5 h-5" />
+            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:shadow-teal-500/5 transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-teal-500 transition-colors">Đã thu</span>
+                <span className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <CheckCircleIcon className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-3xl font-black text-teal-600 dark:text-teal-400 tracking-tight">{formatCurrency(historyMetrics.paid)}</div>
-              <div className="mt-3 text-xs font-bold text-pin-gray-500 dark:text-pin-gray-300">{historyMetrics.completed} đơn đã/đang thu</div>
+              <div className="text-2xl font-black text-teal-600 dark:text-teal-400 tracking-tight">{formatCurrency(historyMetrics.paid)}</div>
+              <div className="mt-2 text-[10px] font-bold text-pin-gray-500 dark:text-pin-gray-300">{historyMetrics.completed} đơn đã/đang thu</div>
             </div>
 
-            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-orange-500 transition-colors">Công nợ</span>
-                <span className="w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <ClockIcon className="w-5 h-5" />
+            <div className="group bg-white dark:bg-pin-gray-800 border border-pin-gray-200 dark:border-pin-gray-700 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:shadow-orange-500/5 transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-pin-gray-400 group-hover:text-orange-500 transition-colors">Công nợ</span>
+                <span className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <ClockIcon className="w-4 h-4" />
                 </span>
               </div>
-              <div className="text-3xl font-black text-orange-500 dark:text-orange-300 tracking-tight">{formatCurrency(historyMetrics.debt)}</div>
-              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-pin-gray-200 dark:bg-pin-gray-600">
+              <div className="text-2xl font-black text-orange-500 dark:text-orange-300 tracking-tight">{formatCurrency(historyMetrics.debt)}</div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-pin-gray-200 dark:bg-pin-gray-600">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-orange-300 to-amber-400 transition-all"
                   style={{
@@ -1924,14 +1815,6 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
           <SalesInvoiceTemplate
             sale={invoiceSaleData}
             onClose={() => setShowInvoicePreview(false)}
-            inventoryLogs={
-              invoiceInventoryLogs || {
-                isLoading: true,
-                error: null,
-                materials: [],
-                products: [],
-              }
-            }
           />
         </InvoicePreviewModal>
       )}

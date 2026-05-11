@@ -46,6 +46,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       <button
         type="button"
         aria-label={label}
+        title={label}
         disabled={disabled}
         className={`h-10 w-10 rounded-full flex items-center justify-center ring-1 ring-inset transition-colors duration-200 focus:outline-none ${disabled
             ? "opacity-30 cursor-not-allowed bg-pin-gray-100 ring-pin-gray-200 dark:bg-pin-gray-800/40 dark:ring-pin-gray-600"
@@ -291,6 +292,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
   const { deleteProductWithOptions } = useProductDeletion();
   const [deleteQtyMap, setDeleteQtyMap] = useState<Record<string, number>>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [showProductForm, setShowProductForm] = useState<{
     type: "edit";
@@ -301,13 +303,18 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
   const filteredProducts = useMemo(
     () =>
       products.filter(
-        (p) =>
-          (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (filterCategoryId === "" ||
-            (filterCategoryId === "__none__" ? !p.category_id : p.category_id === filterCategoryId))
+        (p) => {
+          const matchSearch = (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+          const matchCategory = (filterCategoryId === "" ||
+            (filterCategoryId === "__none__" ? !p.category_id : p.category_id === filterCategoryId));
+          let matchStock = true;
+          if (stockFilter === "out_of_stock") matchStock = p.stock === 0;
+          else if (stockFilter === "in_stock") matchStock = p.stock > 0;
+          return matchSearch && matchCategory && matchStock;
+        }
       ),
-    [products, searchTerm, filterCategoryId]
+    [products, searchTerm, filterCategoryId, stockFilter]
   );
 
   const paginatedProducts = useMemo(() => {
@@ -409,6 +416,15 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                 {cat.type === "material" ? "📦" : "🏷️"} {cat.name}
               </option>
             ))}
+          </select>
+          <select
+            value={stockFilter}
+            onChange={(e) => { setStockFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-pin-gray-300 dark:border-pin-gray-600 rounded-lg bg-white dark:bg-pin-gray-700 text-pin-gray-900 dark:text-white text-sm font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+          >
+            <option value="all">Tất cả tồn kho</option>
+            <option value="in_stock">Còn hàng</option>
+            <option value="out_of_stock">Hết hàng (Tồn = 0)</option>
           </select>
           {filteredProducts.length !== products.length && (
             <div className="px-3 md:px-5 py-2 md:py-3 bg-pin-gray-100 dark:bg-pin-gray-800 rounded-lg md:rounded-xl border border-pin-gray-200 dark:border-pin-gray-700 text-center md:text-left">
@@ -549,12 +565,6 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     SKU
                   </div>
                 </th>
-                <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300">
-                  <div className="flex items-center gap-2">
-                    <Icon name="tag" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
-                    Danh mục
-                  </div>
-                </th>
                 <th className="p-3 font-semibold text-pin-gray-700 dark:text-pin-gray-300 text-right">
                   <div className="flex items-center gap-2 justify-end">
                     <Icon name="chart-bar" className="w-4 h-4 text-pin-gray-600 dark:text-pin-gray-300" />
@@ -596,10 +606,10 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                   >
                     <td className="p-3">
                       <div>
-                        <div className="font-medium text-pin-gray-800 dark:text-pin-gray-200">
+                        <div className="font-medium text-pin-gray-800 dark:text-pin-gray-200 text-[15px]">
                           {product.name}
                         </div>
-                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">
+                        <div className="text-[13px] text-pin-gray-600 dark:text-pin-gray-300 mt-0.5">
                           Lợi nhuận lẻ: {formatCurrency(profitRetail)} (
                           {profitMarginRetail > 0 ? "+" : ""}
                           {profitMarginRetail.toFixed(1)}%)
@@ -610,15 +620,6 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                       <span className="bg-pin-gray-100 dark:bg-pin-gray-700 px-2 py-1 rounded text-sm font-mono text-pin-gray-700 dark:text-pin-gray-300">
                         {product.sku}
                       </span>
-                    </td>
-                    <td className="p-3">
-                      {getCategoryName(product.category_id) ? (
-                        <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-sm font-medium">
-                          {getCategoryName(product.category_id)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-pin-gray-400 italic">Chưa phân loại</span>
-                      )}
                     </td>
                     <td className="p-3 text-right">
                       <div
@@ -640,10 +641,10 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     </td>
                     <td className="p-3 text-right">
                       <div className="space-y-1">
-                        <div className="font-semibold text-pin-gray-800 dark:text-pin-gray-200">
+                        <div className="text-base font-bold text-pin-gray-900 dark:text-white">
                           Lẻ: {formatCurrency(retailPrice)}
                         </div>
-                        <div className="text-xs text-pin-gray-500 dark:text-pin-gray-400">
+                        <div className="text-[11px] text-pin-gray-500 dark:text-pin-gray-400 opacity-80 mt-0.5">
                           Sỉ: {formatCurrency(wholesalePrice)}
                         </div>
                       </div>
@@ -661,8 +662,8 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                     <td className="p-3 sticky right-0 z-[5] bg-white dark:bg-pin-gray-900 border-l border-pin-gray-200 dark:border-pin-gray-700 group-hover:bg-pin-gray-50 dark:group-hover:bg-pin-gray-700/30 transition-colors">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                         {/* Quantity input and delete button */}
-                        <div className="flex items-center gap-2 text-xs text-pin-gray-400">
-                          <span>SL</span>
+                        <div className="flex items-center bg-red-50 dark:bg-red-900/10 rounded-lg p-1 border border-red-100 dark:border-red-900/30">
+                          <span className="text-[11px] font-medium text-red-600 dark:text-red-400 px-1.5 whitespace-nowrap">Xóa kho:</span>
                           <input
                             type="number"
                             min={1}
@@ -675,18 +676,20 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                                 [product.id]: Number(e.target.value),
                               }))
                             }
-                            className="w-16 h-8 px-2 text-sm rounded-lg border border-pin-gray-400/70 bg-transparent text-pin-gray-800 dark:text-white focus:ring-2 focus:ring-red-400/40 focus:border-red-400"
-                            title="Số lượng muốn xóa và hoàn kho NVL"
+                            className="w-14 h-7 px-1.5 text-xs rounded bg-white dark:bg-pin-gray-800 text-pin-gray-800 dark:text-white border border-pin-gray-200 dark:border-pin-gray-600 focus:ring-1 focus:ring-red-400 focus:outline-none"
+                            title="Nhập số lượng muốn xóa và hoàn kho NVL"
                           />
-                          <ActionButton
-                            icon="trash"
-                            label="Xóa & hoàn kho"
-                            variant="danger"
-                            disabled={
-                              !deleteQtyMap[product.id] ||
-                              deleteQtyMap[product.id] <= 0 ||
-                              !currentUser
-                            }
+                          <div className="ml-1">
+                            <ActionButton
+                              icon="trash"
+                              label="Xác nhận xóa & hoàn kho"
+                              variant="danger"
+                              className="!w-7 !h-7 [&_svg]:!w-4 [&_svg]:!h-4"
+                              disabled={
+                                !deleteQtyMap[product.id] ||
+                                deleteQtyMap[product.id] <= 0 ||
+                                !currentUser
+                              }
                             onClick={() => {
                               if (!currentUser) {
                                 showToast("Vui lòng đăng nhập để thực hiện thao tác", "warn");
@@ -744,6 +747,7 @@ const PinProductManager: React.FC<PinProductManagerProps> = ({ products, updateP
                               );
                             }}
                           />
+                          </div>
                         </div>
 
                         {/* Action buttons */}
