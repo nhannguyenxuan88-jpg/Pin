@@ -884,7 +884,7 @@ export function createProductionService(ctx: PinContextType): ProductionService 
             message: "Không thể hoàn kho NVL vì không tìm thấy công thức tương ứng.",
             type: "warn",
           });
-          return;
+          throw new Error("Missing BOM");
         }
         const returnMap = new Map<string, number>();
         (bom.materials || []).forEach((m) => {

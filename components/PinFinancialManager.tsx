@@ -2015,25 +2015,25 @@ const PinFinancialManager: React.FC = () => {
       {/* ====== ADD TRANSACTION MODAL ====== */}
       {showAddTransaction && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl border border-slate-700 flex flex-col">
-            <div className="p-4 sm:p-6 border-b border-slate-700 flex-shrink-0">
-              <h3 className="text-base sm:text-lg font-semibold text-white">
+          <div className="bg-slate-900/95 rounded-xl w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl border border-slate-600/70 flex flex-col">
+            <div className="p-3 sm:p-4 border-b border-slate-700/80 flex-shrink-0">
+              <h3 className="text-base sm:text-lg font-semibold text-slate-100">
                 {editingTransaction ? "✏️ Sửa giao dịch" : "➕ Thêm giao dịch mới"}
               </h3>
             </div>
-            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
+            <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3 overflow-y-auto flex-1">
               {/* Transaction Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Loại giao dịch
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setNewTransaction((prev) => ({ ...prev, type: "income" }))}
-                    className={`p-2.5 sm:p-3 rounded-lg border text-center font-medium transition-colors text-sm sm:text-base ${newTransaction.type === "income"
-                      ? "bg-teal-500/20 border-teal-500 text-teal-400"
-                      : "border-slate-600 text-gray-400 hover:bg-slate-700"
+                    className={`p-2.5 rounded-lg border text-center font-semibold transition-colors text-sm ${newTransaction.type === "income"
+                      ? "bg-emerald-500/25 border-emerald-400 text-emerald-200 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                      : "border-slate-600/80 text-slate-300 hover:bg-slate-800"
                       }`}
                   >
                     ↑ Thu nhập
@@ -2041,9 +2041,9 @@ const PinFinancialManager: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setNewTransaction((prev) => ({ ...prev, type: "expense" }))}
-                    className={`p-2.5 sm:p-3 rounded-lg border text-center font-medium transition-colors text-sm sm:text-base ${newTransaction.type === "expense"
-                      ? "bg-red-500/20 border-red-500 text-red-400"
-                      : "border-slate-600 text-gray-400 hover:bg-slate-700"
+                    className={`p-2.5 rounded-lg border text-center font-semibold transition-colors text-sm ${newTransaction.type === "expense"
+                      ? "bg-rose-500/25 border-rose-400 text-rose-200 shadow-[0_0_0_1px_rgba(244,63,94,0.25)]"
+                      : "border-slate-600/80 text-slate-300 hover:bg-slate-800"
                       }`}
                   >
                     ↓ Chi phí
@@ -2053,7 +2053,7 @@ const PinFinancialManager: React.FC = () => {
 
               {/* Amount */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Số tiền <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -2065,7 +2065,7 @@ const PinFinancialManager: React.FC = () => {
                       amount: parseFloat(e.target.value) || 0,
                     }))
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-slate-800/70 border border-slate-600/80 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-sm"
                   placeholder="0"
                   min="0"
                 />
@@ -2073,7 +2073,7 @@ const PinFinancialManager: React.FC = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Nội dung <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -2085,14 +2085,14 @@ const PinFinancialManager: React.FC = () => {
                       description: e.target.value,
                     }))
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-slate-800/70 border border-slate-600/80 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-sm"
                   placeholder="Nhập nội dung giao dịch"
                 />
               </div>
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Danh mục
                 </label>
                 <select
@@ -2103,7 +2103,7 @@ const PinFinancialManager: React.FC = () => {
                       category: e.target.value,
                     }))
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-slate-800/70 border border-slate-600/80 rounded-lg text-slate-100 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-sm"
                 >
                   <option value="">Chọn danh mục</option>
                   {newTransaction.type === "income" ? (
@@ -2126,7 +2126,7 @@ const PinFinancialManager: React.FC = () => {
 
               {/* Payment Source */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Nguồn tiền
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -2135,9 +2135,9 @@ const PinFinancialManager: React.FC = () => {
                     onClick={() =>
                       setNewTransaction((prev) => ({ ...prev, paymentSource: "cash" }))
                     }
-                    className={`p-2.5 sm:p-3 rounded-lg border text-center font-medium transition-colors text-sm sm:text-base ${newTransaction.paymentSource === "cash"
-                      ? "bg-yellow-500/20 border-yellow-500 text-yellow-400"
-                      : "border-slate-600 text-gray-400 hover:bg-slate-700"
+                    className={`p-2.5 rounded-lg border text-center font-semibold transition-colors text-sm ${newTransaction.paymentSource === "cash"
+                      ? "bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_0_1px_rgba(245,158,11,0.25)]"
+                      : "border-slate-600/80 text-slate-300 hover:bg-slate-800"
                       }`}
                   >
                     💵 Tiền mặt
@@ -2147,9 +2147,9 @@ const PinFinancialManager: React.FC = () => {
                     onClick={() =>
                       setNewTransaction((prev) => ({ ...prev, paymentSource: "bank" }))
                     }
-                    className={`p-2.5 sm:p-3 rounded-lg border text-center font-medium transition-colors text-sm sm:text-base ${newTransaction.paymentSource === "bank"
-                      ? "bg-blue-500/20 border-blue-500 text-blue-400"
-                      : "border-slate-600 text-gray-400 hover:bg-slate-700"
+                    className={`p-2.5 rounded-lg border text-center font-semibold transition-colors text-sm ${newTransaction.paymentSource === "bank"
+                      ? "bg-sky-500/25 border-sky-400 text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,0.25)]"
+                      : "border-slate-600/80 text-slate-300 hover:bg-slate-800"
                       }`}
                   >
                     🏦 Ngân hàng
@@ -2159,7 +2159,7 @@ const PinFinancialManager: React.FC = () => {
 
               {/* Contact Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Đối tượng (khách hàng/nhà cung cấp)
                 </label>
                 <input
@@ -2171,14 +2171,14 @@ const PinFinancialManager: React.FC = () => {
                       contactName: e.target.value,
                     }))
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-slate-800/70 border border-slate-600/80 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-sm"
                   placeholder="Tên khách hàng hoặc nhà cung cấp"
                 />
               </div>
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Ngày giao dịch
                 </label>
                 <input
@@ -2190,13 +2190,13 @@ const PinFinancialManager: React.FC = () => {
                       date: e.target.value,
                     }))
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-slate-800/70 border border-slate-600/80 rounded-lg text-slate-100 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-sm"
                 />
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 sm:mb-2">
+                <label className="block text-xs font-semibold text-slate-200 mb-1.5">
                   Ghi chú
                 </label>
                 <textarea
@@ -2207,23 +2207,23 @@ const PinFinancialManager: React.FC = () => {
                       notes: e.target.value,
                     }))
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 bg-slate-800/70 border border-slate-600/80 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/60 text-sm"
                   rows={2}
                   placeholder="Ghi chú thêm (không bắt buộc)"
                 />
               </div>
             </div>
-            <div className="p-4 sm:p-6 border-t border-slate-700 flex gap-2 sm:gap-3 flex-shrink-0">
+            <div className="p-3 sm:p-4 border-t border-slate-700/80 flex gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={resetTransactionForm}
-                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-gray-300 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors font-medium text-sm sm:text-base"
+                className="flex-1 px-3 py-2 text-slate-200 bg-slate-700/80 hover:bg-slate-600 rounded-lg transition-colors font-medium text-sm"
               >
                 Hủy
               </button>
               <button
                 onClick={handleAddTransaction}
                 disabled={!newTransaction.description || !newTransaction.amount || isSubmitting}
-                className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-600 disabled:text-gray-400 rounded-lg transition-colors font-medium text-sm sm:text-base flex justify-center items-center gap-2"
+                className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 text-white hover:from-blue-600 hover:via-indigo-600 hover:to-blue-700 disabled:bg-slate-700 disabled:text-slate-400 rounded-lg transition-colors font-semibold text-sm flex justify-center items-center gap-2"
               >
                 {isSubmitting && (
                   <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

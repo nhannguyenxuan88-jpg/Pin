@@ -262,7 +262,9 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
             ? item.productId === productId && (item.priceType || "retail") === priceType
             : item.productId === productId;
 
-          return shouldUpdate ? { ...item, quantity: Math.max(0, quantity) } : item;
+          if (!shouldUpdate) return item;
+          const maxQty = Number.isFinite(item.stock) ? Math.max(0, item.stock) : quantity;
+          return { ...item, quantity: Math.max(0, Math.min(quantity, maxQty)) };
         })
         .filter((item) => item.quantity > 0)
     );
@@ -502,13 +504,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
   const recentSales = useMemo(() => (pinSales || []).slice(0, 50), [pinSales]);
   const [historySearch, setHistorySearch] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState<
-    "all" | "paid" | "partial" | "debt" | "installment"
+    "all" | "paid" | "partial" | "debt" | "installment" | "cancelled"
   >("all");
   const [historyDateFilter, setHistoryDateFilter] = useState<"all" | "today" | "7d" | "month">(
     "all"
   );
 
-  const getSalePaymentStatus = (sale: PinSale): "paid" | "partial" | "debt" | "installment" => {
+  const getSalePaymentStatus = (sale: PinSale): "paid" | "partial" | "debt" | "installment" | "cancelled" => {
+    if (sale.paymentStatus === "cancelled") return "cancelled";
     const linkedPlan = installmentPlans.find((plan) => plan.saleId === sale.id);
     const actualInstallmentPlan = sale.installmentPlan || linkedPlan;
     if (sale.isInstallment || actualInstallmentPlan) return "installment";
@@ -533,6 +536,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
       if (historyDateFilter === "month" && saleTime < startOfMonth) return false;
 
       const status = getSalePaymentStatus(sale);
+      if (status === "cancelled" && historyStatusFilter !== "cancelled") return false;
       if (historyStatusFilter !== "all" && status !== historyStatusFilter) return false;
 
       if (!query) return true;
@@ -618,10 +622,34 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
     const finalDiscountAmount =
       editDiscountType === "%" ? Math.round((subtotal * editDiscount) / 100) : editDiscount;
 
+    const newTotal = subtotal - finalDiscountAmount;
+    const isInstallment = editingSale.isInstallment || editingSale.paymentStatus === "installment";
+    const rawPaid =
+      typeof editingSale.paidAmount === "number"
+        ? editingSale.paidAmount
+        : editingSale.paymentStatus === "debt"
+          ? 0
+          : editingSale.total;
+    const adjustedPaid = isInstallment
+      ? Math.min(Math.max(0, rawPaid), newTotal)
+      : editingSale.paymentStatus === "debt"
+        ? 0
+        : Math.min(Math.max(0, rawPaid), newTotal);
+
+    const normalizedStatus: PinSale["paymentStatus"] = isInstallment
+      ? "installment"
+      : adjustedPaid <= 0
+        ? "debt"
+        : adjustedPaid < newTotal
+          ? "partial"
+          : "paid";
+
     const updated: PinSale = {
       ...editingSale,
       discount: finalDiscountAmount,
-      total: subtotal - finalDiscountAmount,
+      total: newTotal,
+      paidAmount: adjustedPaid,
+      paymentStatus: normalizedStatus,
       paymentMethod: editPayment,
     };
     await updatePinSale(updated);
@@ -1514,6 +1542,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                 <option value="partial">Cần trả</option>
                 <option value="debt">Ghi nợ</option>
                 <option value="installment">Trả góp</option>
+                <option value="cancelled">Đã hủy</option>
               </select>
             </div>
           </div>
@@ -1529,9 +1558,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               filteredHistorySales.map((s: PinSale) => {
                 const linkedPlan = installmentPlans.find((p) => p.saleId === s.id);
                 const actualInstallmentPlan = s.installmentPlan || linkedPlan;
-                let paymentStatus: "paid" | "partial" | "debt" | "installment" = "paid";
+                let paymentStatus: "paid" | "partial" | "debt" | "installment" | "cancelled" = "paid";
 
-                if (s.isInstallment || actualInstallmentPlan) paymentStatus = "installment";
+                if (s.paymentStatus === "cancelled") paymentStatus = "cancelled";
+                else if (s.isInstallment || actualInstallmentPlan) paymentStatus = "installment";
                 else if (s.paidAmount !== undefined && s.paidAmount > 0 && s.paidAmount < s.total) paymentStatus = "partial";
                 else if (s.paidAmount === 0 || s.paymentStatus === "debt") paymentStatus = "debt";
 
@@ -1540,6 +1570,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   partial: "from-amber-50 to-orange-50 text-amber-600 border-amber-100 dark:from-amber-900/20 dark:to-orange-900/20",
                   debt: "from-red-50 to-rose-50 text-red-600 border-red-100 dark:from-red-900/20 dark:to-rose-900/20",
                   installment: "from-purple-50 to-indigo-50 text-purple-600 border-purple-100 dark:from-purple-900/20 dark:to-indigo-900/20",
+                  cancelled: "from-slate-100 to-slate-200 text-slate-500 border-slate-200 dark:from-slate-800/40 dark:to-slate-700/40",
                 }[paymentStatus];
                 const saleCost = getSaleCost(s);
                 const saleProfit = Number(s.total || 0) - saleCost;
@@ -1554,7 +1585,15 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         </p>
                       </div>
                       <div className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase border bg-gradient-to-br ${statusColor}`}>
-                        {paymentStatus === 'paid' ? 'Hoàn tất' : paymentStatus === 'partial' ? 'Một phần' : paymentStatus === 'debt' ? 'Nợ' : 'Trả góp'}
+                        {paymentStatus === 'paid'
+                          ? 'Hoàn tất'
+                          : paymentStatus === 'partial'
+                            ? 'Một phần'
+                            : paymentStatus === 'debt'
+                              ? 'Nợ'
+                              : paymentStatus === 'installment'
+                                ? 'Trả góp'
+                                : 'Đã hủy'}
                       </div>
                     </div>
 
@@ -1578,7 +1617,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                       <div className="flex gap-2">
                         <button onClick={() => { setInvoiceSaleData(s); setShowInvoicePreview(true); }} className="w-9 h-9 flex items-center justify-center bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all" title="In hóa đơn"><PrinterIcon className="w-4 h-4" /></button>
                         <button onClick={() => openEdit(s)} className="w-9 h-9 flex items-center justify-center bg-pin-blue-50 dark:bg-pin-blue-900/30 text-pin-blue-600 rounded-xl hover:bg-pin-blue-100 transition-all" title="Sửa"><PencilSquareIcon className="w-4 h-4" /></button>
-                        <button onClick={() => showConfirmDialog("Xóa hóa đơn", "Bạn có chắc chắn muốn xóa đơn này không?", () => deletePinSale(s.id))} className="ml-1 w-9 h-9 flex items-center justify-center bg-red-50 dark:bg-red-900/30 text-red-500 rounded-xl hover:bg-red-100 transition-all" title="Xóa"><TrashIcon className="w-4 h-4" /></button>
+                        <button onClick={() => showConfirmDialog("Hủy hóa đơn", "Bạn có chắc chắn muốn hủy đơn này không?", () => deletePinSale(s.id))} className="ml-1 w-9 h-9 flex items-center justify-center bg-red-50 dark:bg-red-900/30 text-red-500 rounded-xl hover:bg-red-100 transition-all" title="Hủy"><TrashIcon className="w-4 h-4" /></button>
                       </div>
                     </div>
                   </div>
@@ -1626,9 +1665,10 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     filteredHistorySales.map((s: PinSale) => {
                       const linkedPlan = installmentPlans.find((p) => p.saleId === s.id);
                       const actualInstallmentPlan = s.installmentPlan || linkedPlan;
-                      let paymentStatus: "paid" | "partial" | "debt" | "installment" = "paid";
+                      let paymentStatus: "paid" | "partial" | "debt" | "installment" | "cancelled" = "paid";
 
-                      if (s.isInstallment || actualInstallmentPlan) paymentStatus = "installment";
+                      if (s.paymentStatus === "cancelled") paymentStatus = "cancelled";
+                      else if (s.isInstallment || actualInstallmentPlan) paymentStatus = "installment";
                       else if (s.paidAmount !== undefined && s.paidAmount > 0 && s.paidAmount < s.total) paymentStatus = "partial";
                       else if (s.paidAmount === 0 || s.paymentStatus === "debt") paymentStatus = "debt";
 
@@ -1637,6 +1677,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                         partial: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
                         debt: "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400",
                         installment: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
+                        cancelled: "bg-slate-100 text-slate-500 dark:bg-slate-700/40 dark:text-slate-300",
                       }[paymentStatus];
                       const saleCost = getSaleCost(s);
                       const saleProfit = Number(s.total || 0) - saleCost;
@@ -1674,7 +1715,15 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                           </td>
                           <td className="px-5 py-4 align-middle text-center">
                             <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide ${statusStyle}`}>
-                              {paymentStatus === 'paid' ? 'Hoàn tất' : paymentStatus === 'partial' ? 'Cần trả' : paymentStatus === 'debt' ? 'Ghi nợ' : 'Trả góp'}
+                              {paymentStatus === 'paid'
+                                ? 'Hoàn tất'
+                                : paymentStatus === 'partial'
+                                  ? 'Cần trả'
+                                  : paymentStatus === 'debt'
+                                    ? 'Ghi nợ'
+                                    : paymentStatus === 'installment'
+                                      ? 'Trả góp'
+                                      : 'Đã hủy'}
                             </span>
                           </td>
                           <td className="px-5 py-4 align-middle text-right">
@@ -1697,7 +1746,7 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => { setInvoiceSaleData(s); setShowInvoicePreview(true); }} className="p-1.5 text-pin-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-md transition-all" title="In hóa đơn"><PrinterIcon className="w-4 h-4" /></button>
                               <button onClick={() => openEdit(s)} className="p-1.5 text-pin-gray-400 hover:text-pin-blue-600 hover:bg-pin-blue-50 dark:hover:bg-pin-blue-500/10 rounded-md transition-all" title="Sửa"><PencilSquareIcon className="w-4 h-4" /></button>
-                              <button onClick={() => showConfirmDialog("Xóa hóa đơn", "Bạn có chắc chắn muốn xóa đơn này không?", () => deletePinSale(s.id))} className="p-1.5 text-pin-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-all" title="Xóa"><TrashIcon className="w-4 h-4" /></button>
+                              <button onClick={() => showConfirmDialog("Hủy hóa đơn", "Bạn có chắc chắn muốn hủy đơn này không?", () => deletePinSale(s.id))} className="p-1.5 text-pin-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-all" title="Hủy"><TrashIcon className="w-4 h-4" /></button>
                             </div>
                           </td>
                         </tr>

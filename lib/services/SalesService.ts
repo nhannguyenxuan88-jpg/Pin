@@ -435,6 +435,15 @@ export function createSalesService(ctx: PinContextType): SalesService {
         return;
       }
 
+      if (sale.paymentStatus === "cancelled") {
+        ctx.addToast?.({
+          title: "Hoá đơn đã hủy",
+          message: "Hoá đơn này đã được hủy trước đó.",
+          type: "warn",
+        });
+        return;
+      }
+
       if (IS_OFFLINE_MODE) {
         const usageByProduct = new Map<string, number>();
         const usageByMaterial = new Map<string, number>();
@@ -476,7 +485,11 @@ export function createSalesService(ctx: PinContextType): SalesService {
             return delta > 0 ? { ...next, stock: (next.stock || 0) + delta } : next;
           });
         });
-        ctx.setPinSales((prev: PinSale[]) => prev.filter((s: PinSale) => s.id !== saleId));
+        ctx.setPinSales((prev: PinSale[]) =>
+          prev.map((s: PinSale) =>
+            s.id === saleId ? { ...s, paymentStatus: "cancelled" } : s
+          )
+        );
         ctx.setCashTransactions?.((prev: CashTransaction[]) =>
           prev.filter((t: CashTransaction) => t.saleId !== saleId)
         );
@@ -671,19 +684,26 @@ export function createSalesService(ctx: PinContextType): SalesService {
         // Delete cash transactions via centralized finance helper
         await ctx.deleteCashTransactions?.({ saleId });
 
-        const { error: delSaleErr } = await supabase.from("pin_sales").delete().eq("id", saleId);
-        if (delSaleErr) {
+        const { error: cancelErr } = await supabase
+          .from("pin_sales")
+          .update({ payment_status: "cancelled" })
+          .eq("id", saleId);
+        if (cancelErr) {
           ctx.addToast?.({
-            title: "Lỗi xoá hoá đơn",
-            message: delSaleErr.message || String(delSaleErr),
+            title: "Lỗi hủy hoá đơn",
+            message: cancelErr.message || String(cancelErr),
             type: "error",
           });
           return;
         }
 
-        ctx.setPinSales((prev: PinSale[]) => prev.filter((s: PinSale) => s.id !== saleId));
+        ctx.setPinSales((prev: PinSale[]) =>
+          prev.map((s: PinSale) =>
+            s.id === saleId ? { ...s, paymentStatus: "cancelled" } : s
+          )
+        );
         ctx.addToast?.({
-          title: "Đã xoá hoá đơn",
+          title: "Đã hủy hoá đơn",
           message: saleId,
           type: "success",
         });
@@ -691,7 +711,7 @@ export function createSalesService(ctx: PinContextType): SalesService {
         const errorMessage = e instanceof Error ? e.message : String(e);
         console.error("Exception xoá hoá đơn PIN:", e);
         ctx.addToast?.({
-          title: "Lỗi xoá hoá đơn",
+          title: "Lỗi hủy hoá đơn",
           message: errorMessage,
           type: "error",
         });

@@ -670,7 +670,7 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
               created_at: (row.created_at || row.createdat || undefined) as string | undefined,
               paymentStatus: (() => {
                 const v = row.payment_status || row.paymentstatus;
-                if (v === "paid" || v === "partial" || v === "debt" || v === "installment") return v;
+                if (v === "paid" || v === "partial" || v === "debt" || v === "installment" || v === "cancelled") return v;
                 return undefined;
               })(),
               paidAmount: (row.paid_amount ?? row.paidamount ?? undefined) as number | undefined,

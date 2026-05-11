@@ -679,7 +679,7 @@ export interface PinSale {
   created_at?: string;
   branchId?: string; // Chi nhánh bán hàng
   // Optional payment tracking (front-end/UI only; not necessarily stored in DB)
-  paymentStatus?: "paid" | "partial" | "debt" | "installment";
+  paymentStatus?: "paid" | "partial" | "debt" | "installment" | "cancelled";
   paidAmount?: number; // amount received at sale time
   dueDate?: string; // optional due date when recording debt
 
