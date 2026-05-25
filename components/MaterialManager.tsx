@@ -4067,145 +4067,134 @@ const MaterialManager: React.FC<{
 
   return (
     <div className="flex flex-col h-full min-h-0 pb-20 md:pb-1">
-      {/* Mobile Header - Clean & Simple */}
-      <div className="p-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-gray-800 md:hidden sticky top-0 z-30 shadow-sm">
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-2">
+      {/* Mobile Header - Clean & Elegant App-like Design */}
+      <div className="p-4 bg-slate-50 dark:bg-[#0b0f19] border-b border-slate-200/50 dark:border-slate-850/60 md:hidden sticky top-0 z-30 shadow-sm space-y-3.5">
+        <div className="flex justify-between items-center gap-3">
+          {/* Segmented Control View Selector */}
+          <div className="flex-1 flex rounded-xl bg-slate-100 p-1 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850">
             <button
               onClick={() => setActiveView("materials")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${activeView === "materials" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-1 ${activeView === "materials" ? "bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400" : "text-slate-500 hover:text-slate-900 dark:text-slate-400"}`}
             >
               Kho hàng
             </button>
             <button
               onClick={() => setActiveView("history")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${activeView === "history" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-1 ${activeView === "history" ? "bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400" : "text-slate-500 hover:text-slate-900 dark:text-slate-400"}`}
             >
               Lịch sử
             </button>
             <button
               onClick={() => setActiveView("orders")}
-              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${activeView === "orders" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-1 ${activeView === "orders" ? "bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400" : "text-slate-500 hover:text-slate-900 dark:text-slate-400"}`}
             >
               Đặt hàng
             </button>
           </div>
 
-          {/* Mobile Actions */}
-          <div className="flex gap-2">
-            {activeView === "materials" && (
-              <button
-                onClick={() => navigate("/materials/goods-receipt/new")}
-                className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
-              >
-                <Icon name="add" size="sm" weight="bold" />
-              </button>
-            )}
+          {/* Add Action (FAB-like or top header action) */}
+          {activeView === "materials" && (
+            <button
+              onClick={() => navigate("/materials/goods-receipt/new")}
+              className="w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-blue-600 to-sky-500 text-white rounded-xl shadow-md active:scale-95 transition-all"
+            >
+              <Icon name="add" size="md" tone="contrast" weight="bold" />
+            </button>
+          )}
+        </div>
+
+        {/* Search & Stats Card */}
+        <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 p-4 rounded-2xl shadow-sm space-y-3">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm kiếm vật tư, SKU..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-950 text-gray-900 dark:text-white rounded-xl border border-slate-250 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+               <Icon name="search" size="sm" tone="muted" />
+            </span>
+          </div>
+
+          {/* Filters Grid */}
+          <div className="grid grid-cols-3 gap-2">
+            <select
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-800 outline-none focus:border-blue-500 transition-all"
+            >
+              <option value="">Tất cả NCC</option>
+              {uniqueSuppliers.map((supplier) => (
+                <option key={supplier} value={supplier}>
+                  {supplier}
+                </option>
+              ))}
+            </select>
+            <select
+              value={unitFilter}
+              onChange={(e) => setUnitFilter(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-800 outline-none focus:border-blue-500 transition-all"
+            >
+              <option value="">Đơn vị</option>
+              {uniqueUnits.map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit}
+                </option>
+              ))}
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as "" | "material" | "product" | "finished_goods")}
+              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-800 outline-none focus:border-blue-500 transition-all"
+            >
+              <option value="">Loại</option>
+              <option value="material">Vật tư</option>
+              <option value="product">Sản phẩm</option>
+              <option value="finished_goods">Thành phẩm</option>
+            </select>
+          </div>
+
+          {/* Stats Badges */}
+          <div className="flex items-center justify-between pt-1 text-xs">
+            <span className="font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-md">
+              {filteredMaterials.length}/{materials.length} SP
+            </span>
+            <span className="font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-md">
+              Tồn: {materials.reduce((sum, m) => sum + (m.stock || 0), 0).toLocaleString()}
+            </span>
+            <span className="font-extrabold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-md">
+              Giá trị: {formatCurrency(totalImportValue)}
+            </span>
           </div>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Tìm kiếm..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-          />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2">
-             <Icon name="search" size="sm" tone="muted" />
-          </span>
-        </div>
-
-        {/* Row 3: Filters - Compact */}
-        <div className="flex items-center gap-2 mt-2">
-          <select
-            value={supplierFilter}
-            onChange={(e) => setSupplierFilter(e.target.value)}
-            className="flex-1 select-base text-xs"
-          >
-            <option value="">Tất cả NCC</option>
-            {uniqueSuppliers.map((supplier) => (
-              <option key={supplier} value={supplier}>
-                {supplier}
-              </option>
-            ))}
-          </select>
-          <select
-            value={unitFilter}
-            onChange={(e) => setUnitFilter(e.target.value)}
-            className="select-base text-xs"
-          >
-            <option value="">Đơn vị</option>
-            {uniqueUnits.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as "" | "material" | "product" | "finished_goods")}
-            className="select-base text-xs"
-          >
-            <option value="">Loại</option>
-            <option value="material">Vật tư</option>
-            <option value="product">Sản phẩm</option>
-            <option value="finished_goods">Thành phẩm</option>
-          </select>
-        </div>
-
-        {/* Row 4: Stats - Single line */}
-        <div className="flex items-center justify-between mt-2 text-xs">
-          <span className="text-blue-400 font-medium">
-            {filteredMaterials.length}/{materials.length} SP
-          </span>
-          <span className="text-emerald-400">
-            Tồn: {materials.reduce((sum, m) => sum + (m.stock || 0), 0).toLocaleString()}
-          </span>
-          <span className="text-amber-400">Giá trị: {formatCurrency(totalImportValue)}</span>
-        </div>
-
-        {/* Row 5: Stock Filter Tabs - Horizontal scroll */}
-        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide pb-1">
+        {/* Stock Filter Tabs - Sleek Horizontal scroll pills */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           <button
             onClick={() => setStockFilter("")}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "" ? "bg-slate-900 text-white shadow-lg" : "bg-slate-800 text-slate-400 hover:text-white"
-              }`}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border ${stockFilter === "" ? "bg-slate-900 text-white border-slate-900 shadow-md dark:bg-white dark:text-slate-950 dark:border-white" : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:text-white"}`}
           >
             Tất cả <span className="ml-1 opacity-50">{materials.length}</span>
           </button>
           <button
             onClick={() => setStockFilter("normal")}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "normal"
-              ? "bg-emerald-600 text-white shadow-lg"
-              : "bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40"
-              }`}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border ${stockFilter === "normal" ? "bg-emerald-600 text-white border-emerald-600 shadow-md dark:bg-emerald-500 dark:text-slate-950 dark:border-emerald-500" : "bg-emerald-900/10 text-emerald-600 border-emerald-250/20 dark:bg-emerald-900/20 dark:text-emerald-450 dark:border-emerald-800/40"}`}
           >
-            Còn hàng{" "}
-            <span className="ml-1 opacity-50">
-              {materials.filter((m) => (m.stock || 0) > 10).length}
-            </span>
+            Còn hàng <span className="ml-1 opacity-50">{materials.filter((m) => (m.stock || 0) > 10).length}</span>
           </button>
           <button
             onClick={() => setStockFilter("low")}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "low" ? "bg-amber-600 text-white shadow-lg" : "bg-amber-900/20 text-amber-500 hover:bg-amber-900/40"
-              }`}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border ${stockFilter === "low" ? "bg-amber-600 text-white border-amber-600 shadow-md dark:bg-amber-500 dark:text-slate-950 dark:border-amber-500" : "bg-amber-900/10 text-amber-600 border-amber-250/20 dark:bg-amber-900/20 dark:text-amber-450 dark:border-amber-800/40"}`}
           >
-            Sắp hết{" "}
-            <span className="ml-1 opacity-50">
-              {materials.filter((m) => (m.stock || 0) > 0 && (m.stock || 0) <= 10).length}
-            </span>
+            Sắp hết <span className="ml-1 opacity-50">{materials.filter((m) => (m.stock || 0) > 0 && (m.stock || 0) <= 10).length}</span>
           </button>
           <button
             onClick={() => setStockFilter("empty")}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${stockFilter === "empty" ? "bg-red-600 text-white shadow-lg" : "bg-red-900/20 text-red-500 hover:bg-red-900/40"
-              }`}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold transition-all border ${stockFilter === "empty" ? "bg-red-600 text-white border-red-600 shadow-md dark:bg-red-500 dark:text-slate-950 dark:border-red-500" : "bg-red-900/10 text-red-600 border-red-250/20 dark:bg-red-900/20 dark:text-red-450 dark:border-red-800/40"}`}
           >
-            Hết hàng{" "}
-            <span className="ml-1 opacity-50">
-              {materials.filter((m) => (m.stock || 0) === 0).length}
-            </span>
+            Hết hàng <span className="ml-1 opacity-50">{materials.filter((m) => (m.stock || 0) === 0).length}</span>
           </button>
         </div>
       </div>
@@ -4818,10 +4807,10 @@ const MaterialManager: React.FC<{
               </div>
             </div>
 
-            {/* Materials Cards - Mobile Only - Compact Flattened Design */}
-            <div className="md:hidden flex-1 overflow-auto bg-white dark:bg-slate-900 pb-20">
+            {/* Materials Cards - Mobile Only - Premium Card-based Design */}
+            <div className="md:hidden flex-1 overflow-auto bg-slate-50 dark:bg-[#0b0f19] p-4 pb-24">
               {filteredMaterials.length === 0 ? (
-                <div className="py-12 text-center text-gray-500 dark:text-gray-400">
+                <div className="py-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-[#131929] rounded-2xl border border-slate-200/80 dark:border-slate-800/60 p-6 shadow-sm">
                   {loading ? (
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -4835,52 +4824,65 @@ const MaterialManager: React.FC<{
                   )}
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="space-y-3">
                   {filteredMaterials.map((material) => {
                     const stockValue = material.availableStock || material.stock;
-                    let stockColorClass = "text-emerald-600 dark:text-emerald-500";
+                    let stockBadgeClass = "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400";
+                    let stockLabel = "Còn hàng";
 
                     if (stockValue === 0) {
-                      stockColorClass = "text-rose-600 dark:text-rose-500";
+                      stockBadgeClass = "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-450";
+                      stockLabel = "Hết hàng";
                     } else if (stockValue < 10) {
-                      stockColorClass = "text-amber-600 dark:text-amber-500";
+                      stockBadgeClass = "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400";
+                      stockLabel = "Sắp hết";
                     }
 
                     return (
                       <div
                         key={material.id}
                         onClick={() => handleShowMaterialDetail(material)}
-                        className={`active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors cursor-pointer py-3 px-4 ${selectedItems.has(material.id) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
-                          }`}
+                        className={`bg-white dark:bg-[#131929] rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800/60 flex flex-col gap-3 active:bg-slate-50 dark:active:bg-slate-800/40 transition-all duration-300 cursor-pointer ${selectedItems.has(material.id) ? "border-blue-500 ring-2 ring-blue-500/10" : ""}`}
                       >
                         <div className="flex justify-between items-start gap-3">
                           {/* Left: Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                                {material.name}
-                              </h4>
-                            </div>
-
-                            <div className="flex flex-wrap gap-y-1 gap-x-2 text-xs text-slate-500 dark:text-slate-400">
-                              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{material.sku}</span>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 truncate leading-snug">
+                              {material.name}
+                            </h4>
+                            
+                            <div className="flex flex-wrap gap-1.5 text-[11px]">
+                              <span className="font-mono bg-slate-100 dark:bg-slate-800/85 px-1.5 py-0.5 rounded text-slate-650 dark:text-slate-400 font-bold">{material.sku}</span>
                               {material.supplier && (
-                                <span className="truncate max-w-[120px] flex items-center gap-1">
-                                  • {material.supplier}
+                                <span className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-850 px-2 py-0.5 rounded-md text-slate-500 dark:text-slate-400 flex items-center gap-1 font-bold">
+                                  🏪 {material.supplier}
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Right: Quantity & Price */}
-                          <div className="text-right flex-shrink-0">
-                            <div className={`font-bold text-sm ${stockColorClass}`}>
-                              {stockValue} <span className="text-[10px] font-normal text-slate-400">{material.unit}</span>
+                          {/* Right: Quantity Badge & Stock state */}
+                          <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+                            <div className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-1 ${stockBadgeClass}`}>
+                              <span>{stockValue}</span>
+                              <span className="text-[10px] font-normal">{material.unit}</span>
                             </div>
-                            <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-1">
-                              {formatCurrency(material.purchasePrice)}
-                            </div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{stockLabel}</span>
                           </div>
+                        </div>
+
+                        {/* Price & Details Bar */}
+                        <div className="flex justify-between items-center pt-2.5 border-t border-slate-100 dark:border-slate-850 text-xs">
+                          <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
+                            <span>Giá nhập:</span>
+                            <span className="font-extrabold text-slate-700 dark:text-slate-350">{formatCurrency(material.purchasePrice || 0)}</span>
+                          </div>
+                          {material.retailPrice !== undefined && material.retailPrice > 0 && (
+                            <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
+                              <span>Giá lẻ:</span>
+                              <span className="font-extrabold text-blue-600 dark:text-blue-400">{formatCurrency(material.retailPrice || 0)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
