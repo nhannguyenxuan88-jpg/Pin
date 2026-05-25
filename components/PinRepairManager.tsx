@@ -653,8 +653,128 @@ const PinRepairManagerNew: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-20 md:pb-0 text-slate-900 dark:text-slate-100">
-      {/* Header + Filters */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      {/* MOBILE INTERFACE: Modern, Clean & Sleek Dashboard for Repairs */}
+      <div className="md:hidden space-y-4">
+        {/* Doanh thu & Lợi nhuận cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <BanknotesIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Doanh thu</div>
+              <div className="text-sm font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
+                {formatCurrency(stats.totalRevenue)}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <CurrencyDollarIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Lợi nhuận</div>
+              <div className="text-sm font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
+                {formatCurrency(stats.totalProfit)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Grid: 4 beautiful modern square cards side-by-side in 1 row */}
+        <div className="grid grid-cols-4 gap-2">
+          {statusOverview.map((item) => {
+            const selected = statusFilter === item.key;
+            
+            // Custom modern background / border colors for each status
+            const styleMap: Record<string, { bg: string, text: string }> = {
+              all: {
+                bg: selected ? "bg-blue-500/10 dark:bg-blue-500/20 border-blue-500 dark:border-blue-450" : "bg-white dark:bg-[#131929] border-slate-200/80 dark:border-slate-800/60",
+                text: "text-blue-600 dark:text-blue-455",
+              },
+              pending: {
+                bg: selected ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-500 dark:border-amber-450" : "bg-white dark:bg-[#131929] border-slate-200/80 dark:border-slate-800/60",
+                text: "text-amber-600 dark:text-amber-300",
+              },
+              inProgress: {
+                bg: selected ? "bg-cyan-500/10 dark:bg-cyan-500/20 border-cyan-500 dark:border-cyan-450" : "bg-white dark:bg-[#131929] border-slate-200/80 dark:border-slate-800/60",
+                text: "text-cyan-600 dark:text-cyan-455",
+              },
+              completed: {
+                bg: selected ? "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500 dark:border-emerald-450" : "bg-white dark:bg-[#131929] border-slate-200/80 dark:border-slate-800/60",
+                text: "text-emerald-600 dark:text-emerald-455",
+              }
+            };
+            
+            const currentStyle = styleMap[item.key] || styleMap.all;
+
+            // Shorten label for ultra compact 4-column layout on mobile
+            const shortLabel = item.label === "Tổng phiếu" ? "Tổng" 
+                             : item.label === "Chờ xử lý" ? "Chờ" 
+                             : item.label === "Đang sửa" ? "Sửa" 
+                             : "Xong";
+
+            return (
+              <button
+                key={item.key}
+                onClick={() => setStatusFilter(item.key)}
+                className={`relative overflow-hidden flex flex-col items-center justify-center p-2 py-3 rounded-xl border transition-all duration-300 ${currentStyle.bg} shadow-sm active:scale-95 text-center`}
+              >
+                <div className={`text-lg font-black tracking-tight tabular-nums ${currentStyle.text}`}>
+                  {item.value}
+                </div>
+                <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 leading-none">
+                  {shortLabel}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search bar and Filters */}
+        <div className="space-y-3 bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 p-4 rounded-2xl shadow-sm">
+          {/* Search bar */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Tìm theo tên, SĐT, thiết bị, mã phiếu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 w-full rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950 pl-10 pr-10 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* Date Segmented Filter */}
+          <div className="flex w-full rounded-xl bg-slate-50 p-1 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850">
+            {dateOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setDateFilter(opt.value)}
+                className={`flex-1 rounded-lg py-2 text-xs font-extrabold transition-all duration-200 ${
+                  dateFilter === opt.value
+                    ? "bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400"
+                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* DESKTOP INTERFACE: Standard Unified Header Card */}
+      <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
@@ -812,24 +932,24 @@ const PinRepairManagerNew: React.FC = () => {
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-4">
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-8 text-pin-gray-500 dark:text-pin-dark-500">
+          <div className="text-center py-12 text-slate-400 dark:text-slate-500 bg-white dark:bg-[#131929] rounded-2xl border border-slate-200/80 dark:border-slate-800/60 p-6 shadow-sm">
             Chưa có phiếu sửa chữa nào
           </div>
         ) : (
           filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="bg-white dark:bg-pin-dark-100 rounded-xl p-3 shadow-sm border border-pin-gray-200 dark:border-pin-dark-400 space-y-3"
+              className="bg-white dark:bg-[#131929] rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800/60 space-y-3.5 hover:shadow-md transition-all duration-300"
             >
               {/* Header: ID + Status */}
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-mono text-sm font-bold text-pin-blue-600 dark:text-pin-blue-400">
+                  <div className="font-mono text-sm font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">
                     {order.id}
                   </div>
-                  <div className="text-[10px] text-pin-gray-500 dark:text-pin-dark-500">
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">
                     {new Date(order.creationDate).toLocaleString("vi-VN", {
                       day: "2-digit",
                       month: "2-digit",
@@ -842,34 +962,50 @@ const PinRepairManagerNew: React.FC = () => {
               </div>
 
               {/* Body: Info */}
-              <div className="space-y-1.5 py-2 border-t border-b border-pin-gray-100 dark:border-pin-dark-300 border-dashed">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-pin-gray-500 dark:text-pin-dark-500 w-4">👤</span>
-                  <span className="font-medium text-pin-gray-900 dark:text-pin-dark-900">
-                    {order.customerName}
-                  </span>
+              <div className="flex flex-col gap-2 py-3 border-t border-b border-slate-105 dark:border-slate-800/80 text-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 flex items-center justify-center text-slate-400 dark:text-slate-500 text-xs">👤</div>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-200">
+                      {order.customerName}
+                    </span>
+                  </div>
+                  <a href={`tel:${order.customerPhone}`} className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850 px-2.5 py-1 rounded-lg hover:text-blue-500 hover:border-blue-500/20 transition-all flex items-center gap-1">
+                    <span>📞</span>
+                    <span>{order.customerPhone}</span>
+                  </a>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-pin-gray-500 dark:text-pin-dark-500 w-4">📱</span>
-                  <span className="text-pin-gray-600 dark:text-pin-dark-600">
-                    {order.customerPhone}
-                  </span>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-center justify-center text-blue-500 text-xs">🔧</div>
+                  <div className="flex-1">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Thiết bị:</span>{" "}
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {order.deviceName}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-pin-gray-500 dark:text-pin-dark-500 w-4">🔧</span>
-                  <span className="text-pin-blue-600 dark:text-pin-blue-400 font-medium">
-                    {order.deviceName}
-                  </span>
-                </div>
+                
+                {order.issueDescription && (
+                  <div className="flex items-start gap-2.5 mt-0.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-center justify-center text-amber-500 text-xs">⚠️</div>
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Lỗi:</span>{" "}
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-350 line-clamp-2 leading-relaxed">
+                        {order.issueDescription}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Footer: Price + Acts */}
               <div className="flex items-center justify-between pt-1">
                 <div className="flex flex-col">
-                  <span className="text-lg font-bold text-pin-blue-600 dark:text-pin-blue-400">
+                  <span className="text-lg font-black text-blue-600 dark:text-blue-400 tracking-tight">
                     {formatCurrency(order.total)}
                   </span>
-                  <div className="scale-90 origin-left">
+                  <div className="scale-90 origin-left mt-0.5">
                     <PaymentBadge
                       status={order.paymentStatus as "paid" | "unpaid" | "partial"}
                       amount={
@@ -880,26 +1016,28 @@ const PinRepairManagerNew: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
                       setInvoiceRepairOrder(order);
                       setShowInvoicePreview(true);
-                      // On mobile we might want to auto-open print dialog or just show preview
                     }}
-                    className="p-2 bg-pin-green-50 text-pin-green-600 rounded-lg"
+                    className="w-9 h-9 flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl active:scale-95 transition-all hover:bg-emerald-500/20"
+                    title="In phiếu"
                   >
                     <PrinterIcon className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleOpenModal(order)}
-                    className="p-2 bg-blue-50 text-blue-600 rounded-lg"
+                    className="w-9 h-9 flex items-center justify-center bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl active:scale-95 transition-all hover:bg-blue-500/20"
+                    title="Sửa"
                   >
                     <PencilSquareIcon className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteClick(order.id)}
-                    className="p-2 bg-pin-red-50 text-pin-red-600 rounded-lg"
+                    className="w-9 h-9 flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl active:scale-95 transition-all hover:bg-red-500/20"
+                    title="Xóa"
                   >
                     <TrashIcon className="w-4 h-4" />
                   </button>
@@ -909,6 +1047,15 @@ const PinRepairManagerNew: React.FC = () => {
           ))
         )}
       </div>
+
+      {/* Floating Action Button (FAB) for Mobile Creating */}
+      <button
+        onClick={() => handleOpenModal()}
+        className="md:hidden fixed bottom-20 right-4 z-40 w-14 h-14 bg-gradient-to-tr from-blue-600 to-sky-500 text-white rounded-full flex items-center justify-center shadow-xl shadow-blue-500/30 active:scale-90 transition-all duration-200"
+        title="Tạo phiếu mới"
+      >
+        <PlusIcon className="w-7 h-7" />
+      </button>
 
       {/* Repair Modal */}
       <PinRepairModalNew
@@ -928,7 +1075,7 @@ const PinRepairManagerNew: React.FC = () => {
           <ModalTitle>Xác nhận xóa</ModalTitle>
         </ModalHeader>
         <ModalBody>
-          <p className="text-pin-gray-600 dark:text-pin-dark-600">
+          <p className="text-slate-600 dark:text-slate-400">
             Bạn có chắc chắn muốn xóa phiếu sửa chữa này không? Hành động này không thể hoàn tác.
           </p>
         </ModalBody>

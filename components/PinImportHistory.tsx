@@ -462,7 +462,7 @@ const PinImportHistory: React.FC = () => {
                     </div>
                     {r.supplier && (
                       <div className="flex items-center gap-1 truncate ml-2">
-                        <Icon name="buildings" size="sm" />
+                        <Icon name="assets" size="sm" />
                         {r.supplier}
                       </div>
                     )}

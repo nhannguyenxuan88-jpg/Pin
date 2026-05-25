@@ -33,6 +33,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     if (title) return title;
     const path = location.pathname;
     const titles: Record<string, string> = {
+      "/overview": "Tổng quan",
       "/sales": "Bán hàng",
       "/products": "Sản phẩm",
       "/materials": "Vật liệu",

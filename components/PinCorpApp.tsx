@@ -23,6 +23,7 @@ const BusinessSettings = lazy(() => import("./BusinessSettings"));
 const TaxReportPage = lazy(() => import("./TaxReportPage").then(m => ({ default: m.TaxReportPage })));
 const DeliveryOrdersView = lazy(() => import("./DeliveryOrdersView"));
 const PinWarrantyManager = lazy(() => import("./PinWarrantyManager"));
+const OverviewTab = lazy(() => import("./mobile/OverviewTab"));
 
 // Loading fallback component
 const PageLoader: React.FC = () => (
@@ -83,7 +84,8 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* FIX: Pass all required props to components */}
-            <Route path="/" element={<Navigate to="/reports" replace />} />
+            <Route path="/" element={<Navigate to="/overview" replace />} />
+            <Route path="/overview" element={<OverviewTab />} />
             <Route
               path="/materials"
               element={

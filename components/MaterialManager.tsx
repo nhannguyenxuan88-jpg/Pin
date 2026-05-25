@@ -6,7 +6,7 @@ import { useMaterialStock } from "../lib/hooks/useMaterialStock";
 import { usePinContext } from "../contexts/PinContext";
 // Standard icons
 import { Icon, type IconName } from "./common/Icon";
-import { XMarkIcon } from "./common/Icons";
+import { XMarkIcon, PlusIcon, TrashIcon, PencilSquareIcon } from "./common/Icons";
 import PinImportHistory from "./PinImportHistory";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
 import PurchaseOrderManager from "./PurchaseOrderManager";

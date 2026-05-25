@@ -63,6 +63,13 @@ export const PinTopNav: React.FC<{
   const navigate = useNavigate();
 
   const navLinks = [
+    // 0. OVERVIEW - Tổng quan
+    {
+      to: "/overview",
+      iconName: "overview" as IconName,
+      label: "Tổng quan",
+      color: "text-blue-400",
+    },
     // 1. SALES & PRODUCTS - Bán hàng & Sản phẩm
     {
       to: "/sales",

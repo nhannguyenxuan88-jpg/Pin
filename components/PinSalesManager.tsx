@@ -1215,14 +1215,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-pin-gray-400 uppercase tracking-widest mb-1">Tổng tiền thanh toán</span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-400 dark:to-red-500">
+                        <span className="text-2xl lg:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600 dark:from-orange-400 dark:to-red-500">
                           {formatCurrency(total).replace('₫', '')}
                         </span>
-                        <span className="text-sm font-black text-orange-600 dark:text-orange-500 italic">VNĐ</span>
+                        <span className="text-xs lg:text-sm font-black text-orange-600 dark:text-orange-500 italic">VNĐ</span>
                       </div>
                     </div>
-                    <div className="bg-emerald-500/10 dark:bg-emerald-500/20 px-3 py-1.5 rounded-2xl border border-emerald-500/20">
-                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter flex items-center gap-1">
+                    <div className="bg-emerald-500/10 dark:bg-emerald-500/20 px-2.5 py-1 lg:px-3 lg:py-1.5 rounded-2xl border border-emerald-500/20">
+                      <span className="text-[9px] lg:text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter flex items-center gap-1">
                         <CheckCircleIcon className="w-3 h-3" /> Sẵn sàng
                       </span>
                     </div>
@@ -1231,14 +1231,14 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
                   <button
                     onClick={finalizeSale}
                     disabled={!currentUser || cartItems.length === 0}
-                    className="relative w-full group overflow-hidden rounded-3xl"
+                    className="relative w-full group overflow-hidden rounded-2xl lg:rounded-3xl"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-pin-blue-600 via-indigo-600 to-pin-blue-700 group-hover:scale-105 transition-transform duration-500" />
                     <div className="shimmer absolute inset-0 opacity-30" />
-                    <div className="relative py-5 px-6 flex items-center justify-center gap-3 text-white">
-                      <ShoppingCartIcon className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                      <span className="text-lg font-black tracking-tighter uppercase">Xác nhận thanh toán</span>
-                      <ChevronRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    <div className="relative py-3.5 px-4 lg:py-5 lg:px-6 flex items-center justify-center gap-2 lg:gap-3 text-white">
+                      <ShoppingCartIcon className="w-5 h-5 lg:w-6 lg:h-6 group-hover:rotate-12 transition-transform" />
+                      <span className="text-sm lg:text-lg font-black tracking-tighter uppercase">Xác nhận thanh toán</span>
+                      <ChevronRightIcon className="w-4 h-4 lg:w-5 lg:h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </button>
                 </div>
@@ -1248,32 +1248,32 @@ const PinSalesManager: React.FC<PinSalesManagerProps> = ({
               <div className="mt-6 space-y-6">
                 <div>
                   <label className="block text-[10px] font-bold text-pin-gray-400 uppercase tracking-widest mb-3 px-1">Phương thức thanh toán</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2 lg:gap-3">
                     <button
                       onClick={() => setPaymentMethod("cash")}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all duration-300 ${
+                      className={`flex flex-col items-center gap-1.5 p-2.5 lg:p-3 rounded-xl lg:rounded-2xl border-2 transition-all duration-300 ${
                         paymentMethod === "cash"
                           ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 shadow-lg shadow-emerald-500/10"
-                          : "border-pin-gray-100 dark:border-pin-gray-700 hover:border-emerald-200 dark:hover:border-emerald-800 text-pin-gray-500"
+                          : "border-pin-gray-100 dark:border-pin-gray-700/50 hover:border-emerald-200 dark:hover:border-emerald-800 text-pin-gray-500"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === "cash" ? "bg-emerald-500 text-white" : "bg-pin-gray-100 dark:bg-pin-gray-700"}`}>
-                        <BanknotesIcon className="w-5 h-5" />
+                      <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center ${paymentMethod === "cash" ? "bg-emerald-500 text-white" : "bg-pin-gray-100 dark:bg-pin-gray-700"}`}>
+                        <BanknotesIcon className="w-4 h-4 lg:w-5 lg:h-5" />
                       </div>
-                      <span className="text-xs font-bold">Tiền mặt</span>
+                      <span className="text-[11px] lg:text-xs font-bold">Tiền mặt</span>
                     </button>
                     <button
                       onClick={() => setPaymentMethod("bank")}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all duration-300 ${
+                      className={`flex flex-col items-center gap-1.5 p-2.5 lg:p-3 rounded-xl lg:rounded-2xl border-2 transition-all duration-300 ${
                         paymentMethod === "bank"
                           ? "border-pin-blue-500 bg-pin-blue-50 dark:bg-pin-blue-900/20 text-pin-blue-700 dark:text-pin-blue-400 shadow-lg shadow-pin-blue-500/10"
-                          : "border-pin-gray-100 dark:border-pin-gray-700 hover:border-pin-blue-200 dark:hover:border-pin-blue-800 text-pin-gray-500"
+                          : "border-pin-gray-100 dark:border-pin-gray-700/50 hover:border-pin-blue-200 dark:hover:border-pin-blue-800 text-pin-gray-500"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${paymentMethod === "bank" ? "bg-pin-blue-500 text-white" : "bg-pin-gray-100 dark:bg-pin-gray-700"}`}>
-                        <span className="text-sm">🏦</span>
+                      <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center ${paymentMethod === "bank" ? "bg-pin-blue-500 text-white" : "bg-pin-gray-100 dark:bg-pin-gray-700"}`}>
+                        <span className="text-xs lg:text-sm">🏦</span>
                       </div>
-                      <span className="text-xs font-bold">Chuyển khoản</span>
+                      <span className="text-[11px] lg:text-xs font-bold">Chuyển khoản</span>
                     </button>
                   </div>
                 </div>

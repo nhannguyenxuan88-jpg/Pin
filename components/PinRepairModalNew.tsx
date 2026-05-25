@@ -320,14 +320,64 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     }
   };
 
+  const setDepositAmount = (amount: number) => {
+    const normalized = Math.max(0, Math.trunc(amount || 0));
+    setFormData((prev) => {
+      const next: Partial<PinRepairOrder> = { ...prev, depositAmount: normalized };
+      if (normalized > 0) {
+        next.paymentStatus = "partial";
+      } else if ((prev.partialPaymentAmount || 0) > 0) {
+        next.paymentStatus = "partial";
+      } else if (prev.paymentStatus === "partial") {
+        next.paymentStatus = "unpaid";
+        next.partialPaymentAmount = 0;
+      }
+      return next;
+    });
+  };
+
+  const setPartialPaymentAmount = (amount: number) => {
+    const normalized = Math.max(0, Math.trunc(amount || 0));
+    setFormData((prev) => {
+      const next: Partial<PinRepairOrder> = { ...prev, partialPaymentAmount: normalized };
+      if (normalized > 0) {
+        next.paymentStatus = "partial";
+      } else if ((prev.depositAmount || 0) > 0) {
+        next.paymentStatus = "partial";
+      } else if (prev.paymentStatus === "partial") {
+        next.paymentStatus = "unpaid";
+      }
+      return next;
+    });
+  };
+
+  const setPaymentMethod = (paymentMethod: "cash" | "bank") => {
+    setFormData((prev) => {
+      const hasPartialPayment =
+        prev.paymentStatus === "partial" ||
+        (prev.partialPaymentAmount || 0) > 0 ||
+        (prev.depositAmount || 0) > 0;
+
+      return {
+        ...prev,
+        paymentMethod,
+        paymentStatus: hasPartialPayment ? "partial" : "paid",
+      };
+    });
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    if (name === "depositAmount") {
+      setDepositAmount(parseCurrencyInput(value));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]:
-        name === "laborCost" || name === "depositAmount"
+        name === "laborCost"
           ? parseCurrencyInput(value)
           : name === "dueDate"
             ? value
@@ -540,8 +590,12 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
   const calculateRemaining = () => {
     const total = calculateTotal();
-    const deposit = formData.depositAmount || 0;
-    return Math.max(0, total - deposit);
+    if (formData.paymentStatus === "paid") return 0;
+    const paidAmount =
+      formData.paymentStatus === "partial"
+        ? Number(formData.partialPaymentAmount || formData.depositAmount || 0)
+        : 0;
+    return Math.max(0, total - paidAmount);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -603,8 +657,9 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
 
       // Validate payment method when deposit > 0 OR payment status is paid/partial
       const depositAmt = Number(formData.depositAmount || 0);
+      const partialAmt = Number(formData.partialPaymentAmount || 0);
       const needsPaymentMethod =
-        depositAmt > 0 || formData.paymentStatus === "paid" || formData.paymentStatus === "partial";
+        depositAmt > 0 || partialAmt > 0 || formData.paymentStatus === "paid" || formData.paymentStatus === "partial";
 
       if (needsPaymentMethod && !formData.paymentMethod) {
         showToast("Vui lòng chọn phương thức thanh toán", "warn");
@@ -652,12 +707,36 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         cashTransactionId: formData.cashTransactionId,
       };
 
+      const isReturning = orderToSave.status === "Trả máy";
+      const hasDebt = orderToSave.paymentStatus !== "paid";
+
       // Warn when marking as "Trả máy" (Complete) -> Inventory Deduction
-      if (orderToSave.status === "Trả máy" && (!initialOrder?.materialsDeducted)) {
+      if (isReturning && (!initialOrder?.materialsDeducted)) {
         setIsSubmitting(false);
+        const debtNote =
+          hasDebt
+            ? "\n\nLưu ý: Đơn này đang ghi nợ, khách chưa thanh toán đủ."
+            : "";
         showConfirmDialog(
           "Xác nhận hoàn tất & trừ kho",
-          "Khi chuyển sang 'Trả máy', hệ thống sẽ:\n1. Trừ tồn kho vật tư đã sử dụng\n2. Ghi nhận doanh thu & lợi nhuận\n3. Tạo phiếu thu (nếu thanh toán)\n\nBạn có chắc chắn?",
+          `Khi chuyển sang 'Trả máy', hệ thống sẽ:\n1. Trừ tồn kho vật tư đã sử dụng\n2. Ghi nhận doanh thu & lợi nhuận\n3. Tạo phiếu thu (nếu thanh toán)${debtNote}\n\nBạn có chắc chắn?`,
+          async () => {
+            try {
+              await onSave(orderToSave);
+              onClose();
+            } catch (error) {
+              showToast("Lỗi: " + (error as Error).message, "error");
+            }
+          }
+        );
+        return;
+      }
+
+      if (isReturning && hasDebt) {
+        setIsSubmitting(false);
+        showConfirmDialog(
+          "Trả máy & ghi nợ",
+          "Khách chưa thanh toán đủ, đơn sẽ được ghi nợ.\n\nBạn có chắc chắn muốn Trả máy?",
           async () => {
             try {
               await onSave(orderToSave);
@@ -687,60 +766,36 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     (sum, m) => sum + m.quantity * m.price,
     0
   );
+  const isReturnPaymentAction =
+    formData.status === "Trả máy" &&
+    (formData.paymentStatus === "unpaid" || formData.paymentStatus === "partial");
 
   // Determine button text based on action
   const getButtonText = () => {
     if (isSubmitting) return "Đang xử lý...";
 
+    if (isReturnPaymentAction) {
+      return "Thanh toán & Trả máy";
+    }
+
     if (!initialOrder) {
       // Creating new order
       const hasDeposit = formData.depositAmount && Number(formData.depositAmount) > 0;
-      return hasDeposit ? "💰 Đặt cọc & Tạo phiếu" : "✅ Tạo phiếu";
+      return hasDeposit ? "Đặt cọc & Tạo phiếu" : "Tạo phiếu";
     }
 
-    // Updating existing order
-    const isReturning = formData.status === "Trả máy";
-    const needsPayment =
-      formData.paymentStatus === "unpaid" || formData.paymentStatus === "partial";
-
-    if (isReturning && needsPayment) {
-      return "💳 Thanh toán & Trả máy";
-    }
-
-    return "📝 Cập nhật";
+    return "Cập nhật";
   };
-
-  const getHeaderTitle = () => {
-    if (!initialOrder) {
-      const hasDeposit = formData.depositAmount && Number(formData.depositAmount) > 0;
-      return hasDeposit ? "Tạo phiếu & Đặt cọc" : "Tạo phiếu sửa chữa mới";
-    }
-
-    const isReturning = formData.status === "Trả máy";
-    const needsPayment =
-      formData.paymentStatus === "unpaid" || formData.paymentStatus === "partial";
-
-    if (isReturning && needsPayment) {
-      return "Thanh toán & Trả máy cho khách";
-    }
-
-    return "Cập nhật phiếu sửa chữa";
-  };
-
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-[#1e293b] border border-slate-700/50 rounded-[20px] shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[96vh] text-slate-200 font-sans">
+    <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-[#182335] border border-slate-700/60 rounded-lg shadow-2xl shadow-black/40 w-full max-w-[1036px] overflow-hidden flex flex-col max-h-[95vh] text-slate-200 font-sans">
         
         {/* ── HEADER ── */}
-        <div className="px-6 py-4 flex flex-wrap justify-between items-center gap-6 bg-[#1e293b] border-b border-slate-700/50 flex-shrink-0">
-          <div className="flex items-center gap-5">
-            <h2 className="text-lg font-bold text-white tracking-wide">
-              {initialOrder ? initialOrder.id : "Phiếu mới"}
-            </h2>
-            <div className="h-5 w-px bg-slate-600/50"></div>
+        <div className="px-5 py-3.5 flex flex-wrap justify-between items-center gap-4 bg-[#1b2638] border-b border-slate-700/60 flex-shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             {/* Status Segmented Control */}
-            <div className="flex bg-[#0f172a] rounded-xl p-1 border border-slate-700/50">
+            <div className="flex max-w-full overflow-x-auto items-center rounded-full">
               {([
                 { value: "Tiếp nhận", icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> },
                 { value: "Đang sửa", icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
@@ -749,14 +804,21 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               ] as const).map(({ value, icon }) => {
                 const active = formData.status === value;
                 return (
-                  <button key={value} type="button" disabled={isCompleted}
-                    onClick={() => setFormData(p => ({ ...p, status: value as any }))}
-                    className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-1.5 ${
-                      active ? "bg-blue-600 shadow-sm text-white" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                    }`}>
-                    <span className="opacity-80">{icon}</span>
-                    <span>{value}</span>
-                  </button>
+                  <div key={value} className="flex shrink-0 items-center">
+                    <button type="button" disabled={isCompleted}
+                      onClick={() => setFormData(p => ({ ...p, status: value as any }))}
+                      className={`px-3.5 py-2 rounded-full text-[13px] font-bold transition-all flex items-center gap-1.5 border ${
+                        active
+                          ? value === "Trả máy"
+                            ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-300"
+                            : "bg-slate-700/60 border-slate-600 text-slate-100"
+                          : "bg-transparent border-slate-700/70 text-slate-400 hover:text-slate-200 hover:border-slate-600"
+                      }`}>
+                      <span className="opacity-80">{icon}</span>
+                      <span>{value}</span>
+                    </button>
+                    {value !== "Trả máy" && <span className="mx-1.5 h-px w-4 bg-slate-600/70" />}
+                  </div>
                 );
               })}
             </div>
@@ -768,12 +830,17 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
             )}
           </div>
           
-          <button onClick={onClose} className="text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full p-2.5 transition-all" type="button">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-blue-500/50 bg-blue-500/10 px-3 py-1 text-[12px] font-bold text-blue-200">
+              {initialOrder ? initialOrder.id : "Phiếu mới"}
+            </span>
+            <button onClick={onClose} className="text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full p-2 transition-all" type="button">
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0 bg-[#0f172a]">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0 bg-[#0b1220]">
 
           {isCompleted && (
             <div className="mx-6 mt-5 p-3.5 bg-emerald-900/20 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-3 flex-shrink-0 text-emerald-400">
@@ -786,13 +853,13 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
           <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-10 min-h-0">
 
             {/* ════ CỘT TRÁI (NỘI DUNG CHÍNH) ════ */}
-            <div className="lg:col-span-7 overflow-y-auto p-6 space-y-6 custom-scrollbar pr-2 lg:pr-6">
+            <div className="lg:col-span-7 overflow-y-auto p-5 space-y-5 custom-scrollbar pr-2 lg:pr-5">
               
               {/* SECTION 1: Khách hàng & Thiết bị */}
-              <div className="bg-[#1e293b] border border-slate-700/50 shadow-md rounded-[18px] p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="h-6 w-1.5 rounded-full bg-blue-500"></div>
-                  <h3 className="font-bold text-slate-100 text-base tracking-wide">Khách hàng & Thiết bị</h3>
+              <div className="bg-[#1d2a3d] border border-slate-700/70 shadow-lg shadow-black/10 rounded-xl p-5">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-black text-white">1</span>
+                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Khách hàng & Xe</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -900,10 +967,10 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               </div>
 
               {/* SECTION 2: Phụ tùng sử dụng */}
-              <div className="bg-[#1e293b] border border-slate-700/50 shadow-md rounded-[18px] p-6">
-                <div className="flex items-center mb-5 gap-3">
-                  <div className="h-6 w-1.5 rounded-full bg-indigo-500"></div>
-                  <h3 className="font-bold text-slate-100 text-base tracking-wide">Phụ tùng sử dụng</h3>
+              <div className="bg-[#1d2a3d] border border-slate-700/70 shadow-lg shadow-black/10 rounded-xl p-5">
+                <div className="flex items-center mb-5 gap-2.5">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-black text-white">2</span>
+                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Phụ tùng sử dụng</h3>
                 </div>
 
                 <div className="flex flex-wrap lg:flex-nowrap gap-3 mb-4 relative bg-[#0f172a] p-2 rounded-2xl border border-slate-700/50">
@@ -988,10 +1055,10 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               </div>
 
               {/* SECTION 3: Báo giá (Gia công) */}
-              <div className="bg-[#1e293b] border border-slate-700/50 shadow-md rounded-[18px] p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="h-6 w-1.5 rounded-full bg-purple-500"></div>
-                  <h3 className="font-bold text-slate-100 text-base tracking-wide">Dịch vụ & Gia công</h3>
+              <div className="bg-[#1d2a3d] border border-slate-700/70 shadow-lg shadow-black/10 rounded-xl p-5">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-xs font-black text-white">3</span>
+                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Báo giá (Gia công, Đặt hàng)</h3>
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-slate-700/50 bg-[#0f172a]/50">
@@ -1069,8 +1136,8 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
             </div>{/* end Cột Trái */}
 
             {/* ════ CỘT PHẢI (TỔNG KẾT & THANH TOÁN) ════ */}
-            <div className="lg:col-span-3 flex flex-col bg-[#1e293b] border-l border-slate-700/50 p-6 overscroll-none overflow-y-auto custom-scrollbar relative shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.3)] z-10">
-              <div className="flex-1 space-y-6 pb-24"> {/* pb-24 space for floating actions */}
+            <div className="lg:col-span-3 flex flex-col bg-[#151f31] border-l border-slate-700/70 p-5 overscroll-none overflow-y-auto custom-scrollbar relative shadow-[-12px_0_30px_-22px_rgba(0,0,0,0.9)] z-10">
+              <div className="flex-1 space-y-5 pb-28"> {/* pb-28 space for floating actions */}
 
                 {/* Tổng kết */}
                 <div>
@@ -1078,17 +1145,17 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                     <span className="text-blue-400 opacity-90">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </span>
-                    <h3 className="text-[13px] font-bold text-slate-300 uppercase tracking-widest">Chi phí tạm tính</h3>
+                    <h3 className="text-[13px] font-bold text-slate-200">Tổng kết</h3>
                   </div>
                   
-                  <div className="bg-[#0f172a] rounded-[16px] p-5 border border-slate-700/50 shadow-inner">
-                    <div className="space-y-4 font-medium text-[13px] text-slate-400">
+                  <div className="bg-[#1d2a3d] rounded-xl p-4 border border-slate-700/80 shadow-inner shadow-black/20">
+                    <div className="space-y-3.5 font-medium text-[13px] text-slate-400">
                       <div className="flex items-center justify-between">
                         <span>Phí dịch vụ</span>
                         <input type="text" name="laborCost" placeholder="0"
                           value={formData.laborCost ? formatCurrencyInput(formData.laborCost) : ""}
                           onChange={handleInputChange} disabled={isCompleted}
-                          className="w-24 text-right font-bold text-slate-200 bg-[#1e293b] border border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 placeholder-slate-500" />
+                          className="w-24 text-right font-bold text-slate-200 bg-slate-700/70 border border-slate-600 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 placeholder-slate-500" />
                       </div>
                       <div className="flex items-center justify-between border-t border-slate-700/50 pt-3">
                         <span>Phụ tùng</span>
@@ -1103,14 +1170,14 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       <div className="flex items-center justify-between border-t border-slate-800/50 pt-3 text-red-400">
                         <span>Giảm giá</span>
                         <div className="flex items-center gap-1.5">
-                          <input type="text" className="w-16 bg-[#151E32] border border-slate-700/60 rounded-lg px-2 py-1 text-right text-red-200 font-bold focus:outline-none" disabled value="0" />
-                          <div className="bg-[#151E32] border border-slate-700/60 rounded-lg px-2 py-1 text-slate-400 text-xs font-bold pointer-events-none">đ</div>
+                          <input type="text" className="w-20 bg-slate-700/70 border border-slate-600 rounded-md px-2 py-1 text-right text-red-200 font-bold focus:outline-none" disabled value="0" />
+                          <div className="bg-slate-700/70 border border-slate-600 rounded-md px-2 py-1 text-slate-200 text-xs font-bold pointer-events-none">đ</div>
                         </div>
                       </div>
 
-                      <div className="border-t border-slate-700/80 mt-4 pt-4 flex items-center justify-between">
-                        <span className="text-[14px] font-bold text-slate-200 uppercase tracking-wide">Tổng cộng</span>
-                        <span className="text-xl font-black text-blue-400 tracking-tight">{formatCurrency(total)}</span>
+                        <div className="border-t border-slate-700/80 mt-4 pt-4 flex items-end justify-between">
+                          <span className="text-[14px] font-bold text-slate-200 uppercase tracking-wide">Tổng cộng</span>
+                        <span className="text-2xl font-black text-blue-400 tracking-tight">{formatCurrency(total)}</span>
                       </div>
                     </div>
                   </div>
@@ -1122,20 +1189,22 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                     <span className="text-emerald-400 opacity-80">
                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </span>
-                    <h3 className="text-[13px] font-bold text-slate-300 uppercase tracking-widest">Thanh toán</h3>
+                    <h3 className="text-[13px] font-bold text-slate-200">Thanh toán</h3>
                   </div>
 
-                  <div className="bg-[#0B1121] rounded-[16px] p-5 border border-slate-800/80 space-y-5">
+                  <div className="bg-[#1d2a3d] rounded-xl p-4 border border-slate-700/80 space-y-4 shadow-inner shadow-black/20">
                     
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="space-y-2.5">
+                      <label className={`flex items-center gap-3 cursor-pointer group rounded-xl border px-3 py-2.5 transition-all ${
+                        (formData.depositAmount || 0) > 0 ? "bg-blue-500/10 border-blue-500/50" : "bg-transparent border-transparent hover:bg-slate-700/30"
+                      }`}>
                         <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
-                          (formData.depositAmount || 0) > 0 ? "bg-blue-600 border-blue-600" : "bg-[#151E32] border-slate-600 group-hover:border-blue-500"
+                          (formData.depositAmount || 0) > 0 ? "bg-blue-600 border-blue-600" : "bg-[#0b1220] border-slate-600 group-hover:border-blue-500"
                         }`}>
                           {(formData.depositAmount || 0) > 0 && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" className="hidden" checked={(formData.depositAmount || 0) > 0} 
-                          onChange={(e) => setFormData(p => ({ ...p, depositAmount: e.target.checked ? 100000 : 0 }))} disabled={isCompleted} />
+                          onChange={(e) => setDepositAmount(e.target.checked ? 100000 : 0)} disabled={isCompleted} />
                         <span className="text-[13px] font-bold text-slate-200">Yêu cầu Đặt cọc</span>
                       </label>
                        
@@ -1143,16 +1212,47 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                          <div className="ml-8 relative">
                            <input type="text"
                             value={formData.depositAmount ? formatCurrencyInput(formData.depositAmount) : ""}
-                            onChange={(e) => setFormData(p => ({ ...p, depositAmount: parseCurrencyInput(e.target.value) }))}
+                            onChange={(e) => setDepositAmount(parseCurrencyInput(e.target.value))}
                             disabled={isCompleted}
                             className="w-full px-3 py-2.5 border border-blue-500/40 bg-blue-500/10 rounded-xl text-sm text-right font-bold text-blue-100 focus:outline-none focus:border-blue-500 transition-colors" />
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-400">Số tiền gốc</span>
                          </div>
                       )}
 
-                      <label className="flex items-center gap-3 cursor-pointer group">
+                      <label className={`flex items-center gap-3 cursor-pointer group rounded-xl border px-3 py-2.5 transition-all ${
+                        (formData.partialPaymentAmount || 0) > 0 ? "bg-blue-500/10 border-blue-500/50" : "bg-transparent border-transparent hover:bg-slate-700/30"
+                      }`}>
                         <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
-                          formData.quoteApproved ? "bg-emerald-600 border-emerald-600" : "bg-[#151E32] border-slate-600 group-hover:border-emerald-500"
+                          (formData.partialPaymentAmount || 0) > 0 ? "bg-amber-600 border-amber-600" : "bg-[#0b1220] border-slate-600 group-hover:border-amber-500"
+                        }`}>
+                          {(formData.partialPaymentAmount || 0) > 0 && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input type="checkbox" className="hidden" checked={(formData.partialPaymentAmount || 0) > 0}
+                          onChange={(e) => setPartialPaymentAmount(e.target.checked ? 100000 : 0)} disabled={isCompleted} />
+                        <span className="text-[13px] font-bold text-slate-200">Thanh toán một phần</span>
+                      </label>
+
+                      {(formData.partialPaymentAmount || 0) > 0 && (
+                        <div className="ml-8 relative">
+                          <input type="text"
+                            value={formData.partialPaymentAmount ? formatCurrencyInput(formData.partialPaymentAmount) : ""}
+                            onChange={(e) => setPartialPaymentAmount(parseCurrencyInput(e.target.value))}
+                            disabled={isCompleted}
+                            className="w-full px-3 py-2.5 border border-amber-500/40 bg-amber-500/10 rounded-xl text-sm text-right font-bold text-amber-100 focus:outline-none focus:border-amber-500 transition-colors" />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-amber-400">Số tiền đã trả</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between rounded-lg border border-slate-600/80 bg-slate-700/50 px-3 py-2.5">
+                        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Còn lại</span>
+                        <span className="text-sm font-bold text-rose-300">{formatCurrency(remaining)}</span>
+                      </div>
+
+                      <label className={`flex items-center gap-3 cursor-pointer group rounded-xl border px-3 py-2.5 transition-all ${
+                        formData.quoteApproved ? "bg-emerald-500/10 border-emerald-500/50" : "bg-transparent border-transparent hover:bg-slate-700/30"
+                      }`}>
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                          formData.quoteApproved ? "bg-emerald-600 border-emerald-600" : "bg-[#0b1220] border-slate-600 group-hover:border-emerald-500"
                         }`}>
                           {formData.quoteApproved && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
@@ -1162,39 +1262,43 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       </label>
                     </div>
 
-                    <div className="border-t border-slate-800/80 pt-5">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Phương thức thanh toán</label>
+                    <div className="border-t border-slate-700/70 pt-4">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">Phương thức</label>
                       <div className="grid grid-cols-2 gap-2.5">
-                        <button type="button" onClick={() => setFormData(p => ({...p, paymentMethod: "cash", paymentStatus: "paid" }))} disabled={isCompleted}
+                        <button type="button" onClick={() => setPaymentMethod("cash")} disabled={isCompleted}
                           className={`flex items-center justify-center gap-2 py-3 rounded-[12px] text-[13px] font-bold transition-all border ${
-                            formData.paymentMethod === "cash" && formData.paymentStatus === "paid"
-                              ? "bg-slate-700/50 border-slate-600 text-white shadow-sm" 
-                              : "bg-[#151E32] border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                            formData.paymentMethod === "cash"
+                              ? "bg-blue-600/20 border-blue-500/80 text-blue-100 shadow-sm" 
+                              : "bg-transparent border-slate-600/80 text-slate-400 hover:text-slate-200 hover:border-slate-500"
                           }`}>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                           Tiền mặt
                         </button>
-                        <button type="button" onClick={() => setFormData(p => ({...p, paymentMethod: "bank", paymentStatus: "paid" }))} disabled={isCompleted}
+                        <button type="button" onClick={() => setPaymentMethod("bank")} disabled={isCompleted}
                           className={`flex items-center justify-center gap-2 py-3 rounded-[12px] text-[13px] font-bold transition-all border ${
-                            formData.paymentMethod === "bank" && formData.paymentStatus === "paid"
-                              ? "bg-slate-700/50 border-slate-600 text-white shadow-sm" 
-                              : "bg-[#151E32] border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                            formData.paymentMethod === "bank"
+                              ? "bg-blue-600/20 border-blue-500/80 text-blue-100 shadow-sm" 
+                              : "bg-transparent border-slate-600/80 text-slate-400 hover:text-slate-200 hover:border-slate-500"
                           }`}>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                           C.Khoản
                         </button>
                       </div>
-                      <p className="text-[10px] text-slate-500/80 mt-3 text-center">* Bắt buộc thanh toán 100% khi "Trả máy"</p>
+                      <p className="text-[10px] text-slate-500/80 mt-3 text-center">* Bắt buộc thanh toán 100% khi &quot;Trả máy&quot;</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* FLOATING ACTION BLOCKS (Lưu phiếu / Hủy) */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#151E32] via-[#151E32] to-transparent pt-12">
+              <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[#151f31] via-[#151f31]/95 to-transparent pt-14">
                 <div className="space-y-3">
                   <button type="submit" disabled={isSubmitting || isCompleted}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 active:transform active:scale-[0.99] text-white rounded-2xl font-bold shadow-lg shadow-blue-900/40 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 text-[15px] tracking-wide">
+                    className={`w-full py-3.5 active:transform active:scale-[0.99] text-white rounded-lg font-black shadow-lg transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 text-[15px] tracking-wide ${
+                      isReturnPaymentAction
+                        ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/40"
+                        : "bg-blue-600 hover:bg-blue-500 shadow-blue-950/40"
+                    }`}>
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
                          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -1205,14 +1309,18 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                       </span>
                     ) : (
                       <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        {isReturnPaymentAction ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5 2a8 8 0 11-16 0 8 8 0 0116 0z" /></svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        )}
                         {getButtonText()}
                       </>
                     )}
                   </button>
                   <button type="button" onClick={onClose} disabled={isSubmitting}
                     className="w-full py-2.5 text-slate-500 hover:text-slate-300 font-bold transition-colors text-[13px] tracking-wide">
-                    Hủy & Đóng
+                    Hủy bỏ
                   </button>
                 </div>
               </div>

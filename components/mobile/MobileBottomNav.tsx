@@ -1,17 +1,17 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { Coins } from "phosphor-react";
 import {
   ShoppingCartIcon,
   CubeIcon,
-  BeakerIcon,
   WrenchScrewdriverIcon,
-  BanknotesIcon,
   Squares2X2Icon,
+  Cog6ToothIcon,
 } from "../common/Icons";
 
 interface NavItem {
   to: string;
-  IconComponent: React.FC<React.SVGProps<SVGSVGElement>>;
+  IconComponent: React.ComponentType<any>;
   label: string;
   activeColor: string;
   activeIndicatorBg: string;
@@ -20,60 +20,60 @@ interface NavItem {
 export const MobileBottomNav: React.FC = () => {
   const location = useLocation();
 
-  // Main navigation items - limited to 5 for mobile
+  // Main navigation items with Phosphor Coins icon synchronized with desktop
   const navItems: NavItem[] = [
     {
-      to: "/sales",
-      IconComponent: ShoppingCartIcon,
-      label: "Bán hàng",
-      activeColor: "text-emerald-500",
-      activeIndicatorBg: "bg-emerald-500",
-    },
-    {
-      to: "/materials",
-      IconComponent: CubeIcon,
-      label: "Vật liệu",
-      activeColor: "text-teal-500",
-      activeIndicatorBg: "bg-teal-500",
-    },
-    {
-      to: "/boms",
-      IconComponent: BeakerIcon,
-      label: "Sản xuất",
-      activeColor: "text-rose-500",
-      activeIndicatorBg: "bg-rose-500",
+      to: "/overview",
+      IconComponent: Squares2X2Icon,
+      label: "Tổng",
+      activeColor: "text-blue-600 dark:text-blue-400",
+      activeIndicatorBg: "bg-blue-600 dark:bg-blue-400",
     },
     {
       to: "/repairs",
       IconComponent: WrenchScrewdriverIcon,
-      label: "Sửa chữa",
-      activeColor: "text-pink-500",
-      activeIndicatorBg: "bg-pink-500",
+      label: "Phiếu SC",
+      activeColor: "text-pink-600 dark:text-pink-400",
+      activeIndicatorBg: "bg-pink-600 dark:bg-pink-400",
     },
     {
-      to: "/financial",
-      IconComponent: BanknotesIcon,
-      label: "Tài chính",
-      activeColor: "text-cyan-500",
-      activeIndicatorBg: "bg-cyan-500",
+      to: "/sales",
+      IconComponent: ShoppingCartIcon,
+      label: "Bán",
+      activeColor: "text-emerald-600 dark:text-emerald-400",
+      activeIndicatorBg: "bg-emerald-600 dark:bg-emerald-400",
+    },
+    {
+      to: "/receivables",
+      // Render Phosphor Coins icon to match desktop "hand-coins" icon exactly
+      IconComponent: (props) => <Coins size={22} weight="duotone" {...props} />,
+      label: "Công nợ",
+      activeColor: "text-amber-500 dark:text-amber-400",
+      activeIndicatorBg: "bg-amber-500 dark:bg-amber-400",
+    },
+    {
+      to: "/materials",
+      IconComponent: CubeIcon,
+      label: "Kho",
+      activeColor: "text-teal-600 dark:text-teal-400",
+      activeIndicatorBg: "bg-teal-600 dark:bg-teal-400",
     },
     {
       to: "/more",
-      IconComponent: Squares2X2Icon,
-      label: "Khác",
-      activeColor: "text-slate-600 dark:text-slate-200",
-      activeIndicatorBg: "bg-slate-600 dark:bg-slate-200",
+      IconComponent: Cog6ToothIcon,
+      label: "Thêm",
+      activeColor: "text-slate-800 dark:text-slate-200",
+      activeIndicatorBg: "bg-slate-800 dark:bg-slate-200",
     },
   ];
 
-  // Check if current path matches a nav item
   const isActive = (to: string) => {
     return location.pathname.startsWith(to);
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 safe-area-inset-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-[#131929]/95 backdrop-blur-md border-t border-slate-200/60 dark:border-slate-800/80 shadow-lg shadow-black/5 safe-area-inset-bottom">
+      <div className="flex items-center justify-around h-[56px] px-1">
         {navItems.map((item) => {
           const active = isActive(item.to);
           const IconComponent = item.IconComponent;
@@ -82,21 +82,24 @@ export const MobileBottomNav: React.FC = () => {
             <NavLink
               key={item.to}
               to={item.to}
-              className="flex flex-col items-center justify-center w-full h-full touch-manipulation"
+              className="relative flex flex-col items-center justify-center w-full h-full touch-manipulation"
             >
+              {/* Premium Top Line Active Indicator */}
+              {active && (
+                <div
+                  className={`absolute top-0 w-8 h-[2.5px] rounded-full ${item.activeIndicatorBg} animate-pulse`}
+                />
+              )}
+
               <div
-                className={`relative flex flex-col items-center justify-center transition-all duration-200 ${
-                  active ? "scale-110" : "scale-100"
+                className={`flex flex-col items-center justify-center transition-all duration-300 ${
+                  active ? "-translate-y-[2px]" : "translate-y-0"
                 }`}
               >
-                {/* Icon Container */}
-                <div
-                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${
-                    active ? "bg-slate-100 dark:bg-slate-700" : "bg-transparent"
-                  }`}
-                >
+                {/* Icon (No bulky background shapes for a clean app-like look) */}
+                <div className="w-8 h-8 flex items-center justify-center rounded-lg transition-transform duration-300">
                   <IconComponent
-                    className={`w-6 h-6 transition-colors duration-200 ${
+                    className={`w-[22px] h-[22px] transition-colors duration-300 ${
                       active ? item.activeColor : "text-slate-400 dark:text-slate-500"
                     }`}
                   />
@@ -104,19 +107,12 @@ export const MobileBottomNav: React.FC = () => {
 
                 {/* Label */}
                 <span
-                  className={`text-[10px] font-medium mt-0.5 transition-colors duration-200 ${
+                  className={`text-[9.5px] font-bold tracking-tight mt-0.5 transition-colors duration-300 ${
                     active ? item.activeColor : "text-slate-400 dark:text-slate-500"
                   }`}
                 >
                   {item.label}
                 </span>
-
-                {/* Active Indicator */}
-                {active && (
-                  <div
-                    className={`absolute bottom-1 w-1 h-1 rounded-full ${item.activeIndicatorBg}`}
-                  />
-                )}
               </div>
             </NavLink>
           );

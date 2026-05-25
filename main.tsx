@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+// import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { PinProviderStandalone } from "./contexts/PinProviderStandalone";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { NetworkStatus } from "./components/common/NetworkStatus";
@@ -78,7 +78,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <App />
           </PinProviderStandalone>
         </DialogProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
+        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>

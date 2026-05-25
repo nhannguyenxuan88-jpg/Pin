@@ -1146,9 +1146,67 @@ export default function Receivables() {
   ];
 
   return (
-    <div className="p-2 md:p-4 lg:p-6 space-y-3 animate-fade-in pb-20 md:pb-6">
-      {/* Header with inline Stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div className="space-y-4">
+      {/* MOBILE HEADER: Premium 4-column horizontal grid for metrics */}
+      <div className="md:hidden space-y-4">
+        {/* Doanh thu & Lợi nhuận / Công nợ grids */}
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+          {/* Card 1: Tổng */}
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 rounded-xl p-2.5 py-3.5 shadow-sm flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] sm:text-[11px] font-black text-blue-500 dark:text-blue-400 tracking-tighter leading-none">
+              {fmt(totalCustomerDebt + totalSupplierDebt + totalInstallmentDebt)}
+            </span>
+            <span className="mt-1.5 text-[8.5px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 leading-none">
+              Tổng (đ)
+            </span>
+            <span className="mt-1 text-[8px] font-bold text-slate-500 dark:text-slate-500/70 leading-none">
+              {customerRows.length + supplierRows.length + installmentRows.length} khoản
+            </span>
+          </div>
+
+          {/* Card 2: Khách */}
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 rounded-xl p-2.5 py-3.5 shadow-sm flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] sm:text-[11px] font-black text-rose-500 dark:text-rose-450 tracking-tighter leading-none">
+              {fmt(totalCustomerDebt)}
+            </span>
+            <span className="mt-1.5 text-[8.5px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 leading-none">
+              Khách (đ)
+            </span>
+            <span className="mt-1 text-[8px] font-bold text-slate-500 dark:text-slate-500/70 leading-none">
+              {customerRows.length} khoản
+            </span>
+          </div>
+
+          {/* Card 3: NCC */}
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 rounded-xl p-2.5 py-3.5 shadow-sm flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] sm:text-[11px] font-black text-orange-500 dark:text-orange-450 tracking-tighter leading-none">
+              {fmt(totalSupplierDebt)}
+            </span>
+            <span className="mt-1.5 text-[8.5px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 leading-none">
+              NCC (đ)
+            </span>
+            <span className="mt-1 text-[8px] font-bold text-slate-500 dark:text-slate-500/70 leading-none">
+              {supplierRows.length} khoản
+            </span>
+          </div>
+
+          {/* Card 4: Góp */}
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 rounded-xl p-2.5 py-3.5 shadow-sm flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] sm:text-[11px] font-black text-purple-500 dark:text-purple-405 tracking-tighter leading-none">
+              {fmt(totalInstallmentDebt)}
+            </span>
+            <span className="mt-1.5 text-[8.5px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 leading-none">
+              Góp (đ)
+            </span>
+            <span className="mt-1 text-[8px] font-bold text-slate-500 dark:text-slate-500/70 leading-none">
+              {installmentRows.length} khoản
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* DESKTOP HEADER with inline Stats */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100">
             Quản lý Công Nợ
@@ -1189,8 +1247,138 @@ export default function Receivables() {
 
       {/* Main Card - Mobile: Transparent/No padding, Desktop: Card style */}
       <div className="md:bg-white md:dark:bg-slate-800 md:rounded-xl md:shadow-sm md:border md:border-slate-200 md:dark:border-slate-700 md:p-4">
-        {/* Tab, Search and Actions - Compact single row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        {/* MOBILE CONTROLS Section */}
+        <div className="md:hidden space-y-3">
+          {/* Segmented Tab Selector */}
+          <div className="flex w-full rounded-xl bg-slate-100 p-1 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850">
+            <button
+              onClick={() => {
+                setActiveTab("customers");
+                setSelected({});
+              }}
+              className={`flex-1 rounded-lg py-2 text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                activeTab === "customers"
+                  ? "bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              <Icon name="customers" size="sm" tone={activeTab === "customers" ? "primary" : "muted"} />
+              KH ({customerRows.length})
+            </button>
+            
+            <button
+              onClick={() => {
+                setActiveTab("suppliers");
+                setSelected({});
+              }}
+              className={`flex-1 rounded-lg py-2 text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                activeTab === "suppliers"
+                  ? "bg-white text-orange-600 shadow-sm dark:bg-slate-800 dark:text-orange-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              <Icon name="stock" size="sm" tone={activeTab === "suppliers" ? "primary" : "muted"} />
+              NCC ({supplierRows.length})
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab("installments");
+                setSelected({});
+              }}
+              className={`flex-1 rounded-lg py-2 text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                activeTab === "installments"
+                  ? "bg-white text-purple-600 shadow-sm dark:bg-slate-800 dark:text-purple-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              <Icon name="calendar" size="sm" tone={activeTab === "installments" ? "primary" : "muted"} />
+              Trả góp ({installmentRows.length})
+            </button>
+          </div>
+
+          {/* Search + View Toggles card */}
+          <div className="bg-white dark:bg-[#131929] border border-slate-200/80 dark:border-slate-800/60 p-4 rounded-2xl shadow-sm space-y-3">
+            <div className="relative">
+              <Icon name="search" size="sm" tone="muted" className="absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder={
+                  activeTab === "customers"
+                    ? "Tìm theo tên, SĐT..."
+                    : activeTab === "suppliers"
+                      ? "Tìm theo nhà cung cấp..."
+                      : "Tìm theo tên khách, mã đơn..."
+                }
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* View toggles + Summary Row */}
+            <div className="flex items-center justify-between gap-3 pt-1">
+              {/* Left: View Mode Toggle */}
+              {activeTab === "customers" ? (
+                <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850 rounded-lg">
+                  <button
+                    onClick={() => setViewMode("per-order")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                      viewMode === "per-order"
+                        ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-355"
+                    }`}
+                  >
+                    Đơn lẻ
+                  </button>
+                  <button
+                    onClick={() => setViewMode("by-customer")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                      viewMode === "by-customer"
+                        ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-355"
+                    }`}
+                  >
+                    Gom khách
+                  </button>
+                </div>
+              ) : (
+                <div />
+              )}
+
+              {/* Right: Actions */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-550 dark:text-slate-400">
+                  Tổng: <span className="font-extrabold text-red-500 dark:text-red-400">{fmt(totalDebt)} đ</span>
+                </span>
+                {activeTab !== "installments" && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      if (activeTab === "customers") {
+                        if (viewMode === "by-customer") {
+                          setCollectModalMode("consolidated");
+                        } else {
+                          setCollectModalMode("per-order");
+                        }
+                        setShowCollectModal(true);
+                      } else {
+                        setShowSupplierPayModal(true);
+                      }
+                    }}
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl shadow-none"
+                  >
+                    {activeTab === "customers" ? "Thu nợ" : "Thanh toán"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP CONTROLS Section */}
+        <div className="hidden md:flex flex-col sm:flex-row sm:items-center gap-2">
           {/* Tab buttons */}
           <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             <button
