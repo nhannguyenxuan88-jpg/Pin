@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePinContext } from "../../contexts/PinContext";
 import { supabase } from "../../supabaseClient";
@@ -12,6 +12,8 @@ import {
   UserCircleIcon,
   ChartBarIcon,
 } from "../common/Icons";
+import { BatteryEstimatorModal } from "./BatteryEstimatorModal";
+
 
 // Helper to format currency in VND
 const formatVND = (amount: number) => {
@@ -42,6 +44,7 @@ const isThisMonth = (dateString?: string) => {
 
 export const OverviewTab: React.FC = () => {
   const navigate = useNavigate();
+  const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
   const {
     pinSales = [],
     pinRepairOrders = [],
@@ -581,6 +584,19 @@ export const OverviewTab: React.FC = () => {
                     Báo cáo
                   </span>
                 </button>
+
+                {/* Bộ tính Pin */}
+                <button
+                  onClick={() => setIsEstimatorOpen(true)}
+                  className="flex flex-col items-center justify-center bg-white dark:bg-[#131929] border border-slate-200 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm dark:shadow-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 active:scale-95 transition-all text-center min-h-[96px]"
+                >
+                  <div className="w-10 h-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center mb-2">
+                    <span className="text-lg">🧮</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 leading-snug">
+                    Bộ tính Pin
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -597,6 +613,7 @@ export const OverviewTab: React.FC = () => {
 
         </div>
       </div>
+      <BatteryEstimatorModal isOpen={isEstimatorOpen} onClose={() => setIsEstimatorOpen(false)} />
     </div>
   );
 };

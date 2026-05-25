@@ -8,6 +8,7 @@ import { usePinContext } from "../contexts/PinContext";
 import { Icon, type IconName } from "./common/Icon";
 import { XMarkIcon, PlusIcon, TrashIcon, PencilSquareIcon } from "./common/Icons";
 import PinImportHistory from "./PinImportHistory";
+import { BatteryEstimatorModal } from "./mobile/BatteryEstimatorModal";
 import MaterialImportModal, { ImportRow } from "./MaterialImportModal";
 import PurchaseOrderManager from "./PurchaseOrderManager";
 import { generateMaterialSKU } from "../lib/sku";
@@ -2995,6 +2996,9 @@ const MaterialManager: React.FC<{
   // CSV import modal state
   const [showImportModal, setShowImportModal] = useState(false);
 
+  // Battery Estimator Modal state
+  const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
+
   // Tab management for main views
   const [activeView, setActiveView] = useState<"materials" | "history" | "orders">("materials");
   // Note: History view now self-fetches; no need to trigger context reload here
@@ -4094,12 +4098,21 @@ const MaterialManager: React.FC<{
 
           {/* Add Action (FAB-like or top header action) */}
           {activeView === "materials" && (
-            <button
-              onClick={() => navigate("/materials/goods-receipt/new")}
-              className="w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-blue-600 to-sky-500 text-white rounded-xl shadow-md active:scale-95 transition-all"
-            >
-              <Icon name="add" size="md" tone="contrast" weight="bold" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsEstimatorOpen(true)}
+                className="w-9 h-9 flex items-center justify-center bg-slate-800 text-white rounded-xl border border-slate-700/50 shadow-md active:scale-95 transition-all text-sm"
+                title="Ước tính ráp pin"
+              >
+                🧮
+              </button>
+              <button
+                onClick={() => navigate("/materials/goods-receipt/new")}
+                className="w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-blue-600 to-sky-500 text-white rounded-xl shadow-md active:scale-95 transition-all"
+              >
+                <Icon name="add" size="md" tone="contrast" weight="bold" />
+              </button>
+            </div>
           )}
         </div>
 
@@ -4245,6 +4258,14 @@ const MaterialManager: React.FC<{
         <div className="flex items-center gap-1 flex-wrap">
           {activeView === "materials" && (
             <>
+              <button
+                onClick={() => setIsEstimatorOpen(true)}
+                className="flex items-center gap-1 bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-all"
+                title="Ước tính ráp pin"
+              >
+                <span className="text-base">🧮</span>
+                Bộ tính pin
+              </button>
               <button
                 onClick={() => setShowImportModal(true)}
                 className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-all"
@@ -5046,6 +5067,11 @@ const MaterialManager: React.FC<{
               isOpen={showImportModal}
               onClose={() => setShowImportModal(false)}
               onImport={handleCsvImport}
+            />
+            {/* Battery Estimator Modal */}
+            <BatteryEstimatorModal
+              isOpen={isEstimatorOpen}
+              onClose={() => setIsEstimatorOpen(false)}
             />
           </div>
         )}
