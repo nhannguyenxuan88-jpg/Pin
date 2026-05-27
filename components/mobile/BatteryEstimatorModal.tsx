@@ -51,9 +51,11 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
   const [customBmsRetailPrice, setCustomBmsRetailPrice] = useState<number>(0);
 
   // --- Other fees ---
-  const [accessoriesCost, setAccessoriesCost] = useState<number>(350000); // Vỏ hộp, kẽm, co nhiệt, vv.
-  const [laborCost, setLaborCost] = useState<number>(300000); // Tiền công ráp
+  const [accessoriesCost, setAccessoriesCost] = useState<number>(350000); // Phụ kiện & sạc
+  const [laborCost, setLaborCost] = useState<number>(300000); // Hộp đựng
   const [markupPercent, setMarkupPercent] = useState<number>(20); // Markup percentage (%)
+
+  const [showQuotePreview, setShowQuotePreview] = useState<boolean>(false);
 
   // --- Manual Override overrides ---
   const [seriesOverride, setSeriesOverride] = useState<number | null>(null);
@@ -249,12 +251,9 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
     return opt.isPreset ? opt.preset?.name || "Mạch bảo vệ BMS" : opt.material?.name || "Mạch bảo vệ BMS";
   }, [selectedBmsId, bmsOptions]);
 
-  // --- ACTIONS ---
-
-  // Copy Zalo quote
-  const handleCopyQuote = () => {
+  const quoteText = useMemo(() => {
     const chemistryText = isLiIon ? "Lithium-Ion 3.7V" : "LiFePO4 3.2V";
-    const quoteText = `⚡ BÁO GIÁ KHỐI PIN XE ĐIỆN THÔNG MINH ⚡
+    return `⚡ BÁO GIÁ KHỐI PIN XE ĐIỆN THÔNG MINH ⚡
 ----------------------------------
 🔋 Thông số yêu cầu:
 - Điện áp mong muốn: ${targetVoltage}V (${chemistryText})
@@ -269,27 +268,118 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
 💰 Chi tiết vật tư báo giá:
 - Cell pin: ${totalCells} cell x ${formatVND(customCellRetailPrice)} = ${formatVND(totalCellRetailPrice)}
 - Mạch BMS bảo vệ: ${formatVND(customBmsRetailPrice)}
-- Hộp chống nước, khung chịu lực & kẽm hàn: ${formatVND(accessoriesCost)}
-- Tiền công ráp & cân bằng kỹ thuật: ${formatVND(laborCost)}
+- Phụ kiện & Sạc: ${formatVND(accessoriesCost)}
+- Hộp đựng: ${formatVND(laborCost)}
 ----------------------------------
 💸 TỔNG GIÁ RÁP THÀNH PHẨM: ${formatVND(finalRetailPrice)}
 (Đã bao gồm vỏ hộp hoàn thiện, test tải xung dung lượng, sạc cân bằng chủ động bảo vệ)
 ✨ Thời gian bảo hành: 12 tháng tại cửa hàng ✨
 ----------------------------------
 Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
+  }, [
+    accessoriesCost,
+    activeP,
+    activeS,
+    bmsDisplayName,
+    cellCapacityAh,
+    cellDisplayName,
+    customBmsRetailPrice,
+    customCellRetailPrice,
+    isLiIon,
+    laborCost,
+    shopName,
+    targetCapacity,
+    targetVoltage,
+    totalCellRetailPrice,
+    totalCells,
+    finalRetailPrice
+  ]);
 
-    navigator.clipboard.writeText(quoteText)
-      .then(() => {
+  // --- ACTIONS ---
+
+  const fallbackCopy = (text: string) => {
+    const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      let copied = false;
+      try {
+        copied = document.execCommand("copy");
+      } catch (err) {
+        console.error("Copy fallback failed: ", err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+
+    return copied;
+  };
+
+  const copyQuoteToClipboard = async (text: string) => {
+    const clipboardSupported = typeof navigator !== "undefined" && !!navigator.clipboard && window.isSecureContext;
+
+    if (clipboardSupported) {
+      try {
+        await navigator.clipboard.writeText(text);
         addToast({
           title: "Đã sao chép!",
-          message: "Báo giá định dạng Zalo đã được lưu vào khay nhớ tạm.",
+          message: "Báo giá đã được lưu vào khay nhớ tạm để dán vào Zalo.",
           type: "success"
         });
-      })
-      .catch(err => {
+        return;
+      } catch (err) {
         console.error("Copy failed: ", err);
-        alert("Lỗi khi sao chép báo giá. Vui lòng thử lại!");
+      }
+    }
+
+    if (fallbackCopy(text)) {
+      addToast({
+        title: "Đã sao chép!",
+        message: "Báo giá đã được lưu vào khay nhớ tạm để dán vào Zalo.",
+        type: "success"
       });
+      return;
+    }
+
+    addToast({
+      title: "Không thể sao chép",
+      message: "Trình duyệt chặn sao chép. Hãy thử lại hoặc dùng trình duyệt khác.",
+      type: "error"
+    });
+  };
+
+  // Share or copy Zalo quote
+  const handleCopyQuote = () => {
+    const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+    if (canShare) {
+      navigator.share({
+        title: "Bao gia khoi pin",
+        text: quoteText
+      })
+        .then(() => {
+          addToast({
+            title: "Đã mở chia sẻ",
+            message: "Hãy chọn Zalo trong danh sách chia sẻ.",
+            type: "success"
+          });
+        })
+        .catch(err => {
+          if (err && err.name === "AbortError") return;
+          console.error("Share failed: ", err);
+          void copyQuoteToClipboard(quoteText);
+        });
+      return;
+    }
+
+    void copyQuoteToClipboard(quoteText);
+  };
+
+  const handleCopyOnly = () => {
+    void copyQuoteToClipboard(quoteText);
   };
 
   // Create BOM dynamically in inventory database
@@ -358,7 +448,7 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
       {/* Container */}
-      <div className="bg-slate-900 border border-slate-800/80 rounded-t-3xl sm:rounded-3xl w-full max-w-lg md:max-w-5xl h-[92vh] md:h-[88vh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden transition-all duration-300 text-slate-100 font-sans">
+      <div className="bg-slate-900 border border-slate-800/80 rounded-t-3xl sm:rounded-3xl w-full max-w-lg md:max-w-6xl h-[92vh] md:h-auto sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden transition-all duration-300 text-slate-100 font-sans">
         
         {/* Header */}
         <div className="px-5 py-4 bg-slate-950/60 border-b border-slate-800/50 flex justify-between items-center sticky top-0 z-10">
@@ -382,11 +472,11 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-5 md:p-6 pb-28 md:pb-6 scrollbar-hide">
-          <div className="md:flex md:gap-6">
-            <div className="space-y-5 md:flex-1">
+        <div className="flex-1 overflow-y-auto md:overflow-hidden p-5 md:p-4 pb-28 md:pb-4 scrollbar-hide">
+          <div className="md:grid md:grid-cols-12 md:gap-5">
+            <div className="space-y-5 md:space-y-4 md:col-span-6">
               {/* Section 1: Customer request */}
-              <div className="bg-slate-950/40 border border-slate-800/40 p-4 rounded-2xl space-y-3.5 shadow-sm">
+              <div className="bg-slate-950/40 border border-slate-800/40 p-4 md:p-3 rounded-2xl space-y-3 md:space-y-2.5 shadow-sm">
             <h4 className="text-xs font-black tracking-wider text-blue-400 uppercase">
               1. Yêu cầu của Khách hàng
             </h4>
@@ -475,7 +565,7 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
               </div>
 
               {/* Section 2: Materials selection */}
-              <div className="bg-slate-950/40 border border-slate-800/40 p-4 rounded-2xl space-y-3.5 shadow-sm">
+              <div className="bg-slate-950/40 border border-slate-800/40 p-4 md:p-3 rounded-2xl space-y-3 md:space-y-2.5 shadow-sm">
             <h4 className="text-xs font-black tracking-wider text-emerald-400 uppercase">
               2. Chọn Cell & Linh kiện từ Kho
             </h4>
@@ -577,8 +667,11 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
             </div>
               </div>
 
+            </div>
+
+            <div className="space-y-5 md:space-y-4 md:col-span-3">
               {/* Section 3: Fine tune config and auxiliary costs */}
-              <div className="bg-slate-950/40 border border-slate-800/40 p-4 rounded-2xl space-y-3.5 shadow-sm">
+              <div className="bg-slate-950/40 border border-slate-800/40 p-4 md:p-3 rounded-2xl space-y-3 md:space-y-2.5 shadow-sm">
             <h4 className="text-xs font-black tracking-wider text-amber-400 uppercase">
               3. Cấu hình Khối & Chi phí khác
             </h4>
@@ -643,7 +736,7 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
             {/* Accessories & Labor */}
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/40 text-[10px]">
               <div>
-                <span className="text-slate-400 block mb-0.5 font-semibold">Phụ kiện & Hộp đựng (đ):</span>
+                <span className="text-slate-400 block mb-0.5 font-semibold">Phụ kiện & Sạc (đ):</span>
                 <input
                   type="number"
                   value={accessoriesCost}
@@ -652,7 +745,7 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
                 />
               </div>
               <div>
-                <span className="text-slate-400 block mb-0.5 font-semibold">Công ráp hoàn thiện (đ):</span>
+                <span className="text-slate-400 block mb-0.5 font-semibold">Hộp đựng (đ):</span>
                 <input
                   type="number"
                   value={laborCost}
@@ -664,9 +757,9 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
               </div>
             </div>
 
-            <div className="space-y-5 md:w-[360px] md:flex-shrink-0 md:sticky md:top-4">
+            <div className="space-y-5 md:space-y-4 md:col-span-3 md:sticky md:top-4">
               {/* Section 4: SUMMARY & DECISIONS */}
-              <div className="bg-gradient-to-tr from-slate-950 to-slate-900 border border-slate-700/60 p-5 rounded-2xl space-y-4 shadow-xl">
+              <div className="bg-gradient-to-tr from-slate-950 to-slate-900 border border-slate-700/60 p-5 md:p-4 rounded-2xl space-y-4 shadow-xl">
             <h4 className="text-xs font-black tracking-wider text-purple-400 uppercase">
               4. Kết quả & Đề xuất báo giá
             </h4>
@@ -720,15 +813,23 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
                   <span className="font-semibold">{formatVND(customBmsRetailPrice)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>📦 Vỏ hộp & Kẽm hàn gia cố</span>
+                  <span>🔌 Phụ kiện & Sạc</span>
                   <span className="font-semibold">{formatVND(accessoriesCost)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>🛠️ Tiền công lắp ráp hoàn thiện</span>
+                  <span>📦 Hộp đựng</span>
                   <span className="font-semibold">{formatVND(laborCost)}</span>
                 </div>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowQuotePreview(true)}
+              className="w-full mt-3 bg-slate-900 hover:bg-slate-800 text-slate-200 font-extrabold text-xs py-2.5 px-3 rounded-xl border border-slate-800 transition-all"
+            >
+              Xem trước báo giá
+            </button>
               </div>
 
               {/* Desktop actions */}
@@ -763,6 +864,87 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
           </div>
 
         </div>
+
+        {showQuotePreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-950/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/30">
+                    <span className="text-sm">🧾</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-200">Xem trước báo giá</h4>
+                    <p className="text-[10px] text-slate-400 font-medium">Kiểm tra trước khi gửi cho khách</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowQuotePreview(false)}
+                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-200 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-4 p-5">
+                <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4">
+                  <textarea
+                    value={quoteText}
+                    readOnly
+                    rows={20}
+                    className="w-full h-[60vh] md:h-[70vh] resize-none bg-slate-950 border border-slate-800 text-slate-200 rounded-xl p-3 text-xs leading-relaxed focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-4 mt-4 md:mt-0">
+                  <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
+                        <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Cấu hình</span>
+                        <span className="text-lg font-black text-blue-400">{activeS}S {activeP}P</span>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
+                        <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Tổng cell</span>
+                        <span className="text-lg font-black text-amber-400">{totalCells} cell</span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-850 text-xs">
+                      <div className="flex justify-between items-center text-slate-400">
+                        <span>Chi phí vốn:</span>
+                        <span className="font-extrabold text-slate-200">{formatVND(finalRawCost)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-400 mt-1">
+                        <span>Lợi nhuận gộp:</span>
+                        <span className="font-bold text-emerald-500">+{formatVND(finalRetailPrice - finalRawCost)}</span>
+                      </div>
+                      <div className="pt-2 mt-2 border-t border-slate-850 flex justify-between items-center text-sm font-extrabold">
+                        <span className="text-slate-100">Giá bán lẻ:</span>
+                        <span className="text-xl font-black text-emerald-400">{formatVND(finalRetailPrice)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyOnly}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3 px-4 rounded-xl shadow-lg transition-all"
+                  >
+                    Copy báo giá
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowQuotePreview(false)}
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 font-extrabold text-sm py-3 px-4 rounded-xl border border-slate-800 transition-all"
+                  >
+                    Đóng xem trước
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Floating action buttons footer */}
         <div className="absolute bottom-0 left-0 right-0 bg-slate-950/90 border-t border-slate-800/80 p-4 grid grid-cols-2 gap-3 z-15 backdrop-blur-sm md:hidden">

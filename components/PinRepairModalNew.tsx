@@ -766,9 +766,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
     (sum, m) => sum + m.quantity * m.price,
     0
   );
-  const isReturnPaymentAction =
-    formData.status === "Trả máy" &&
-    (formData.paymentStatus === "unpaid" || formData.paymentStatus === "partial");
+  const isReturnPaymentAction = formData.status === "Trả máy";
 
   // Determine button text based on action
   const getButtonText = () => {
@@ -1136,8 +1134,8 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
             </div>{/* end Cột Trái */}
 
             {/* ════ CỘT PHẢI (TỔNG KẾT & THANH TOÁN) ════ */}
-            <div className="lg:col-span-3 flex flex-col bg-[#151f31] border-l border-slate-700/70 p-5 overscroll-none overflow-y-auto custom-scrollbar relative shadow-[-12px_0_30px_-22px_rgba(0,0,0,0.9)] z-10">
-              <div className="flex-1 space-y-5 pb-28"> {/* pb-28 space for floating actions */}
+            <div className="lg:col-span-3 flex flex-col bg-[#151f31] border-l border-slate-700/70 p-5 overscroll-none overflow-y-auto custom-scrollbar shadow-[-12px_0_30px_-22px_rgba(0,0,0,0.9)] z-10">
+              <div className="flex-1 space-y-5">
 
                 {/* Tổng kết */}
                 <div>
@@ -1290,8 +1288,8 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                 </div>
               </div>
 
-              {/* FLOATING ACTION BLOCKS (Lưu phiếu / Hủy) */}
-              <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[#151f31] via-[#151f31]/95 to-transparent pt-14">
+              {/* ACTION BUTTONS */}
+              <div className="pt-4 border-t border-slate-700/50">
                 <div className="space-y-3">
                   <button type="submit" disabled={isSubmitting || isCompleted}
                     className={`w-full py-3.5 active:transform active:scale-[0.99] text-white rounded-lg font-black shadow-lg transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 text-[15px] tracking-wide ${

@@ -429,6 +429,37 @@ export function createRepairService(ctx: PinContextType): RepairService {
           }
         }
 
+        // 4. Ghi chi phí giá vốn gia công (Outsourcing Cost Expense)
+        // Khi "Trả máy": tạo giao dịch CHI cho mỗi hạng mục gia công có giá vốn > 0
+        if (isCompleted && ctx.addCashTransaction && (order.outsourcingItems || []).length > 0) {
+          for (let i = 0; i < (order.outsourcingItems || []).length; i++) {
+            const item = order.outsourcingItems![i];
+            if (!item.costPrice || item.costPrice <= 0) continue;
+
+            const costTxId = `CT-COST-${order.id}-${i}`;
+            const alreadyHasCostTx = (ctx.cashTransactions || []).some((t: any) => t.id === costTxId);
+            if (alreadyHasCostTx) continue;
+
+            const totalCost = Math.abs(item.costPrice) * (item.quantity || 1);
+            const costTx: CashTransaction = {
+              id: costTxId,
+              type: "expense",
+              date: new Date().toISOString(),
+              amount: totalCost,
+              contact: {
+                id: order.id,
+                name: item.description || "Gia công ngoài",
+              },
+              notes: `Chi phí gia công: ${item.description} (x${item.quantity}) - ${order.deviceName} - ${order.id} #app:pincorp`,
+              paymentSourceId: order.paymentMethod || "cash",
+              branchId: "main",
+              workOrderId: order.id,
+              category: "repair_cost",
+            };
+            await ctx.addCashTransaction(costTx);
+          }
+        }
+
         ctx.setRepairOrders((prev: PinRepairOrder[]) =>
           prev.map((o: PinRepairOrder) => (o.id === order.id ? order : o))
         );

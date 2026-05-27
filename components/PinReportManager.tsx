@@ -89,14 +89,14 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
   // Sort state for daily report table
   type SortColumn = "date" | "capitalCost" | "salesCOGS" | "salesRevenue" | "repairMaterialCost" | "repairLaborCost" | "totalRevenue" | "salesProfit" | "otherIncome" | "otherExpense" | "netProfit";
   const [sortColumn, setSortColumn] = useState<SortColumn>("date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection("asc");
+      setSortDirection("desc");
     }
   };
 
@@ -199,8 +199,21 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       sum + s.items.reduce((itemSum, i) => itemSum + (i.costPrice || 0) * i.quantity, 0), 0
     );
 
+    // Cost of repair materials and outsourcing (Giá vốn sửa chữa)
+    const repairCost = filteredRepairs
+      .filter(r => r.paymentStatus === "paid" || r.paymentStatus === "partial")
+      .reduce((sum, r) => {
+        const matCost = (r.materialsUsed || []).reduce((mSum, m) => {
+          const mat = materials.find(x => x.id === m.materialId);
+          const c = mat ? (mat.purchasePrice || 0) : (m.price * 0.7);
+          return mSum + c * m.quantity;
+        }, 0);
+        const outsourcingCost = (r.outsourcingItems || []).reduce((oSum, item) => oSum + (item.costPrice || 0) * item.quantity, 0);
+        return sum + matCost + outsourcingCost;
+      }, 0);
+
     // Gross profit (Lợi nhuận gộp = Doanh thu - Giá vốn hàng bán)
-    const grossProfit = salesRevenue - salesCOGS;
+    const grossProfit = (salesRevenue - salesCOGS) + (repairRevenue - repairCost);
 
     // Inventory purchases (Vốn nhập kho - không tính vào chi phí trong kỳ)
     const inventoryPurchases = filteredTransactions
@@ -218,8 +231,8 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       .filter(t => t.type === "income" && t.category === "other_income")
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-    // Total cost for display (COGS + Operating expenses)
-    const totalCost = salesCOGS + operatingExpenses;
+    // Total cost for display (COGS + Operating expenses + Repair cost)
+    const totalCost = salesCOGS + repairCost + operatingExpenses;
 
     // Net profit (Lợi nhuận thuần = Lợi nhuận gộp + Thu khác - Chi phí vận hành)
     const netProfit = grossProfit + otherIncome - operatingExpenses;
@@ -240,7 +253,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       profitMargin,
       otherIncome
     };
-  }, [filteredData]);
+  }, [filteredData, materials]);
 
   // Calculate daily report data
   const dailyReportData = useMemo(() => {
@@ -278,15 +291,34 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
       }
     });
 
-    // Process repairs
+    // Process repairs - group by completion date for paid orders, creation date for others
     filteredRepairs.forEach((repair) => {
       const repairDate = new Date(repair.creationDate);
       const dateKey = toLocalDateKey(repairDate);
       if (dateMap.has(dateKey)) {
         const row = dateMap.get(dateKey)!;
-        const materialsCost = (repair.materialsUsed || []).reduce((sum, m) => sum + m.price * m.quantity, 0);
-        row.repairMaterialCost += materialsCost;
-        row.repairLaborCost += repair.laborCost || 0;
+        if (repair.paymentStatus === "paid" || repair.paymentStatus === "partial") {
+          row.repairLaborCost += repair.total || 0;
+
+          // Calculate actual cost of materials used in repair
+          const matCost = (repair.materialsUsed || []).reduce((sum, m) => {
+            const mat = materials.find(x => x.id === m.materialId);
+            const c = mat ? (mat.purchasePrice || 0) : (m.price * 0.7);
+            return sum + c * m.quantity;
+          }, 0);
+
+          // Calculate actual cost of outsourcing items
+          const outsourcingCost = (repair.outsourcingItems || []).reduce(
+            (sum, item) => sum + (item.costPrice || 0) * item.quantity,
+            0
+          );
+
+          row.repairMaterialCost += matCost + outsourcingCost;
+
+          // Repair profit = repair total - (materials cost + outsourcing cost)
+          const repairProfit = (repair.total || 0) - (matCost + outsourcingCost);
+          row.salesProfit += repairProfit;
+        }
       }
     });
 
@@ -310,8 +342,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
 
     // Calculate totals for each row
     dateMap.forEach((row) => {
-      // totalRevenue = bán hàng + (vật tư sửa chữa tính cho KH) + tiền công sửa chữa
-      row.totalRevenue = row.salesRevenue + row.repairMaterialCost + row.repairLaborCost;
+      row.totalRevenue = row.salesRevenue + row.repairLaborCost;
       row.netProfit = (row.salesProfit + row.otherIncome) - row.otherExpense;
     });
 
@@ -339,7 +370,7 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
     }
 
     return rows;
-  }, [filteredData, dateRange]);
+  }, [filteredData, dateRange, materials]);
 
   // Sorted daily report data
   const sortedDailyData = useMemo(() => {
@@ -881,32 +912,53 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
                         <div className="bg-slate-900/60 border-t border-slate-700/30 px-4 py-3 space-y-3">
                           {/* Profit breakdown */}
                           <div className="bg-slate-800/80 rounded-lg p-3 border border-slate-700/50">
-                            <h4 className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Cách tính lợi nhuận</h4>
                             <div className="space-y-1 text-xs">
                               <div className="flex justify-between text-slate-300">
                                 <span>Doanh thu bán hàng</span>
                                 <span className="text-blue-400">{formatCompact(row.salesRevenue)}</span>
                               </div>
                               <div className="flex justify-between text-slate-300">
-                                <span>(-) Giá vốn hàng bán</span>
+                                <span>(-) Giá vốn bán hàng</span>
                                 <span className="text-orange-400">- {formatCompact(row.salesCOGS)}</span>
                               </div>
-                              <div className="flex justify-between font-semibold border-t border-slate-700/50 pt-1">
+                              <div className="flex justify-between font-semibold border-t border-slate-700/50 pt-1 pb-1">
                                 <span className="text-slate-200">= Lãi gộp bán hàng</span>
-                                <span className={row.salesProfit >= 0 ? "text-emerald-400" : "text-red-400"}>
-                                  {formatCompact(row.salesProfit)}
+                                <span className={row.salesRevenue - row.salesCOGS >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                  {formatCompact(row.salesRevenue - row.salesCOGS)}
                                 </span>
                               </div>
-                              {row.otherIncome > 0 && (
-                                <div className="flex justify-between text-slate-300">
-                                  <span>(+) Thu nhập khác</span>
-                                  <span className="text-teal-400">+ {formatCompact(row.otherIncome)}</span>
-                                </div>
+                              {row.repairLaborCost > 0 && (
+                                <>
+                                  <div className="flex justify-between text-slate-300 border-t border-slate-700/50 pt-1">
+                                    <span>Doanh thu sửa chữa</span>
+                                    <span className="text-blue-400">{formatCompact(row.repairLaborCost)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-300">
+                                    <span>(-) Giá vốn sửa chữa</span>
+                                    <span className="text-orange-400">- {formatCompact(row.repairMaterialCost)}</span>
+                                  </div>
+                                  <div className="flex justify-between font-semibold border-t border-slate-700/50 pt-1 pb-1">
+                                    <span className="text-slate-200">= Lãi gộp sửa chữa</span>
+                                    <span className={row.repairLaborCost - row.repairMaterialCost >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                      {formatCompact(row.repairLaborCost - row.repairMaterialCost)}
+                                    </span>
+                                  </div>
+                                </>
                               )}
-                              {row.otherExpense > 0 && (
-                                <div className="flex justify-between text-slate-300">
-                                  <span>(-) Chi phí khác</span>
-                                  <span className="text-orange-400">- {formatCompact(row.otherExpense)}</span>
+                              {(row.otherIncome > 0 || row.otherExpense > 0) && (
+                                <div className="border-t border-slate-700/50 pt-1 space-y-1">
+                                  {row.otherIncome > 0 && (
+                                    <div className="flex justify-between text-slate-300">
+                                      <span>(+) Thu nhập khác</span>
+                                      <span className="text-teal-400">+ {formatCompact(row.otherIncome)}</span>
+                                    </div>
+                                  )}
+                                  {row.otherExpense > 0 && (
+                                    <div className="flex justify-between text-slate-300">
+                                      <span>(-) Chi phí khác</span>
+                                      <span className="text-orange-400">- {formatCompact(row.otherExpense)}</span>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               <div className="flex justify-between font-bold border-t border-slate-600/50 pt-1 text-sm">
@@ -1228,24 +1280,30 @@ const PinReportManager: React.FC<PinReportManagerProps> = ({
                                         </div>
                                         <div className="flex justify-between font-semibold py-1.5 border-t border-dashed border-slate-700">
                                           <span className="text-slate-200">= Lãi gộp bán hàng</span>
-                                          <span className={row.salesProfit >= 0 ? "text-emerald-400" : "text-red-400"}>
-                                            {formatCompact(row.salesProfit)}
+                                          <span className={row.salesRevenue - row.salesCOGS >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                            {formatCompact(row.salesRevenue - row.salesCOGS)}
                                           </span>
                                         </div>
                                         {row.repairLaborCost > 0 && (
-                                          <div className="flex justify-between text-slate-300 py-1">
-                                            <span>(+) Doanh thu sửa chữa</span>
-                                            <span className="text-blue-400">+ {formatCompact(row.repairLaborCost)}</span>
-                                          </div>
-                                        )}
-                                        {row.repairMaterialCost > 0 && (
-                                          <div className="flex justify-between text-slate-400 py-1">
-                                            <span>(-) Chi phí vật tư SC</span>
-                                            <span className="text-orange-400">- {formatCompact(row.repairMaterialCost)}</span>
-                                          </div>
+                                          <>
+                                            <div className="flex justify-between text-slate-300 py-1 border-t border-slate-700/50 pt-1">
+                                              <span>(+) Doanh thu sửa chữa</span>
+                                              <span className="text-blue-400">+ {formatCompact(row.repairLaborCost)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-slate-400 py-1">
+                                              <span>(-) Chi phí vật tư & GC ngoài SC</span>
+                                              <span className="text-orange-400">- {formatCompact(row.repairMaterialCost)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-semibold py-1.5 border-t border-dashed border-slate-700">
+                                              <span className="text-slate-200">= Lãi gộp sửa chữa</span>
+                                              <span className={row.repairLaborCost - row.repairMaterialCost >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                                {formatCompact(row.repairLaborCost - row.repairMaterialCost)}
+                                              </span>
+                                            </div>
+                                          </>
                                         )}
                                         {row.otherIncome > 0 && (
-                                          <div className="flex justify-between text-slate-300 py-1">
+                                          <div className="flex justify-between text-slate-300 py-1 border-t border-slate-700/50 pt-1">
                                             <span>(+) Thu nhập khác</span>
                                             <span className="text-teal-400">+ {formatCompact(row.otherIncome)}</span>
                                           </div>

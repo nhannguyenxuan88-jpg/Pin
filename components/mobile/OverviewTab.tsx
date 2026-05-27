@@ -89,18 +89,24 @@ export const OverviewTab: React.FC = () => {
       .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
       .reduce((sum, r) => sum + (r.total || 0), 0);
 
-    const repairMaterialCost = repairRepairs
+    const repairCost = repairRepairs
       .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
       .reduce(
-        (sum, r) =>
-          sum +
-          (r.materialsUsed || []).reduce(
-            (mSum, m) => mSum + m.price * m.quantity,
+        (sum, r) => {
+          const matCost = (r.materialsUsed || []).reduce((mSum, m) => {
+            const mat = pinMaterials.find((x) => x.id === m.materialId);
+            const c = mat ? (mat.purchasePrice || 0) : (m.price * 0.7);
+            return mSum + c * m.quantity;
+          }, 0);
+          const outsourcingCost = (r.outsourcingItems || []).reduce(
+            (oSum, item) => oSum + (item.costPrice || 0) * item.quantity,
             0
-          ),
+          );
+          return sum + matCost + outsourcingCost;
+        },
         0
       );
-    const repairProfit = repairRevenue - repairMaterialCost;
+    const repairProfit = repairRevenue - repairCost;
 
     // 3. Cashflow operating expense & other income
     const monthTransactions = cashTransactions.filter((t) =>
@@ -157,18 +163,24 @@ export const OverviewTab: React.FC = () => {
       .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
       .reduce((sum, r) => sum + (r.total || 0), 0);
 
-    const repairMaterialCost = todayRepairs
+    const repairCost = todayRepairs
       .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
       .reduce(
-        (sum, r) =>
-          sum +
-          (r.materialsUsed || []).reduce(
-            (mSum, m) => mSum + m.price * m.quantity,
+        (sum, r) => {
+          const matCost = (r.materialsUsed || []).reduce((mSum, m) => {
+            const mat = pinMaterials.find((x) => x.id === m.materialId);
+            const c = mat ? (mat.purchasePrice || 0) : (m.price * 0.7);
+            return mSum + c * m.quantity;
+          }, 0);
+          const outsourcingCost = (r.outsourcingItems || []).reduce(
+            (oSum, item) => oSum + (item.costPrice || 0) * item.quantity,
             0
-          ),
+          );
+          return sum + matCost + outsourcingCost;
+        },
         0
       );
-    const repairProfit = repairRevenue - repairMaterialCost;
+    const repairProfit = repairRevenue - repairCost;
 
     // 3. Cashflow operating expense & other income
     const todayTransactions = cashTransactions.filter((t) => isToday(t.date));
