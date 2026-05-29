@@ -54,6 +54,7 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
   const [accessoriesCost, setAccessoriesCost] = useState<number>(350000); // Phụ kiện & sạc
   const [laborCost, setLaborCost] = useState<number>(300000); // Hộp đựng
   const [markupPercent, setMarkupPercent] = useState<number>(20); // Markup percentage (%)
+  const [useMarkupPricing, setUseMarkupPricing] = useState<boolean>(false); // Toggle markup-based pricing vs component-based
 
   const [showQuotePreview, setShowQuotePreview] = useState<boolean>(false);
 
@@ -85,7 +86,13 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
 
   // Combined cells list (presets + inventory)
   const cellOptions = useMemo(() => {
-    const opts = [];
+    const opts: Array<{
+      id: string;
+      name: string;
+      material?: PinMaterial;
+      preset?: typeof CELL_PRESETS[number];
+      isPreset: boolean;
+    }> = [];
     // Inventory cells
     inventoryCells.forEach(cell => {
       opts.push({
@@ -109,7 +116,13 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
 
   // Combined BMS list (presets + inventory)
   const bmsOptions = useMemo(() => {
-    const opts = [];
+    const opts: Array<{
+      id: string;
+      name: string;
+      material?: PinMaterial;
+      preset?: typeof BMS_PRESETS[number];
+      isPreset: boolean;
+    }> = [];
     // Inventory BMS
     inventoryBms.forEach(bms => {
       opts.push({
@@ -234,9 +247,14 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
     return totalCellRetailPrice + customBmsRetailPrice + accessoriesCost + laborCost;
   }, [totalCellRetailPrice, customBmsRetailPrice, accessoriesCost, laborCost]);
 
+  // Suggested selling price based on cost price + margin markup percentage
+  const retailPriceByMarkup = useMemo(() => {
+    return Math.round(rawCost * (1 + markupPercent / 100));
+  }, [rawCost, markupPercent]);
+
   // Active prices
   const finalRawCost = rawCost;
-  const finalRetailPrice = retailPriceByComponents; // components accumulation is extremely realistic for workshops
+  const finalRetailPrice = useMarkupPricing ? retailPriceByMarkup : retailPriceByComponents;
 
   // Selected cell & bms display names
   const cellDisplayName = useMemo(() => {
@@ -754,6 +772,45 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
                 />
               </div>
             </div>
+
+            {/* Pricing Mode Option */}
+            <div className="pt-3 border-t border-slate-800/40 space-y-2">
+              <label className="block text-[10px] font-extrabold text-slate-400">Phương pháp tính Giá Bán lẻ</label>
+              <div className="flex rounded-xl bg-slate-950 p-0.5 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setUseMarkupPricing(false)}
+                  className={`flex-1 rounded-lg py-1.5 text-[9px] font-extrabold transition-all border-none cursor-pointer ${!useMarkupPricing ? "bg-slate-800 text-white shadow-sm" : "bg-transparent text-slate-400 hover:text-slate-200"}`}
+                >
+                  Cộng dồn lẻ linh kiện
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseMarkupPricing(true)}
+                  className={`flex-1 rounded-lg py-1.5 text-[9px] font-extrabold transition-all border-none cursor-pointer ${useMarkupPricing ? "bg-slate-800 text-white shadow-sm" : "bg-transparent text-slate-400 hover:text-slate-200"}`}
+                >
+                  Giá vốn + Lợi nhuận %
+                </button>
+              </div>
+            </div>
+
+            {/* Markup Percentage input (only shown if useMarkupPricing is true) */}
+            {useMarkupPricing && (
+              <div className="pt-2 flex items-center justify-between gap-4 text-[10px] bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/50">
+                <span className="text-slate-400 font-semibold">Biên lợi nhuận mong muốn (%):</span>
+                <div className="w-1/3 flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                  <input
+                    type="number"
+                    min="0"
+                    max="200"
+                    value={markupPercent}
+                    onChange={(e) => setMarkupPercent(Number(e.target.value))}
+                    className="w-full text-center bg-transparent border-none text-white focus:outline-none font-bold text-xs"
+                  />
+                  <span className="text-slate-400 font-extrabold">%</span>
+                </div>
+              </div>
+            )}
               </div>
             </div>
 

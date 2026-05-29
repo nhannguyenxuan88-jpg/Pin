@@ -81,18 +81,25 @@ export const OverviewTab: React.FC = () => {
     );
     const salesProfit = salesRevenue - salesCOGS;
 
-    // 2. Repair revenue (only counting paid / partial orders)
+    // 2. Repair revenue (only counting actual cash collected: deposit + partial payments, or full total if paid)
     const repairRepairs = pinRepairOrders.filter((r) =>
       isThisMonth(r.creationDate)
     );
     const repairRevenue = repairRepairs
-      .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
-      .reduce((sum, r) => sum + (r.total || 0), 0);
+      .reduce((sum, r) => {
+        if (r.paymentStatus === "paid") {
+          return sum + (r.total || 0);
+        }
+        if (r.paymentStatus === "partial") {
+          return sum + (r.depositAmount || 0) + (r.partialPaymentAmount || 0);
+        }
+        return sum; // unpaid or cancelled
+      }, 0);
 
     const repairCost = repairRepairs
-      .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
       .reduce(
         (sum, r) => {
+          if (r.status === "Đã hủy") return sum;
           const matCost = (r.materialsUsed || []).reduce((mSum, m) => {
             const mat = pinMaterials.find((x) => x.id === m.materialId);
             const c = mat ? (mat.purchasePrice || 0) : (m.price * 0.7);
@@ -157,16 +164,23 @@ export const OverviewTab: React.FC = () => {
     );
     const salesProfit = salesRevenue - salesCOGS;
 
-    // 2. Repair revenue (only counting paid / partial orders)
+    // 2. Repair revenue (only counting actual cash collected)
     const todayRepairs = pinRepairOrders.filter((r) => isToday(r.creationDate));
     const repairRevenue = todayRepairs
-      .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
-      .reduce((sum, r) => sum + (r.total || 0), 0);
+      .reduce((sum, r) => {
+        if (r.paymentStatus === "paid") {
+          return sum + (r.total || 0);
+        }
+        if (r.paymentStatus === "partial") {
+          return sum + (r.depositAmount || 0) + (r.partialPaymentAmount || 0);
+        }
+        return sum;
+      }, 0);
 
     const repairCost = todayRepairs
-      .filter((r) => r.paymentStatus === "paid" || r.paymentStatus === "partial")
       .reduce(
         (sum, r) => {
+          if (r.status === "Đã hủy") return sum;
           const matCost = (r.materialsUsed || []).reduce((mSum, m) => {
             const mat = pinMaterials.find((x) => x.id === m.materialId);
             const c = mat ? (mat.purchasePrice || 0) : (m.price * 0.7);
