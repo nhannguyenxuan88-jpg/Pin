@@ -28,6 +28,18 @@ const formatVND = (amount: number) => {
   return new Intl.NumberFormat("vi-VN").format(Math.round(amount)) + " đ";
 };
 
+// Format number with dot separators for input display (e.g., 350000 -> "350.000")
+const formatInputNumber = (value: number): string => {
+  if (!value && value !== 0) return "";
+  return new Intl.NumberFormat("vi-VN").format(value);
+};
+
+// Parse formatted string back to number (e.g., "350.000" -> 350000)
+const parseInputNumber = (text: string): number => {
+  const cleaned = text.replace(/\./g, "").replace(/,/g, "").replace(/[^0-9]/g, "");
+  return Number(cleaned) || 0;
+};
+
 export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ isOpen, onClose }) => {
   const { pinMaterials = [], upsertPinBOM, addToast, storeSettings } = usePinContext();
   const shopName = storeSettings?.name || "Nhạn Lâm SmartCare";
@@ -69,7 +81,7 @@ export const BatteryEstimatorModal: React.FC<BatteryEstimatorModalProps> = ({ is
       const nameLower = m.name.toLowerCase();
       return (
         m.category === "material" &&
-        (nameLower.includes("cell") || nameLower.includes("pin") || nameLower.includes("lg") || nameLower.includes("eve") || nameLower.includes("samsung") || nameLower.includes("lishen"))
+        nameLower.includes("cell")
       );
     });
   }, [pinMaterials]);
@@ -629,18 +641,20 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
               <div className="mt-1">
                 <span className="text-slate-400 block mb-0.5 font-semibold">Giá vốn cell (đ):</span>
                 <input
-                  type="number"
-                  value={customCellPrice}
-                  onChange={(e) => setCustomCellPrice(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(customCellPrice)}
+                  onChange={(e) => setCustomCellPrice(parseInputNumber(e.target.value))}
                   className="w-full px-2 py-1 bg-slate-950 border border-slate-800 text-white rounded focus:outline-none font-bold text-blue-400"
                 />
               </div>
               <div className="mt-1">
                 <span className="text-slate-400 block mb-0.5 font-semibold">Giá bán cell (đ):</span>
                 <input
-                  type="number"
-                  value={customCellRetailPrice}
-                  onChange={(e) => setCustomCellRetailPrice(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(customCellRetailPrice)}
+                  onChange={(e) => setCustomCellRetailPrice(parseInputNumber(e.target.value))}
                   className="w-full px-2 py-1 bg-slate-950 border border-slate-800 text-white rounded focus:outline-none font-bold text-emerald-400"
                 />
               </div>
@@ -667,18 +681,20 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
               <div>
                 <span className="text-slate-400 block mb-0.5 font-semibold">BMS Giá vốn (đ):</span>
                 <input
-                  type="number"
-                  value={customBmsPrice}
-                  onChange={(e) => setCustomBmsPrice(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(customBmsPrice)}
+                  onChange={(e) => setCustomBmsPrice(parseInputNumber(e.target.value))}
                   className="w-full px-2 py-1 bg-slate-950 border border-slate-800 text-white rounded focus:outline-none font-bold text-blue-400"
                 />
               </div>
               <div>
                 <span className="text-slate-400 block mb-0.5 font-semibold">BMS Giá bán (đ):</span>
                 <input
-                  type="number"
-                  value={customBmsRetailPrice}
-                  onChange={(e) => setCustomBmsRetailPrice(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(customBmsRetailPrice)}
+                  onChange={(e) => setCustomBmsRetailPrice(parseInputNumber(e.target.value))}
                   className="w-full px-2 py-1 bg-slate-950 border border-slate-800 text-white rounded focus:outline-none font-bold text-emerald-400"
                 />
               </div>
@@ -756,18 +772,20 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
               <div>
                 <span className="text-slate-400 block mb-0.5 font-semibold">Phụ kiện & Sạc (đ):</span>
                 <input
-                  type="number"
-                  value={accessoriesCost}
-                  onChange={(e) => setAccessoriesCost(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(accessoriesCost)}
+                  onChange={(e) => setAccessoriesCost(parseInputNumber(e.target.value))}
                   className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-white rounded-lg focus:outline-none font-bold"
                 />
               </div>
               <div>
                 <span className="text-slate-400 block mb-0.5 font-semibold">Hộp đựng (đ):</span>
                 <input
-                  type="number"
-                  value={laborCost}
-                  onChange={(e) => setLaborCost(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(laborCost)}
+                  onChange={(e) => setLaborCost(parseInputNumber(e.target.value))}
                   className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-white rounded-lg focus:outline-none font-bold"
                 />
               </div>
