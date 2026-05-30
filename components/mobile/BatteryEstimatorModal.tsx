@@ -432,6 +432,12 @@ Cửa hàng ${shopName} - Hân hạnh phục vụ quý khách!`;
             materialId: matched.id,
             quantity: totalCells
           });
+        } else {
+          addToast({
+            title: "Lưu ý",
+            message: "Cell đang dùng là mẫu preset, không liên kết kho. BOM sẽ không có dữ liệu cell.",
+            type: "warn"
+          });
         }
       }
 

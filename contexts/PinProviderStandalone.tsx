@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, IS_OFFLINE_MODE, DEV_AUTH_BYPASS } from "../supabaseClient";
 import type { PinContextType } from "./types";
 import type {
@@ -751,14 +751,29 @@ export const PinProviderStandalone: React.FC<{ children: React.ReactNode }> = ({
     setCapitalInvestments,
   } as unknown) as PinContextType;
 
-  const materialsSvc = useMemo(() => createMaterialsService(ctxForServices), [ctxForServices]);
-  const productionSvc = useMemo(() => createProductionService(ctxForServices), [ctxForServices]);
-  const salesSvc = useMemo(() => createSalesService(ctxForServices), [ctxForServices]);
-  const customersSvc = useMemo(() => createCustomersService(ctxForServices), [ctxForServices]);
-  const suppliersSvc = useMemo(() => createSuppliersService(ctxForServices), [ctxForServices]);
-  const repairSvc = useMemo(() => createRepairService(ctxForServices), [ctxForServices]);
-  const adminSvc = useMemo(() => createProductionAdminService(ctxForServices), [ctxForServices]);
-  const financeSvc = useMemo(() => createFinanceService(ctxForServices), [ctxForServices]);
+  // Keep a ref to always-current context for stable service instances
+  const ctxRef = useRef(ctxForServices);
+  ctxRef.current = ctxForServices;
+
+  // Stable proxy that always delegates to latest ctxRef.current
+  // This ensures services are created once but always read current state
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableCtx = useMemo((): PinContextType => {
+    return new Proxy({} as PinContextType, {
+      get(_, prop: string | symbol) {
+        return (ctxRef.current as any)[prop];
+      }
+    });
+  }, []);
+
+  const materialsSvc = useMemo(() => createMaterialsService(stableCtx), [stableCtx]);
+  const productionSvc = useMemo(() => createProductionService(stableCtx), [stableCtx]);
+  const salesSvc = useMemo(() => createSalesService(stableCtx), [stableCtx]);
+  const customersSvc = useMemo(() => createCustomersService(stableCtx), [stableCtx]);
+  const suppliersSvc = useMemo(() => createSuppliersService(stableCtx), [stableCtx]);
+  const repairSvc = useMemo(() => createRepairService(stableCtx), [stableCtx]);
+  const adminSvc = useMemo(() => createProductionAdminService(stableCtx), [stableCtx]);
+  const financeSvc = useMemo(() => createFinanceService(stableCtx), [stableCtx]);
 
   const value = ({
     // auth & settings

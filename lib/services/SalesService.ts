@@ -45,6 +45,99 @@ function inferItemType(
   return "product";
 }
 
+// --- Shared RPC Stock Adjustment Helpers ---
+// Extracted to avoid duplication between handlePinSale and deletePinSale
+
+interface StockAdjustArgs {
+  delta: number;
+  transactionType: "import" | "export" | "adjustment";
+  reason: string;
+  invoiceNumber?: string | null;
+  note?: string | null;
+}
+
+async function adjustMaterialStockWithHistorySafe(
+  args: StockAdjustArgs & { materialId: string }
+): Promise<number | null> {
+  const d = Number(args.delta);
+  if (!Number.isFinite(d) || d === 0) return null;
+  try {
+    const { data, error } = await supabase.rpc("pin_adjust_material_stock_with_history", {
+      p_material_id: args.materialId,
+      p_delta: d,
+      p_transaction_type: args.transactionType,
+      p_reason: args.reason,
+      p_invoice_number: args.invoiceNumber ?? null,
+      p_note: args.note ?? null,
+    });
+    if (error) throw error;
+    return typeof data === "number" ? data : Number(data);
+  } catch (e: any) {
+    if (String(e?.code || "") === "42883") return null;
+    throw e;
+  }
+}
+
+async function adjustProductStockWithHistorySafe(
+  args: StockAdjustArgs & { productId: string }
+): Promise<number | null> {
+  const d = Number(args.delta);
+  if (!Number.isFinite(d) || d === 0) return null;
+  try {
+    const { data, error } = await supabase.rpc("pin_adjust_product_stock_with_history", {
+      p_product_id: args.productId,
+      p_delta: d,
+      p_transaction_type: args.transactionType,
+      p_reason: args.reason,
+      p_invoice_number: args.invoiceNumber ?? null,
+      p_note: args.note ?? null,
+    });
+    if (error) throw error;
+    return typeof data === "number" ? data : Number(data);
+  } catch (e: any) {
+    if (String(e?.code || "") === "42883") return null;
+    throw e;
+  }
+}
+
+async function adjustMaterialStockSafe(
+  materialId: string,
+  delta: number
+): Promise<number | null> {
+  const d = Number(delta);
+  if (!Number.isFinite(d) || d === 0) return null;
+  try {
+    const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
+      p_material_id: materialId,
+      p_delta: d,
+    });
+    if (error) throw error;
+    return typeof data === "number" ? data : Number(data);
+  } catch (e: any) {
+    if (String(e?.code || "") === "42883") return null;
+    throw e;
+  }
+}
+
+async function adjustProductStockSafe(
+  productId: string,
+  delta: number
+): Promise<number | null> {
+  const d = Number(delta);
+  if (!Number.isFinite(d) || d === 0) return null;
+  try {
+    const { data, error } = await supabase.rpc("pin_adjust_product_stock", {
+      p_product_id: productId,
+      p_delta: d,
+    });
+    if (error) throw error;
+    return typeof data === "number" ? data : Number(data);
+  } catch (e: any) {
+    if (String(e?.code || "") === "42883") return null;
+    throw e;
+  }
+}
+
 export function createSalesService(ctx: PinContextType): SalesService {
   const syncFinishedGoodsStock = async (product: PinProduct, nextStock: number) => {
     const sku = String(product.sku || "").trim();
@@ -93,92 +186,6 @@ export function createSalesService(ctx: PinContextType): SalesService {
       }
 
       try {
-        const adjustMaterialStockWithHistorySafe = async (args: {
-          materialId: string;
-          delta: number;
-          transactionType: "import" | "export" | "adjustment";
-          reason: string;
-          invoiceNumber?: string | null;
-          note?: string | null;
-        }) => {
-          const d = Number(args.delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_material_stock_with_history", {
-              p_material_id: args.materialId,
-              p_delta: d,
-              p_transaction_type: args.transactionType,
-              p_reason: args.reason,
-              p_invoice_number: args.invoiceNumber ?? null,
-              p_note: args.note ?? null,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
-        const adjustProductStockWithHistorySafe = async (args: {
-          productId: string;
-          delta: number;
-          transactionType: "import" | "export" | "adjustment";
-          reason: string;
-          invoiceNumber?: string | null;
-          note?: string | null;
-        }) => {
-          const d = Number(args.delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_product_stock_with_history", {
-              p_product_id: args.productId,
-              p_delta: d,
-              p_transaction_type: args.transactionType,
-              p_reason: args.reason,
-              p_invoice_number: args.invoiceNumber ?? null,
-              p_note: args.note ?? null,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
-        const adjustMaterialStockSafe = async (materialId: string, delta: number) => {
-          const d = Number(delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
-              p_material_id: materialId,
-              p_delta: d,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
-        const adjustProductStockSafe = async (productId: string, delta: number) => {
-          const d = Number(delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_product_stock", {
-              p_product_id: productId,
-              p_delta: d,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
         // Prepare DB payload for pin_sales (snake_case)
         const paymentStatus =
           newSaleBase.paymentStatus ||
@@ -506,92 +513,6 @@ export function createSalesService(ctx: PinContextType): SalesService {
       }
 
       try {
-        const adjustMaterialStockWithHistorySafe = async (args: {
-          materialId: string;
-          delta: number;
-          transactionType: "import" | "export" | "adjustment";
-          reason: string;
-          invoiceNumber?: string | null;
-          note?: string | null;
-        }) => {
-          const d = Number(args.delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_material_stock_with_history", {
-              p_material_id: args.materialId,
-              p_delta: d,
-              p_transaction_type: args.transactionType,
-              p_reason: args.reason,
-              p_invoice_number: args.invoiceNumber ?? null,
-              p_note: args.note ?? null,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
-        const adjustProductStockWithHistorySafe = async (args: {
-          productId: string;
-          delta: number;
-          transactionType: "import" | "export" | "adjustment";
-          reason: string;
-          invoiceNumber?: string | null;
-          note?: string | null;
-        }) => {
-          const d = Number(args.delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_product_stock_with_history", {
-              p_product_id: args.productId,
-              p_delta: d,
-              p_transaction_type: args.transactionType,
-              p_reason: args.reason,
-              p_invoice_number: args.invoiceNumber ?? null,
-              p_note: args.note ?? null,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
-        const adjustMaterialStockSafe = async (materialId: string, delta: number) => {
-          const d = Number(delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_material_stock", {
-              p_material_id: materialId,
-              p_delta: d,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
-        const adjustProductStockSafe = async (productId: string, delta: number) => {
-          const d = Number(delta);
-          if (!Number.isFinite(d) || d === 0) return null;
-          try {
-            const { data, error } = await supabase.rpc("pin_adjust_product_stock", {
-              p_product_id: productId,
-              p_delta: d,
-            });
-            if (error) throw error;
-            return typeof data === "number" ? data : Number(data);
-          } catch (e: any) {
-            if (String(e?.code || "") === "42883") return null;
-            throw e;
-          }
-        };
-
         // Return stock
         const usageByProduct = new Map<string, number>();
         const usageByMaterial = new Map<string, number>();
