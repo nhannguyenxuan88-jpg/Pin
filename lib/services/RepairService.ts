@@ -125,7 +125,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           customer_name: order.customerName,
           customer_phone: order.customerPhone || "",
           device_name: order.deviceName || "",
-          issue_description: order.issueDescription,
+          issue_description: order.issueDescription || "",
           technician_name: order.technicianName || "",
           status: order.status,
           materials_used: order.materialsUsed ?? [],
@@ -149,7 +149,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
             message: insertErr.message || String(insertErr),
             type: "error",
           });
-          return;
+          throw insertErr;
         }
 
         // Create cash transaction for deposit (tiền đặt cọc khi tạo phiếu)
@@ -188,6 +188,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           message: errorMessage,
           type: "error",
         });
+        throw e;
       }
     },
 
@@ -218,7 +219,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           customer_name: order.customerName,
           customer_phone: order.customerPhone || "",
           device_name: order.deviceName || "",
-          issue_description: order.issueDescription,
+          issue_description: order.issueDescription || "",
           technician_name: order.technicianName || "",
           status: order.status,
           materials_used: order.materialsUsed ?? [],
@@ -257,7 +258,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
             message: upErr.message || String(upErr),
             type: "error",
           });
-          return;
+          throw upErr;
         }
 
         // ===== LOGIC TRỪ KHO (SAFER) =====
@@ -476,6 +477,7 @@ export function createRepairService(ctx: PinContextType): RepairService {
           message: errorMessage,
           type: "error",
         });
+        throw e;
       }
     },
 

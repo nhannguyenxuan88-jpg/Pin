@@ -621,11 +621,6 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
       return;
     }
 
-    if (!formData.issueDescription?.trim()) {
-      showToast("Vui lòng mô tả sự cố", "warn");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -687,7 +682,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
         customerName: formData.customerName.trim(),
         customerPhone: formData.customerPhone.trim(),
         deviceName: formData.deviceName?.trim() || "",
-        issueDescription: formData.issueDescription.trim(),
+        issueDescription: formData.issueDescription?.trim() || "",
         technicianName: formData.technicianName?.trim() || currentUser.name,
         status: (formData.status as any) || "Tiếp nhận",
         materialsUsed: formData.materialsUsed || [],
