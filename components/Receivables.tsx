@@ -282,8 +282,8 @@ export default function Receivables() {
       // Calculate paid amount from sale record first, then fallback to cash transactions
       const salePaidAmount = Number(sale.paidAmount ?? 0);
       const cashTxPaid = paidBySale.get(sale.id) || 0;
-      // Use the higher of the two (in case cash transaction was created but paidAmount not updated)
-      const paid = Math.max(salePaidAmount, cashTxPaid);
+      // For explicit debt sales, ignore cash transactions to keep the receivable visible.
+      const paid = paymentStatus === "debt" ? salePaidAmount : Math.max(salePaidAmount, cashTxPaid);
       const debt = Math.max(0, total - paid);
       if (debt <= 0) continue;
 

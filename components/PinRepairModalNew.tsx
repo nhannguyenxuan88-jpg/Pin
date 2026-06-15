@@ -857,7 +857,7 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
               <div className="bg-[#1d2a3d] border border-slate-700/70 shadow-lg shadow-black/10 rounded-xl p-5">
                 <div className="flex items-center gap-2.5 mb-5">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-black text-white">1</span>
-                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Khách hàng & Xe</h3>
+                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Khách hàng & Thiết bị</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -964,11 +964,11 @@ export const PinRepairModalNew: React.FC<PinRepairModalNewProps> = ({
                 </div>
               </div>
 
-              {/* SECTION 2: Phụ tùng sử dụng */}
+              {/* SECTION 2: Linh kiện thay thế */}
               <div className="bg-[#1d2a3d] border border-slate-700/70 shadow-lg shadow-black/10 rounded-xl p-5">
                 <div className="flex items-center mb-5 gap-2.5">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-black text-white">2</span>
-                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Phụ tùng sử dụng</h3>
+                  <h3 className="font-bold text-slate-100 text-[15px] tracking-wide">Linh kiện thay thế</h3>
                 </div>
 
                 <div className="flex flex-wrap lg:flex-nowrap gap-3 mb-4 relative bg-[#0f172a] p-2 rounded-2xl border border-slate-700/50">

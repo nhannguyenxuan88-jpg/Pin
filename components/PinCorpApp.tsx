@@ -58,15 +58,17 @@ const PinCorpApp: React.FC<PinCorpAppProps> = ({ onSwitchApp }) => {
   // FIX: Wrapper function to create CashTransaction before calling context's handlePinSale
   const wrappedHandlePinSale = (saleData: Omit<PinSale, "id" | "date" | "userId" | "userName">) => {
     const cashTxId = `CT-PINSALE-${Date.now()}`;
+    const isDebt = (saleData as PinSale).paymentStatus === "debt";
+    const paidAmount =
+      typeof (saleData as PinSale).paidAmount === "number"
+        ? Math.max(0, (saleData as PinSale).paidAmount as number)
+        : undefined;
     const newCashTx: Omit<CashTransaction, "id"> & { id: string } = {
       id: cashTxId,
       type: "income",
       date: new Date().toISOString(),
-      // For partial/debt: only record the amount actually received now
-      amount:
-        typeof (saleData as any).paidAmount === "number"
-          ? Math.max(0, (saleData as any).paidAmount)
-          : saleData.total,
+      // For debt sales, do not create a full-payment cash transaction.
+      amount: isDebt ? 0 : (paidAmount ?? saleData.total),
       contact: {
         id: saleData.customer.id || "",
         name: saleData.customer.name,
